@@ -1,12 +1,11 @@
 pipeline {
     agent any
     
-    tools {
-        maven 'Maven-3.9.5' // Jenkins'te yapılandırılmış Maven versiyonu
-        jdk 'JDK-17' // Jenkins'te yapılandırılmış JDK versiyonu
-    }
-    
     environment {
+        // Maven ve Java PATH'leri (container'da mevcut)
+        PATH = "/usr/bin:/opt/java/openjdk/bin:${env.PATH}"
+        JAVA_HOME = '/opt/java/openjdk'
+        M2_HOME = '/usr/share/maven'
         // Test veritabanı için (Docker Compose network içinden)
         TEST_DB_URL = 'jdbc:postgresql://postgres:5432/yazilimdogrulama_test'
         TEST_DB_USER = 'postgres'
