@@ -81,7 +81,11 @@ pipeline {
                     }
                 }
                 dir('backend') {
-                    sh 'mvn test -Dtest="*IntegrationTest"'
+                    // Docker Compose network'ünden postgres'e erişim için environment variable override
+                    sh '''
+                        SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/yazilimdogrulama_test \
+                        mvn test -Dtest="*IntegrationTest"
+                    '''
                 }
             }
             post {
