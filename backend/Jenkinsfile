@@ -34,26 +34,32 @@ pipeline {
         stage('Clean') {
             steps {
                 echo 'Maven clean işlemi yapılıyor...'
-                sh 'mvn clean'
+                dir('backend') {
+                    sh 'mvn clean'
+                }
             }
         }
         
         stage('Compile') {
             steps {
                 echo 'Kod derleniyor...'
-                sh 'mvn compile'
+                dir('backend') {
+                    sh 'mvn compile'
+                }
             }
         }
         
         stage('Unit Tests') {
             steps {
                 echo 'Unit testler çalıştırılıyor...'
-                sh 'mvn test -Dtest="*ServiceImplTest"'
+                dir('backend') {
+                    sh 'mvn test -Dtest="*ServiceImplTest"'
+                }
             }
             post {
                 always {
                     // Test sonuçlarını kaydet
-                    junit 'target/surefire-reports/*.xml'
+                    junit 'backend/target/surefire-reports/*.xml'
                 }
             }
         }
@@ -74,11 +80,13 @@ pipeline {
                         echo "Veritabanı kontrolü atlandı: ${e.getMessage()}"
                     }
                 }
-                sh 'mvn test -Dtest="*IntegrationTest"'
+                dir('backend') {
+                    sh 'mvn test -Dtest="*IntegrationTest"'
+                }
             }
             post {
                 always {
-                    junit 'target/surefire-reports/*.xml'
+                    junit 'backend/target/surefire-reports/*.xml'
                 }
             }
         }
@@ -96,13 +104,15 @@ pipeline {
                         timeout 30 bash -c 'until curl -f ${FRONTEND_URL} || [ $? -eq 22 ]; do sleep 2; done' || echo "Frontend kontrolü atlandı"
                     '''
                 }
-                sh 'mvn test -Dtest="*Selenium*Test" -Dselenium.headless=true'
+                dir('backend') {
+                    sh 'mvn test -Dtest="*Selenium*Test" -Dselenium.headless=true'
+                }
             }
             post {
                 always {
-                    junit 'target/surefire-reports/*.xml'
+                    junit 'backend/target/surefire-reports/*.xml'
                     // Selenium screenshot'larını kaydet (eğer varsa)
-                    archiveArtifacts artifacts: 'target/screenshots/**/*', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'backend/target/screenshots/**/*', allowEmptyArchive: true
                 }
             }
         }
@@ -110,12 +120,14 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'JAR dosyası oluşturuluyor...'
-                sh 'mvn package -DskipTests'
+                dir('backend') {
+                    sh 'mvn package -DskipTests'
+                }
             }
             post {
                 success {
                     // Başarılı build sonrası JAR'ı kaydet
-                    archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: false
+                    archiveArtifacts artifacts: 'backend/target/*.jar', allowEmptyArchive: false
                 }
             }
         }
@@ -123,11 +135,10 @@ pipeline {
     
     post {
         always {
-            echo 'Pipeline tamamlandı. Sonuçlar:'
-            // Test sonuçlarını göster
+            echo 'Pipeline tamamlandı.'
             script {
                 def testResults = sh(
-                    script: 'find target/surefire-reports -name "*.xml" -exec grep -l "testsuite" {} \\; | wc -l',
+                    script: 'find backend/target/surefire-reports -name "*.xml" -exec grep -l "testsuite" {} \\; | wc -l',
                     returnStdout: true
                 ).trim()
                 echo "Test dosyası sayısı: ${testResults}"
