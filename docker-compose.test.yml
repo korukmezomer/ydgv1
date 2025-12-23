@@ -1,0 +1,56 @@
+version: '3.8'
+
+# Docker Compose for testing environment
+services:
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: yazilimdogrulama-postgres-test
+    environment:
+      POSTGRES_DB: yazilimdogrulama_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - test-network
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: yazilimdogrulama-backend-test
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-test:5432/yazilimdogrulama_test
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
+      SPRING_JPA_SHOW_SQL: "false"
+      JWT_SECRET: test-secret-key-for-automation-testing-only
+      JWT_EXPIRATION: 86400000
+      SPRING_PROFILES_ACTIVE: test
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - test-network
+    restart: "no"
+
+volumes:
+  postgres_test_data:
+    driver: local
+
+networks:
+  test-network:
+    driver: bridge
+

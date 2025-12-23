@@ -1,0 +1,278 @@
+/* Medium.com benzeri Membership Sayfası */
+@import url('https://fonts.googleapis.com/css2?family=Charter:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+
+.membership-page {
+  min-height: 100vh;
+  background: #fafafa;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  color: #242424;
+}
+
+/* Header */
+.membership-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #fafafa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.membership-header-container {
+  width: 100%;
+  padding: 0 40px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.membership-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: #242424;
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.medium-logo-img {
+  height: 110px;
+  width: auto;
+  object-fit: contain;
+}
+
+.membership-nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.membership-nav-link {
+  text-decoration: none;
+  color: #242424;
+  font-size: 14px;
+  font-weight: 400;
+  transition: color 0.2s;
+}
+
+.membership-nav-link:hover {
+  color: #10b981;
+}
+
+.membership-get-started-btn {
+  padding: 8px 16px;
+  background: #242424;
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.membership-get-started-btn:hover {
+  background: #000000;
+}
+
+/* Main */
+.membership-main {
+  padding: 80px 24px;
+}
+
+.membership-hero {
+  text-align: center;
+  margin-bottom: 64px;
+}
+
+.membership-hero-title {
+  font-family: 'Charter', 'Georgia', serif;
+  font-size: 48px;
+  font-weight: 700;
+  color: #242424;
+  margin-bottom: 16px;
+}
+
+.membership-hero-subtitle {
+  font-size: 20px;
+  color: #6b6b6b;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.membership-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Plans */
+.membership-plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 32px;
+  margin-bottom: 80px;
+}
+
+.membership-plan-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 32px;
+  position: relative;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.membership-plan-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.membership-plan-card.featured {
+  border-color: #10b981;
+  border-width: 2px;
+}
+
+.plan-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #10b981;
+  color: #ffffff;
+  padding: 4px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.plan-header {
+  margin-bottom: 24px;
+}
+
+.plan-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: #242424;
+  margin-bottom: 16px;
+}
+
+.plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.price-amount {
+  font-size: 36px;
+  font-weight: 700;
+  color: #242424;
+}
+
+.price-period {
+  font-size: 16px;
+  color: #6b6b6b;
+}
+
+.plan-savings {
+  font-size: 14px;
+  color: #10b981;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+.plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 32px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plan-feature {
+  font-size: 16px;
+  color: #242424;
+  line-height: 1.6;
+}
+
+.plan-button {
+  display: block;
+  width: 100%;
+  padding: 12px 24px;
+  background: #242424;
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: 24px;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+  transition: background-color 0.2s;
+}
+
+.plan-button:hover {
+  background: #000000;
+}
+
+.plan-button.featured-btn {
+  background: #10b981;
+}
+
+.plan-button.featured-btn:hover {
+  background: #059669;
+}
+
+/* FAQ */
+.membership-faq {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.faq-title {
+  font-family: 'Charter', 'Georgia', serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #242424;
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.faq-item {
+  padding-bottom: 32px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.faq-item:last-child {
+  border-bottom: none;
+}
+
+.faq-question {
+  font-size: 20px;
+  font-weight: 600;
+  color: #242424;
+  margin-bottom: 12px;
+}
+
+.faq-answer {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #6b6b6b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .membership-hero-title {
+    font-size: 36px;
+  }
+
+  .membership-plans {
+    grid-template-columns: 1fr;
+  }
+}
+

@@ -1,0 +1,83 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: yazilimdogrulama-postgres
+    environment:
+      POSTGRES_DB: yazilimdogrulama
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/main/resources/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: yazilimdogrulama-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/yazilimdogrulama
+      # Eğer IDE'den çalıştırıyorsanız, localhost:5433 kullanın
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+      JWT_SECRET: your-secret-key-change-this-in-production-minimum-256-bits-required-for-security
+      JWT_EXPIRATION: 86400000
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend-network
+    restart: unless-stopped
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: yazilimdogrulama-jenkins
+    user: root
+    ports:
+      - "8082:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker socket erişimi
+      - ./backend:/var/jenkins_home/workspace/backend:ro  # Backend koduna read-only erişim
+    environment:
+      - JENKINS_OPTS=--httpPort=8080
+    networks:
+      - backend-network
+    depends_on:
+      - postgres
+      - backend
+    restart: unless-stopped
+    # Jenkins'i önce başlat, paket kurulumunu arka planda yap
+    entrypoint: >
+      bash -c "
+        # Paket kurulumunu arka planda başlat
+        (apt-get update && apt-get install -y -q postgresql-client curl wget git maven default-jdk chromium chromium-driver > /dev/null 2>&1 &) &&
+        # Jenkins'i hemen başlat
+        /usr/local/bin/jenkins.sh
+      "
+
+volumes:
+  postgres_data:
+    driver: local
+  jenkins_home:
+    driver: local
+
+networks:
+  backend-network:
+    driver: bridge
+

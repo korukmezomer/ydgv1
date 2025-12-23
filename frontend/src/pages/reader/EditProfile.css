@@ -1,0 +1,173 @@
+.edit-profile-page {
+  min-height: 100vh;
+  background: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  color: #242424;
+  transition: margin-left 0.3s ease;
+}
+
+.edit-profile-page.sidebar-open {
+  margin-left: 280px;
+}
+
+.edit-profile-main {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+.edit-profile-container {
+  background: #ffffff;
+}
+
+.edit-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #242424;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.back-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.edit-profile-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #242424;
+  margin: 0;
+  font-family: 'Charter', 'Georgia', serif;
+}
+
+.edit-profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #242424;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 12px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  font-size: 16px;
+  font-family: 'Inter', sans-serif;
+  color: #242424;
+  background: #ffffff;
+  transition: border-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #10b981;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+  font-family: 'Inter', sans-serif;
+  line-height: 1.6;
+}
+
+.char-count {
+  font-size: 12px;
+  color: #6b6b6b;
+  text-align: right;
+  margin-top: 4px;
+}
+
+.edit-profile-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.cancel-button,
+.save-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+
+.cancel-button {
+  background: transparent;
+  color: #242424;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.cancel-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.save-button {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.save-button:hover:not(:disabled) {
+  background: #059669;
+}
+
+.save-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.loading {
+  text-align: center;
+  padding: 64px 24px;
+  color: #6b6b6b;
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .edit-profile-main {
+    padding: 24px 16px;
+  }
+
+  .edit-profile-title {
+    font-size: 24px;
+  }
+}
+

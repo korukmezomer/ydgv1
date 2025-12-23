@@ -1,0 +1,109 @@
+.writer-sidebar {
+  position: fixed;
+  top: 64px;
+  left: 0;
+  height: calc(100vh - 64px);
+  width: 280px;
+  background: #ffffff;
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  z-index: 99;
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+.writer-sidebar.open {
+  transform: translateX(0);
+  pointer-events: all;
+}
+
+.sidebar-content {
+  padding: 24px 0;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 16px;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: #6b6b6b;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.2s;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+}
+
+.sidebar-link:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #242424;
+}
+
+.sidebar-link.active {
+  background: rgba(0, 0, 0, 0.05);
+  color: #242424;
+}
+
+.sidebar-link svg {
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 16px 0;
+}
+
+.sidebar-section {
+  padding: 0 16px;
+  margin-top: 24px;
+}
+
+.sidebar-section h3 {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b6b6b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px 0;
+  font-family: 'Inter', sans-serif;
+}
+
+.sidebar-hint {
+  font-size: 13px;
+  color: #6b6b6b;
+  margin: 0 0 12px 0;
+  font-family: 'Inter', sans-serif;
+}
+
+.sidebar-link-small {
+  display: inline-block;
+  color: #10b981;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+}
+
+.sidebar-link-small:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .writer-sidebar {
+    width: 100%;
+    max-width: 280px;
+  }
+}
+

@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/target/
+backend/.mvn/
+
+# Build outputs
+frontend/dist/
+backend/target/
+*.jar
+*.war
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Docker
+docker-compose.override.yml
+
+# Jenkins
+jenkins_home/
+
+# Uploads
+backend/uploads/
+
+# Test reports
+backend/target/surefire-reports/
+backend/target/site/
+

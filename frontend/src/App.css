@@ -1,0 +1,25 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-primary);
+}
+
+.main-content {
+  flex: 1;
+  padding-top: 0;
+  background-color: var(--bg-primary);
+}
+
+.main-content.reader-main-wrapper {
+  padding: 0;
+  padding-top: 64px;
+  background-color: #ffffff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 15px;
+  }
+}

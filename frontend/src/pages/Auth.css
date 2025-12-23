@@ -1,0 +1,243 @@
+/* Medium.com benzeri Auth Sayfaları */
+@import url('https://fonts.googleapis.com/css2?family=Charter:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+
+.auth-page {
+  min-height: 100vh;
+  background: #fafafa;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  color: #242424;
+}
+
+/* Header */
+.auth-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #fafafa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 0 40px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.auth-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: #242424;
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.medium-logo-img {
+  height: 110px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* Main */
+.auth-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 64px);
+  padding: 48px 24px;
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 600px;
+}
+
+.auth-card {
+  background: #ffffff;
+  border-radius: 0;
+  padding: 40px;
+  box-shadow: none;
+  border: none;
+}
+
+.auth-title {
+  font-family: 'Charter', 'Georgia', serif;
+  font-size: 42px;
+  font-weight: 400;
+  color: #242424;
+  margin-bottom: 8px;
+  text-align: left;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.auth-subtitle {
+  font-size: 16px;
+  color: #6b6b6b;
+  text-align: left;
+  margin-bottom: 40px;
+  line-height: 1.5;
+}
+
+.auth-error {
+  background: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 12px 16px;
+  border-radius: 4px;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+/* Form */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 400;
+  color: #242424 !important;
+  display: block;
+}
+
+.form-input {
+  padding: 12px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  font-size: 16px;
+  font-family: 'Inter', sans-serif;
+  color: #242424 !important;
+  background: #ffffff !important;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.form-input option {
+  color: #242424;
+  background: #ffffff;
+}
+
+.form-input[type="password"] {
+  color: #242424 !important;
+  -webkit-text-fill-color: #242424 !important;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #242424;
+  box-shadow: 0 0 0 1px #242424;
+}
+
+.form-input:hover {
+  border-color: rgba(0, 0, 0, 0.3);
+}
+
+.form-input::placeholder {
+  color: #9ca3af;
+}
+
+.form-input:-webkit-autofill,
+.form-input:-webkit-autofill:hover,
+.form-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #242424 !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+}
+
+.form-input:-webkit-autofill[type="password"] {
+  -webkit-text-fill-color: #242424 !important;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: #6b6b6b;
+  margin-top: 4px;
+}
+
+.auth-submit-btn {
+  padding: 10px 20px;
+  background: #242424;
+  color: #ffffff;
+  border: none;
+  border-radius: 20px;
+  font-size: 15px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.auth-submit-btn:hover:not(:disabled) {
+  background: #000000;
+}
+
+.auth-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0;
+  text-align: center;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.auth-divider span {
+  font-size: 14px;
+  color: #6b6b6b;
+}
+
+.auth-footer {
+  text-align: center;
+  font-size: 15px;
+  color: #242424;
+  margin-top: 24px;
+  line-height: 1.6;
+}
+
+.auth-link {
+  color: #242424;
+  text-decoration: underline;
+  font-weight: 400;
+  transition: color 0.2s;
+}
+
+.auth-link:hover {
+  color: #000000;
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .auth-card {
+    padding: 32px 24px;
+  }
+
+  .auth-title {
+    font-size: 28px;
+  }
+}

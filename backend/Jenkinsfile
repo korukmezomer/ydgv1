@@ -1,0 +1,150 @@
+pipeline {
+    agent any
+    
+    tools {
+        maven 'Maven-3.9.5' // Jenkins'te yapılandırılmış Maven versiyonu
+        jdk 'JDK-17' // Jenkins'te yapılandırılmış JDK versiyonu
+    }
+    
+    environment {
+        // Test veritabanı için (Docker Compose network içinden)
+        TEST_DB_URL = 'jdbc:postgresql://postgres:5432/yazilimdogrulama_test'
+        TEST_DB_USER = 'postgres'
+        TEST_DB_PASSWORD = 'postgres'
+        
+        // Frontend URL (Selenium testleri için - host'tan erişim)
+        // Docker Desktop için: host.docker.internal
+        // Linux için: 172.17.0.1 veya host IP
+        FRONTEND_URL = "${env.FRONTEND_URL ?: 'http://host.docker.internal:5173'}"
+        
+        // Backend URL (Docker Compose network içinden)
+        BACKEND_URL = 'http://backend:8080'
+        
+        // CI ortamı flag'i (Selenium headless mod için)
+        CI = 'true'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Git repository\'den kod çekiliyor...'
+                checkout scm
+            }
+        }
+        
+        stage('Clean') {
+            steps {
+                echo 'Maven clean işlemi yapılıyor...'
+                sh 'mvn clean'
+            }
+        }
+        
+        stage('Compile') {
+            steps {
+                echo 'Kod derleniyor...'
+                sh 'mvn compile'
+            }
+        }
+        
+        stage('Unit Tests') {
+            steps {
+                echo 'Unit testler çalıştırılıyor...'
+                sh 'mvn test -Dtest="*ServiceImplTest"'
+            }
+            post {
+                always {
+                    // Test sonuçlarını kaydet
+                    junit 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+        
+        stage('Integration Tests') {
+            steps {
+                echo 'Entegrasyon testleri çalıştırılıyor...'
+                script {
+                    try {
+                        // PostgreSQL test veritabanının hazır olduğundan emin ol
+                        // Docker Compose network içinden postgres container'ına erişim
+                        sh '''
+                            # Test veritabanını kontrol et ve oluştur (eğer yoksa)
+                            PGPASSWORD=${TEST_DB_PASSWORD} psql -h postgres -p 5432 -U ${TEST_DB_USER} -d postgres -c "SELECT 1 FROM pg_database WHERE datname='yazilimdogrulama_test'" | grep -q 1 || \
+                            PGPASSWORD=${TEST_DB_PASSWORD} psql -h postgres -p 5432 -U ${TEST_DB_USER} -d postgres -c "CREATE DATABASE yazilimdogrulama_test"
+                        '''
+                    } catch (Exception e) {
+                        echo "Veritabanı kontrolü atlandı: ${e.getMessage()}"
+                    }
+                }
+                sh 'mvn test -Dtest="*IntegrationTest"'
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+        
+        stage('Selenium Tests') {
+            steps {
+                echo 'Selenium testleri çalıştırılıyor...'
+                script {
+                    // Frontend ve Backend'in çalıştığından emin ol
+                    sh '''
+                        # Backend'in çalıştığını kontrol et (network içinden)
+                        timeout 30 bash -c 'until curl -f http://backend:8080/api/auth/kayit || [ $? -eq 22 ]; do sleep 2; done' || echo "Backend kontrolü atlandı"
+                        
+                        # Frontend'in çalıştığını kontrol et (host'tan erişim)
+                        timeout 30 bash -c 'until curl -f ${FRONTEND_URL} || [ $? -eq 22 ]; do sleep 2; done' || echo "Frontend kontrolü atlandı"
+                    '''
+                }
+                sh 'mvn test -Dtest="*Selenium*Test" -Dselenium.headless=true'
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                    // Selenium screenshot'larını kaydet (eğer varsa)
+                    archiveArtifacts artifacts: 'target/screenshots/**/*', allowEmptyArchive: true
+                }
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                echo 'JAR dosyası oluşturuluyor...'
+                sh 'mvn package -DskipTests'
+            }
+            post {
+                success {
+                    // Başarılı build sonrası JAR'ı kaydet
+                    archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: false
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo 'Pipeline tamamlandı. Sonuçlar:'
+            // Test sonuçlarını göster
+            script {
+                def testResults = sh(
+                    script: 'find target/surefire-reports -name "*.xml" -exec grep -l "testsuite" {} \\; | wc -l',
+                    returnStdout: true
+                ).trim()
+                echo "Test dosyası sayısı: ${testResults}"
+            }
+        }
+        success {
+            echo '✅ Tüm testler başarılı!'
+            // İsteğe bağlı: Slack, Email bildirimi eklenebilir
+        }
+        failure {
+            echo '❌ Testler başarısız oldu!'
+            // İsteğe bağlı: Hata bildirimi
+        }
+        unstable {
+            echo '⚠️ Bazı testler başarısız oldu!'
+        }
+    }
+}
+
