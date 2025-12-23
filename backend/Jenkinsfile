@@ -81,10 +81,12 @@ pipeline {
                     }
                 }
                 dir('backend') {
-                    // Docker Compose network'ünden postgres'e erişim için environment variable override
+                    // Docker Compose network'ünden postgres'e erişim için Maven system property override
                     sh '''
-                        SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/yazilimdogrulama_test \
-                        mvn test -Dtest="*IntegrationTest"
+                        mvn test -Dtest="*IntegrationTest" \
+                            -Dspring.datasource.url=jdbc:postgresql://postgres:5432/yazilimdogrulama_test \
+                            -Dspring.datasource.username=postgres \
+                            -Dspring.datasource.password=postgres
                     '''
                 }
             }
