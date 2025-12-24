@@ -134,6 +134,32 @@ const AdminSidebar = ({ isOpen, onClose }) => {
             </svg>
             <span>Editör Seçimleri</span>
           </Link>
+
+          <Link to="/admin/kategoriler" className="sidebar-link">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M4 7h16M4 12h16M4 17h16"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>Kategoriler</span>
+          </Link>
+
+          <Link to="/admin/etiketler" className="sidebar-link">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 0 1 0 2.828l-7 7a2 2 0 0 1-2.828 0l-7-7A1.994 1.994 0 0 1 3 12V7a4 4 0 0 1 4-4z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>Etiketler</span>
+          </Link>
         </nav>
       </div>
     </div>

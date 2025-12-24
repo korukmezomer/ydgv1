@@ -6,6 +6,7 @@ import com.example.backend.domain.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Set;
 
@@ -25,6 +26,9 @@ class FollowServiceIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private FollowRepository followRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     private User follower;
     private User following;
 
@@ -37,6 +41,7 @@ class FollowServiceIntegrationTest extends BaseIntegrationTest {
         follower.setEmail("follower@test.com");
         follower.setUsername("follower");
         follower.setFirstName("Follower");
+        follower.setPassword(passwordEncoder.encode("password123"));
         follower.setIsActive(true);
         follower.setRoles(Set.of(userRole));
         follower = userRepository.save(follower);
@@ -46,6 +51,7 @@ class FollowServiceIntegrationTest extends BaseIntegrationTest {
         following.setEmail("following@test.com");
         following.setUsername("following");
         following.setFirstName("Following");
+        following.setPassword(passwordEncoder.encode("password123"));
         following.setIsActive(true);
         following.setRoles(Set.of(userRole));
         following = userRepository.save(following);
@@ -119,6 +125,7 @@ class FollowServiceIntegrationTest extends BaseIntegrationTest {
         user.setEmail(email);
         user.setUsername(username);
         user.setFirstName(username);
+        user.setPassword(passwordEncoder.encode("password123"));
         user.setIsActive(true);
         user.setRoles(Set.of(userRole));
         return userRepository.save(user);

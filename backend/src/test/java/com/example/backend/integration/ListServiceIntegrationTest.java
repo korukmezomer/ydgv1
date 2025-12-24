@@ -14,6 +14,7 @@ import com.example.backend.domain.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Set;
 
@@ -36,6 +37,9 @@ class ListServiceIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private StoryRepository storyRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     private User testUser;
     private Story testStory;
 
@@ -47,6 +51,7 @@ class ListServiceIntegrationTest extends BaseIntegrationTest {
         testUser.setEmail("listuser@test.com");
         testUser.setUsername("listuser");
         testUser.setFirstName("List");
+        testUser.setPassword(passwordEncoder.encode("password123"));
         testUser.setIsActive(true);
         testUser.setRoles(Set.of(userRole));
         testUser = userRepository.save(testUser);
@@ -137,6 +142,7 @@ class ListServiceIntegrationTest extends BaseIntegrationTest {
         writer.setEmail("writer@test.com");
         writer.setUsername("writer");
         writer.setFirstName("Writer");
+        writer.setPassword(passwordEncoder.encode("password123"));
         writer.setIsActive(true);
         writer.setRoles(Set.of(writerRole));
         return userRepository.save(writer);

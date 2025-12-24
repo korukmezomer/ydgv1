@@ -71,6 +71,21 @@ export const kategoriAPI = {
   getAll: () => api.get('/kategoriler'),
   getById: (id) => api.get(`/kategoriler/${id}`),
   getBySlug: (slug) => api.get(`/kategoriler/slug/${slug}`),
+  getAllSayfali: (params) => api.get('/kategoriler/sayfali', { params }),
+  create: (data) => api.post('/kategoriler', data),
+  update: (id, data) => api.put(`/kategoriler/${id}`, data),
+  delete: (id) => api.delete(`/kategoriler/${id}`),
+};
+
+// Etiket API
+export const etiketAPI = {
+  getAll: () => api.get('/etiketler'),
+  getById: (id) => api.get(`/etiketler/${id}`),
+  getBySlug: (slug) => api.get(`/etiketler/slug/${slug}`),
+  getAllSayfali: (params) => api.get('/etiketler/sayfali', { params }),
+  create: (data) => api.post('/etiketler', data),
+  update: (id, data) => api.put(`/etiketler/${id}`, data),
+  delete: (id) => api.delete(`/etiketler/${id}`),
 };
 
 // Yorum API

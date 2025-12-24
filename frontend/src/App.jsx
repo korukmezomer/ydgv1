@@ -24,6 +24,8 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminUsers from './pages/admin/Users';
 import AdminComments from './pages/admin/Comments';
 import EditorPicks from './pages/admin/EditorPicks';
+import AdminCategories from './pages/admin/Categories';
+import AdminTags from './pages/admin/Tags';
 import ReaderDashboard from './pages/reader/Dashboard';
 import ReaderLibrary from './pages/reader/Library';
 import ReaderProfile from './pages/reader/Profile';
@@ -195,6 +197,22 @@ function AppContent() {
             element={
               <ProtectedRoute requiredRole="ADMIN">
                 <AdminComments sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/kategoriler"
+            element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <AdminCategories sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/etiketler"
+            element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <AdminTags sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
               </ProtectedRoute>
             }
           />

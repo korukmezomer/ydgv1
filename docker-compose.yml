@@ -43,6 +43,24 @@ services:
       - backend-network
     restart: unless-stopped
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: yazilimdogrulama-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - backend-network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
   jenkins:
     image: jenkins/jenkins:lts
     container_name: yazilimdogrulama-jenkins
@@ -56,6 +74,11 @@ services:
       - ./backend:/var/jenkins_home/workspace/backend:ro  # Backend koduna read-only erişim
     environment:
       - JENKINS_OPTS=--httpPort=8080
+      # DNS ayarları (GitHub erişimi için)
+      - GIT_SSL_NO_VERIFY=false
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     networks:
       - backend-network
     depends_on:
@@ -75,6 +98,8 @@ volumes:
   postgres_data:
     driver: local
   jenkins_home:
+    driver: local
+  pgadmin_data:
     driver: local
 
 networks:

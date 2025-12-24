@@ -49,11 +49,11 @@ const WriterComments = ({ sidebarOpen, setSidebarOpen }) => {
       let filteredYorumlar = response.data?.content || [];
       
       if (filter === 'pending') {
-        filteredYorumlar = filteredYorumlar.filter(y => y.durum === 'BEKLIYOR');
+        filteredYorumlar = filteredYorumlar.filter(y => (y.status || y.durum) === 'BEKLIYOR');
       } else if (filter === 'approved') {
-        filteredYorumlar = filteredYorumlar.filter(y => y.durum === 'ONAYLANDI');
+        filteredYorumlar = filteredYorumlar.filter(y => (y.status || y.durum) === 'ONAYLANDI');
       } else if (filter === 'rejected') {
-        filteredYorumlar = filteredYorumlar.filter(y => y.durum === 'REDDEDILDI');
+        filteredYorumlar = filteredYorumlar.filter(y => (y.status || y.durum) === 'REDDEDILDI');
       }
       
       setYorumlar(filteredYorumlar);
@@ -71,11 +71,11 @@ const WriterComments = ({ sidebarOpen, setSidebarOpen }) => {
       let filteredYorumlar = response.data?.content || [];
       
       if (filter === 'pending') {
-        filteredYorumlar = filteredYorumlar.filter(y => y.durum === 'BEKLIYOR');
+        filteredYorumlar = filteredYorumlar.filter(y => (y.status || y.durum) === 'BEKLIYOR');
       } else if (filter === 'approved') {
-        filteredYorumlar = filteredYorumlar.filter(y => y.durum === 'ONAYLANDI');
+        filteredYorumlar = filteredYorumlar.filter(y => (y.status || y.durum) === 'ONAYLANDI');
       } else if (filter === 'rejected') {
-        filteredYorumlar = filteredYorumlar.filter(y => y.durum === 'REDDEDILDI');
+        filteredYorumlar = filteredYorumlar.filter(y => (y.status || y.durum) === 'REDDEDILDI');
       }
       
       setYorumlar(filteredYorumlar);
@@ -93,7 +93,8 @@ const WriterComments = ({ sidebarOpen, setSidebarOpen }) => {
   };
 
   const getStatusColor = (durum) => {
-    switch (durum) {
+    const status = durum || '';
+    switch (status) {
       case 'ONAYLANDI':
         return '#10b981';
       case 'BEKLIYOR':
@@ -106,7 +107,8 @@ const WriterComments = ({ sidebarOpen, setSidebarOpen }) => {
   };
 
   const getStatusText = (durum) => {
-    switch (durum) {
+    const status = durum || '';
+    switch (status) {
       case 'ONAYLANDI':
         return 'Onaylandı';
       case 'BEKLIYOR':
@@ -114,14 +116,10 @@ const WriterComments = ({ sidebarOpen, setSidebarOpen }) => {
       case 'REDDEDILDI':
         return 'Reddedildi';
       default:
-        return durum;
+        return durum || 'Bilinmeyen';
     }
   };
 
-  const getHaberBaslik = (haberId) => {
-    const haber = haberler.find(h => h.id === haberId);
-    return haber?.baslik || 'Bilinmeyen hikaye';
-  };
 
   if (loading && yorumlar.length === 0) {
     return (
@@ -190,32 +188,32 @@ const WriterComments = ({ sidebarOpen, setSidebarOpen }) => {
                   <div className="writer-comment-header">
                     <div className="writer-comment-author">
                       <div className="writer-comment-avatar">
-                        {yorum.kullaniciAdi?.charAt(0).toUpperCase() || 'K'}
+                        {(yorum.username || yorum.kullaniciAdi || 'K').charAt(0).toUpperCase()}
                       </div>
                       <div className="writer-comment-author-info">
-                        <div className="writer-comment-author-name">{yorum.kullaniciAdi || 'Kullanıcı'}</div>
+                        <div className="writer-comment-author-name">{yorum.username || yorum.kullaniciAdi || 'Kullanıcı'}</div>
                         <div className="writer-comment-date">{formatDate(yorum.createdAt)}</div>
                       </div>
                     </div>
                     <span
                       className="writer-comment-status"
-                      style={{ color: getStatusColor(yorum.durum) }}
+                      style={{ color: getStatusColor(yorum.status || yorum.durum) }}
                     >
-                      {getStatusText(yorum.durum)}
+                      {getStatusText(yorum.status || yorum.durum)}
                     </span>
                   </div>
                   <div className="writer-comment-content">
-                    <p>{yorum.icerik}</p>
+                    <p>{yorum.content || yorum.icerik}</p>
                   </div>
                   <div className="writer-comment-footer">
                     <Link
-                      to={`/haberler/${haberler.find(h => h.id === yorum.haberId)?.slug || ''}`}
+                      to={`/haberler/${yorum.storySlug || haberler.find(h => h.id === (yorum.storyId || yorum.haberId))?.slug || ''}`}
                       className="writer-comment-haber-link"
                     >
-                      {getHaberBaslik(yorum.haberId)}
+                      {yorum.storyTitle || haberler.find(h => h.id === (yorum.storyId || yorum.haberId))?.baslik || 'Bilinmeyen hikaye'}
                     </Link>
                     <div className="writer-comment-stats">
-                      <span>{yorum.begeniSayisi || 0} beğeni</span>
+                      <span>{yorum.likeCount || yorum.begeniSayisi || 0} beğeni</span>
                     </div>
                   </div>
                 </article>

@@ -4,149 +4,126 @@ Bu klasör, uygulamanın frontend kısmını test etmek için Selenium WebDriver
 
 ## Test Case'ler
 
-### Test Case 1: Kullanıcı Kaydı (User Registration)
-- **Dosya**: `TestCase1_UserRegistrationTest.java`
-- **Açıklama**: Yeni kullanıcı kaydı işlemini test eder
+### Case 1: Kullanıcı Kaydı (User Registration)
+- **Dosya**: `Case1_UserRegistrationTest.java`
+- **Use Case**: Yeni kullanıcı sisteme kayıt olabilmeli
 - **Senaryo**: 
-  - Ana sayfadan kayıt sayfasına gider
-  - Form alanlarını doldurur (ad, soyad, email, kullanıcı adı, şifre, rol)
-  - Kayıt butonuna tıklar
-  - Başarılı kayıt sonrası dashboard'a yönlendirildiğini doğrular
+  - Ana sayfadan kayıt sayfasına git
+  - Form alanlarını doldur (ad, soyad, email, kullanıcı adı, şifre)
+  - Kayıt butonuna tıkla
+  - Başarılı kayıt sonrası dashboard'a yönlendirildiğini doğrula
 
-### Test Case 2: Kullanıcı Girişi (User Login)
-- **Dosya**: `TestCase2_UserLoginTest.java`
-- **Açıklama**: Mevcut kullanıcı girişi işlemini test eder
+### Case 2: Kullanıcı Girişi (User Login)
+- **Dosya**: `Case2_UserLoginTest.java`
+- **Use Case**: Mevcut kullanıcı sisteme giriş yapabilmeli
 - **Senaryo**:
-  - Ana sayfadan giriş sayfasına gider
-  - Email ve şifre alanlarını doldurur
-  - Giriş butonuna tıklar
-  - Başarılı giriş sonrası dashboard'a yönlendirildiğini doğrular
-  - Yanlış şifre ile giriş yapılamadığını test eder
+  - Ana sayfadan giriş sayfasına git
+  - Email ve şifre alanlarını doldur
+  - Giriş butonuna tıkla
+  - Başarılı giriş sonrası dashboard'a yönlendirildiğini doğrula
 
-### Test Case 3: Dashboard Erişimi (Dashboard Access)
-- **Dosya**: `TestCase3_DashboardAccessTest.java`
-- **Açıklama**: Giriş sonrası dashboard erişimini test eder
+### Case 3: Dashboard Erişimi (Dashboard Access)
+- **Dosya**: `Case3_DashboardAccessTest.java`
+- **Use Case**: Kullanıcı giriş yaptıktan sonra rolüne göre doğru dashboard'a yönlendirilmeli
 - **Senaryo**:
   - Kullanıcı giriş yapar
-  - Rolüne göre doğru dashboard'a yönlendirildiğini doğrular
-  - Ana sayfadaki Dashboard butonunun çalıştığını test eder
+  - Rolüne göre doğru dashboard'a yönlendirildiğini doğrula
+  - Dashboard sayfasının yüklendiğini doğrula
 
-### Test Case 4: İçerik Oluşturma (Content Creation)
-- **Dosya**: `TestCase4_ContentCreationTest.java`
-- **Açıklama**: Yazar olarak yeni içerik oluşturma işlemini test eder
+### Case 4: Story Oluşturma (Story Creation)
+- **Dosya**: `Case4_StoryCreationTest.java`
+- **Use Case**: WRITER rolündeki kullanıcı yeni story oluşturabilmeli
 - **Senaryo**:
-  - Yazar olarak giriş yapar
-  - "Yaz" butonuna tıklar veya `/reader/new-story` sayfasına gider
-  - Başlık alanına başlık girer
-  - İçerik blokları ekler (metin, başlık, kod, resim vb.)
-  - İçeriğin kaydedildiğini doğrular
+  - WRITER olarak giriş yap
+  - Yeni story oluştur sayfasına git
+  - Başlık ve içerik gir
+  - Story'yi kaydet
+  - Story'nin oluşturulduğunu doğrula
 
-### Test Case 5: Profil Görüntüleme (Profile View)
-- **Dosya**: `TestCase5_ProfileViewTest.java`
-- **Açıklama**: Kullanıcı profil sayfasına erişimi test eder
+### Case 5: Yorum Yapma (Comment Creation)
+- **Dosya**: `Case5_CommentTest.java`
+- **Use Case**: Kullanıcı bir story'ye yorum yapabilmeli
+- **Senaryo**:
+  - Kullanıcı giriş yapar
+  - Bir story sayfasına gider
+  - Yorum alanına yorum yazar
+  - Yorum gönder butonuna tıklar
+  - Yorumun eklendiğini doğrula
+
+### Case 6: Karar Tablosu - Story Yayınlama (Decision Table - Story Publishing)
+- **Dosya**: `Case6_StoryPublishDecisionTableTest.java`
+- **Use Case**: Story yayınlama işleminin karar tablosuna göre test edilmesi
+- **Karar Tablosu**:
+  - **Koşul 1**: Kullanıcı WRITER rolünde mi? (E/H)
+  - **Koşul 2**: Story durumu TASLAK mı? (E/H)
+  - **Koşul 3**: Story içeriği 100 karakterden uzun mu? (E/H)
+  
+  **Karar Kuralları**:
+  | WRITER | TASLAK | İçerik > 100 | Karar |
+  |--------|--------|--------------|-------|
+  | E      | E      | E            | Yayınlanabilir (YAYIN_BEKLIYOR) |
+  | E      | E      | H            | Yayınlanamaz (İçerik yetersiz) |
+  | E      | H      | E            | Zaten yayınlanmış/reddedilmiş |
+  | H      | E      | E            | Yayınlanamaz (Yetki yok) |
+  | H      | E      | H            | Yayınlanamaz (Yetki + içerik yetersiz) |
+  
+- **Test Senaryoları**:
+  - Case 6.1: Tüm koşullar sağlandığında story yayınlanabilir
+  - Case 6.2: İçerik yetersiz olduğunda story yayınlanamaz
+  - Case 6.3: USER rolündeki kullanıcı story yayınlayamaz
+
+### Case 7: Story Beğenme (Like Story)
+- **Dosya**: `Case7_LikeStoryTest.java`
+- **Use Case**: Kullanıcı bir story'yi beğenebilmeli
+- **Senaryo**:
+  - Kullanıcı giriş yapar
+  - Bir story sayfasına gider
+  - Beğeni butonuna tıklar
+  - Beğeninin eklendiğini doğrula
+
+### Case 8: Story Kaydetme (Save Story)
+- **Dosya**: `Case8_SaveStoryTest.java`
+- **Use Case**: Kullanıcı bir story'yi kaydedebilmeli
+- **Senaryo**:
+  - Kullanıcı giriş yapar
+  - Bir story sayfasına gider
+  - Kaydet butonuna tıklar
+  - Story'nin kaydedildiğini doğrula
+
+### Case 9: Profil Görüntüleme (Profile View)
+- **Dosya**: `Case9_ProfileViewTest.java`
+- **Use Case**: Kullanıcı kendi profilini görüntüleyebilmeli
 - **Senaryo**:
   - Kullanıcı giriş yapar
   - Profil sayfasına gider
-  - Profil bilgilerinin görüntülendiğini doğrular
-  - Profil sayfasından dashboard'a geri dönebildiğini test eder
+  - Profil bilgilerinin görüntülendiğini doğrula
 
-## Gereksinimler
+### Case 10: Admin Story Onaylama (Admin Story Approval)
+- **Dosya**: `Case10_AdminStoryApprovalTest.java`
+- **Use Case**: ADMIN rolündeki kullanıcı story'leri onaylayabilmeli
+- **Senaryo**:
+  - ADMIN olarak giriş yap
+  - Admin dashboard'a git
+  - Onay bekleyen story'leri görüntüle
+  - Story'yi onayla
+  - Story'nin onaylandığını doğrula
 
-### Yazılım Gereksinimleri
-- Java 17 veya üzeri
-- Maven 3.6+
-- Chrome Browser (ChromeDriver otomatik olarak WebDriverManager tarafından yönetilir)
+## Çalıştırma
 
-### Maven Bağımlılıkları
-Testler için gerekli bağımlılıklar `pom.xml` dosyasına eklenmiştir:
-- Selenium Java (4.15.0)
-- WebDriverManager (5.6.2)
-- JUnit Jupiter
-
-## Test Çalıştırma
-
-### Tüm Testleri Çalıştırma
+### Lokal Ortamda
 ```bash
 cd backend
-mvn test
+mvn test -Dtest="*Selenium*Test"
 ```
 
-### Belirli Bir Test Sınıfını Çalıştırma
+### CI/CD Ortamında (Jenkins)
 ```bash
-cd backend
-mvn test -Dtest=TestCase1_UserRegistrationTest
+mvn test -Dtest="*Selenium*Test" -Dselenium.headless=true
 ```
-
-### IDE'den Çalıştırma
-- IntelliJ IDEA veya Eclipse'de test sınıflarını açın
-- Test metodlarının yanındaki "Run" butonuna tıklayın
-- Veya sınıf seviyesinde "Run" butonuna tıklayarak tüm testleri çalıştırın
-
-## Test Öncesi Hazırlık
-
-### 1. Backend ve Frontend Servislerinin Çalışır Durumda Olması
-```bash
-# Backend'i başlat (port 8080)
-cd backend
-mvn spring-boot:run
-
-# Frontend'i başlat (port 5173)
-cd frontend
-npm run dev
-```
-
-### 2. Test Kullanıcılarının Oluşturulması
-Testlerin çalışması için aşağıdaki kullanıcıların veritabanında mevcut olması gerekir:
-
-**Test Kullanıcısı (USER rolü):**
-- Email: `test@example.com`
-- Şifre: `Test123456`
-
-**Yazar Kullanıcısı (WRITER rolü):**
-- Email: `writer@example.com`
-- Şifre: `Test123456`
-
-Bu kullanıcıları manuel olarak oluşturabilir veya kayıt testini çalıştırarak otomatik oluşturabilirsiniz.
-
-### 3. ChromeDriver
-WebDriverManager otomatik olarak ChromeDriver'ı indirir ve yönetir. Manuel kurulum gerekmez.
-
-## Test Yapılandırması
-
-### Base URL Değiştirme
-`BaseSeleniumTest.java` dosyasında `BASE_URL` değişkenini değiştirerek farklı bir URL kullanabilirsiniz:
-```java
-protected static final String BASE_URL = "http://localhost:5173";
-```
-
-### Timeout Ayarları
-`DEFAULT_TIMEOUT` değişkenini değiştirerek bekleme sürelerini ayarlayabilirsiniz:
-```java
-protected static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
-```
-
-## Sorun Giderme
-
-### ChromeDriver Bulunamıyor
-- WebDriverManager otomatik olarak ChromeDriver'ı yönetir
-- İnternet bağlantınızın olduğundan emin olun
-- Chrome browser'ın yüklü olduğundan emin olun
-
-### Element Bulunamıyor
-- Frontend'in çalışır durumda olduğundan emin olun
-- Sayfanın tamamen yüklendiğinden emin olun (waitForPageLoad() kullanılır)
-- Selector'ların doğru olduğundan emin olun
-
-### Test Başarısız Oluyor
-- Backend ve frontend servislerinin çalıştığından emin olun
-- Test kullanıcılarının veritabanında mevcut olduğundan emin olun
-- Console loglarını kontrol edin
-- Test sırasında browser'ı açık tutarak ne olduğunu gözlemleyebilirsiniz
 
 ## Notlar
 
-- Testler gerçek bir browser (Chrome) kullanır
-- Testler sırasında browser penceresi açılır ve kapanır
-- Testler sıralı çalıştırılabilir veya paralel çalıştırılabilir (JUnit 5 varsayılan olarak paralel çalıştırmayı destekler)
-- Her test bağımsızdır ve kendi setUp/tearDown metodlarına sahiptir
-
+- Testler frontend'in `http://localhost:5173` adresinde çalıştığını varsayar
+- CI/CD ortamında headless mod otomatik olarak etkinleştirilir
+- Her test case bağımsız çalışır ve kendi test verilerini oluşturur
+- Karar tablosu testi (Case 6) farklı koşul kombinasyonlarını test eder

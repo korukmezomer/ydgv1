@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Set;
 
@@ -39,6 +40,9 @@ class StoryServiceIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private StoryRepository storyRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     private User testUser;
     private Category testCategory;
 
@@ -52,6 +56,7 @@ class StoryServiceIntegrationTest extends BaseIntegrationTest {
         testUser.setUsername("testwriter");
         testUser.setFirstName("Test");
         testUser.setLastName("Writer");
+        testUser.setPassword(passwordEncoder.encode("password123"));
         testUser.setIsActive(true);
         testUser.setRoles(Set.of(writerRole));
         testUser = userRepository.save(testUser);

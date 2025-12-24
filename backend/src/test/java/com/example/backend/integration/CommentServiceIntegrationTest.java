@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Set;
 
@@ -33,6 +34,9 @@ class CommentServiceIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private CommentRepository commentRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     private User testUser;
     private Story testStory;
 
@@ -46,6 +50,7 @@ class CommentServiceIntegrationTest extends BaseIntegrationTest {
         testUser.setUsername("commenter");
         testUser.setFirstName("Test");
         testUser.setLastName("Commenter");
+        testUser.setPassword(passwordEncoder.encode("password123"));
         testUser.setIsActive(true);
         testUser.setRoles(Set.of(userRole));
         testUser = userRepository.save(testUser);
@@ -189,6 +194,7 @@ class CommentServiceIntegrationTest extends BaseIntegrationTest {
         writer.setEmail("writer@test.com");
         writer.setUsername("writer");
         writer.setFirstName("Writer");
+        writer.setPassword(passwordEncoder.encode("password123"));
         writer.setIsActive(true);
         writer.setRoles(Set.of(writerRole));
         return userRepository.save(writer);
@@ -200,6 +206,7 @@ class CommentServiceIntegrationTest extends BaseIntegrationTest {
         admin.setEmail("admin@test.com");
         admin.setUsername("admin");
         admin.setFirstName("Admin");
+        admin.setPassword(passwordEncoder.encode("password123"));
         admin.setIsActive(true);
         admin.setRoles(Set.of(adminRole));
         return userRepository.save(admin);

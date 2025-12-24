@@ -6,6 +6,7 @@ import com.example.backend.domain.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Set;
 
@@ -28,6 +29,9 @@ class LikeServiceIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private LikeRepository likeRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     private User testUser;
     private Story testStory;
 
@@ -41,6 +45,7 @@ class LikeServiceIntegrationTest extends BaseIntegrationTest {
         testUser.setUsername("liker");
         testUser.setFirstName("Test");
         testUser.setLastName("Liker");
+        testUser.setPassword(passwordEncoder.encode("password123"));
         testUser.setIsActive(true);
         testUser.setRoles(Set.of(userRole));
         testUser = userRepository.save(testUser);
@@ -125,6 +130,7 @@ class LikeServiceIntegrationTest extends BaseIntegrationTest {
         writer.setEmail("writer@test.com");
         writer.setUsername("writer");
         writer.setFirstName("Writer");
+        writer.setPassword(passwordEncoder.encode("password123"));
         writer.setIsActive(true);
         writer.setRoles(Set.of(writerRole));
         return userRepository.save(writer);
