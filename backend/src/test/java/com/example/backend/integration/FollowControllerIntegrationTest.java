@@ -68,7 +68,8 @@ class FollowControllerIntegrationTest extends BaseIntegrationTest {
         followed.setRoles(Set.of(userRole));
         followed = userRepository.save(followed);
         
-        followerToken = "Bearer " + jwtUtil.generateToken(follower.getEmail(), follower.getId(), follower.getRoles());
+        Set<String> followerRoles = follower.getRoles().stream().map(r -> r.getName()).collect(java.util.stream.Collectors.toSet());
+        followerToken = "Bearer " + jwtUtil.generateToken(follower.getEmail(), follower.getId(), followerRoles);
     }
 
     @Test

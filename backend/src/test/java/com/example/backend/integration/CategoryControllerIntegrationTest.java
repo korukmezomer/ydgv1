@@ -1,7 +1,6 @@
 package com.example.backend.integration;
 
 import com.example.backend.application.dto.request.CategoryCreateRequest;
-import com.example.backend.application.dto.response.CategoryResponse;
 import com.example.backend.domain.entity.Category;
 import com.example.backend.domain.repository.CategoryRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -110,8 +110,10 @@ class CommentControllerIntegrationTest extends BaseIntegrationTest {
         story.setIsActive(true);
         story = storyRepository.save(story);
         
-        userToken = "Bearer " + jwtUtil.generateToken(user.getEmail(), user.getId(), user.getRoles());
-        adminToken = "Bearer " + jwtUtil.generateToken(admin.getEmail(), admin.getId(), admin.getRoles());
+        Set<String> userRoles = user.getRoles().stream().map(r -> r.getName()).collect(java.util.stream.Collectors.toSet());
+        Set<String> adminRoles = admin.getRoles().stream().map(r -> r.getName()).collect(java.util.stream.Collectors.toSet());
+        userToken = "Bearer " + jwtUtil.generateToken(user.getEmail(), user.getId(), userRoles);
+        adminToken = "Bearer " + jwtUtil.generateToken(admin.getEmail(), admin.getId(), adminRoles);
     }
 
     @Test

@@ -97,8 +97,10 @@ class StoryControllerIntegrationTest extends BaseIntegrationTest {
         admin = userRepository.save(admin);
         
         // Token oluştur
-        writerToken = "Bearer " + jwtUtil.generateToken(writer.getEmail(), writer.getId(), writer.getRoles());
-        adminToken = "Bearer " + jwtUtil.generateToken(admin.getEmail(), admin.getId(), admin.getRoles());
+        Set<String> writerRoles = writer.getRoles().stream().map(r -> r.getName()).collect(java.util.stream.Collectors.toSet());
+        Set<String> adminRoles = admin.getRoles().stream().map(r -> r.getName()).collect(java.util.stream.Collectors.toSet());
+        writerToken = "Bearer " + jwtUtil.generateToken(writer.getEmail(), writer.getId(), writerRoles);
+        adminToken = "Bearer " + jwtUtil.generateToken(admin.getEmail(), admin.getId(), adminRoles);
         
         // Kategori oluştur
         category = new Category();
@@ -361,7 +363,8 @@ class StoryControllerIntegrationTest extends BaseIntegrationTest {
         });
         otherUser.setRoles(Set.of(userRole));
         otherUser = userRepository.save(otherUser);
-        String otherToken = "Bearer " + jwtUtil.generateToken(otherUser.getEmail(), otherUser.getId(), otherUser.getRoles());
+        Set<String> otherRoles = otherUser.getRoles().stream().map(r -> r.getName()).collect(java.util.stream.Collectors.toSet());
+        String otherToken = "Bearer " + jwtUtil.generateToken(otherUser.getEmail(), otherUser.getId(), otherRoles);
 
         StoryUpdateRequest request = new StoryUpdateRequest();
         request.setBaslik("Unauthorized Update");

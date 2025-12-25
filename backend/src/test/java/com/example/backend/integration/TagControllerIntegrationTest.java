@@ -1,7 +1,6 @@
 package com.example.backend.integration;
 
 import com.example.backend.application.dto.request.TagCreateRequest;
-import com.example.backend.application.dto.response.TagResponse;
 import com.example.backend.domain.entity.Tag;
 import com.example.backend.domain.repository.TagRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;

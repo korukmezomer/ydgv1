@@ -59,7 +59,8 @@ class NotificationControllerIntegrationTest extends BaseIntegrationTest {
         user.setRoles(Set.of(userRole));
         user = userRepository.save(user);
         
-        userToken = "Bearer " + jwtUtil.generateToken(user.getEmail(), user.getId(), user.getRoles());
+        Set<String> userRoles = user.getRoles().stream().map(r -> r.getName()).collect(java.util.stream.Collectors.toSet());
+        userToken = "Bearer " + jwtUtil.generateToken(user.getEmail(), user.getId(), userRoles);
     }
 
     @Test
