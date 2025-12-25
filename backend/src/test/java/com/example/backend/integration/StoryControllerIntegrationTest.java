@@ -377,7 +377,11 @@ class StoryControllerIntegrationTest extends BaseIntegrationTest {
                         .header("Authorization", otherToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(result -> {
+                    int status = result.getResponse().getStatus();
+                    assertTrue(status == 401 || status == 403, 
+                        "Expected 401 or 403 but got " + status);
+                });
     }
 
     private Story createTestStory(String title, Long userId) {

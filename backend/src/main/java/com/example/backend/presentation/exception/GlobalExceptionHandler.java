@@ -6,8 +6,11 @@ import com.example.backend.application.exception.ResourceNotFoundException;
 import com.example.backend.application.exception.UnauthorizedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -49,12 +52,37 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
+    // Spring Security exceptions - must be before RuntimeException handler
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<Map<String, String>> handleAuthenticationException(AuthenticationException e) {
+        Map<String, String> error = new HashMap<>();
+        error.put("message", "Authentication failed: " + e.getMessage());
+        error.put("status", HttpStatus.UNAUTHORIZED.toString());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleAccessDeniedException(AccessDeniedException e) {
+        Map<String, String> error = new HashMap<>();
+        error.put("message", "Access denied: " + e.getMessage());
+        error.put("status", HttpStatus.FORBIDDEN.toString());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException e) {
         Map<String, String> error = new HashMap<>();
         error.put("message", e.getMessage());
         error.put("status", HttpStatus.BAD_REQUEST.toString());
         return ResponseEntity.badRequest().body(error);
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<Map<String, String>> handleMissingRequestHeaderException(MissingRequestHeaderException e) {
+        Map<String, String> error = new HashMap<>();
+        error.put("message", "Missing required header: " + e.getHeaderName());
+        error.put("status", HttpStatus.UNAUTHORIZED.toString());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
