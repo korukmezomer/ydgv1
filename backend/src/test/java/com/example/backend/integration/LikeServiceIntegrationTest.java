@@ -80,8 +80,8 @@ class LikeServiceIntegrationTest extends BaseIntegrationTest {
         Long afterLikeCount = storyRepository.findById(testStory.getId())
                 .orElse(testStory).getLikeCount();
 
-        // Beğeniyi geri al
-        likeService.unlike(testUser.getId(), testStory.getId());
+        // Beğeniyi geri al (parametre sırası: storyId, userId)
+        likeService.unlike(testStory.getId(), testUser.getId());
 
         // Story'nin beğeni sayısı azalmalı
         Story updatedStory = storyRepository.findById(testStory.getId()).orElse(null);

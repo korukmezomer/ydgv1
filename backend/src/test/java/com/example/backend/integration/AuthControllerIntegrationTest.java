@@ -32,7 +32,6 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
     private MockMvc mockMvc;
 
-    @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
@@ -46,6 +45,9 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        // ObjectMapper'ı manuel olarak oluştur (Spring Boot 4.0.0'da otomatik bean olmayabilir)
+        this.objectMapper = new ObjectMapper();
+        
         // MockMvc'yi oluştur
         this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
         

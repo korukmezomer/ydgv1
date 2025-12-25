@@ -46,6 +46,7 @@ public class LikeServiceImpl implements LikeService {
         Like like = new Like();
         like.setStory(story);
         like.setUser(user);
+        like.setIsActive(true); // Beğeniyi aktif olarak işaretle
         likeRepository.save(like);
 
         // Haber beğeni sayısını artır
