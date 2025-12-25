@@ -172,11 +172,13 @@ class TagServiceImplTest {
         when(tagRepository.existsByName("New Name")).thenReturn(false);
         when(tagRepository.existsBySlug(anyString())).thenReturn(false);
 
-        Tag saved = new Tag();
-        saved.setId(tagId);
-        saved.setName("New Name");
-        saved.setSlug("new-name");
-        when(tagRepository.save(any(Tag.class))).thenReturn(saved);
+        // Mock save to return the updated tag
+        when(tagRepository.save(any(Tag.class))).thenAnswer(invocation -> {
+            Tag savedTag = invocation.getArgument(0);
+            savedTag.setName("New Name");
+            savedTag.setSlug("new-name");
+            return savedTag;
+        });
 
         TagResponse response = tagService.update(tagId, request);
 

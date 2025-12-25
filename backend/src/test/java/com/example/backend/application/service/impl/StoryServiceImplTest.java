@@ -174,10 +174,18 @@ class StoryServiceImplTest {
     @Test
     void findById_shouldReturnStoryResponse() {
         Long storyId = 1L;
+        User user = new User();
+        user.setId(1L);
+        user.setUsername("testuser");
+        Role role = new Role();
+        role.setName("USER");
+        user.setRoles(Set.of(role));
+
         Story story = new Story();
         story.setId(storyId);
         story.setTitle("Test Story");
         story.setStatus(Story.StoryStatus.YAYINLANDI);
+        story.setUser(user);
 
         when(storyRepository.findById(storyId)).thenReturn(Optional.of(story));
 
@@ -198,10 +206,18 @@ class StoryServiceImplTest {
     @Test
     void findBySlug_shouldReturnStoryResponse() {
         String slug = "test-story";
+        User user = new User();
+        user.setId(1L);
+        user.setUsername("testuser");
+        Role role = new Role();
+        role.setName("USER");
+        user.setRoles(Set.of(role));
+
         Story story = new Story();
         story.setId(1L);
         story.setTitle("Test Story");
         story.setSlug(slug);
+        story.setUser(user);
 
         when(storyRepository.findBySlug(slug)).thenReturn(Optional.of(story));
 

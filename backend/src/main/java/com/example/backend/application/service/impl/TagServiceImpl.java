@@ -75,14 +75,18 @@ public class TagServiceImpl implements TagService {
         Tag tag = tagRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Etiket bulunamadı"));
 
+        // Eğer isim değişiyorsa ve yeni isim zaten kullanılıyorsa hata fırlat
         if (!tag.getName().equals(request.getName()) &&
             tagRepository.existsByName(request.getName())) {
             throw new BadRequestException("Bu etiket adı zaten kullanılıyor");
         }
 
-        tag.setName(request.getName());
+        // İsim değiştiyse slug'ı da güncelle
         if (!tag.getName().equals(request.getName())) {
+            tag.setName(request.getName());
             tag.setSlug(generateUniqueSlug(request.getName()));
+        } else {
+            tag.setName(request.getName());
         }
 
         tag = tagRepository.save(tag);
