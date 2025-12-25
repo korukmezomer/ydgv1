@@ -62,13 +62,20 @@ pipeline {
             steps {
                 echo 'Unit testler çalıştırılıyor...'
                 dir('backend') {
-                    sh 'mvn test -Dtest="*ServiceImplTest"'
+                    sh 'mvn clean test jacoco:report -Dtest="*ServiceImplTest"'
                 }
             }
             post {
                 always {
                     // Test sonuçlarını kaydet
                     junit 'backend/target/surefire-reports/*.xml'
+                    // JaCoCo coverage raporunu kaydet
+                    publishHTML([
+                        reportDir: 'backend/target/site/jacoco',
+                        reportFiles: 'index.html',
+                        reportName: 'JaCoCo Coverage Report (Unit Tests)',
+                        keepAll: true
+                    ])
                 }
             }
         }
@@ -91,8 +98,9 @@ pipeline {
                 }
                 dir('backend') {
                     // Docker Compose network'ünden postgres'e erişim için Maven system property override
+                    // JaCoCo agent zaten prepare-agent ile hazırlanmış olmalı
                     sh '''
-                        mvn test -Dtest="*IntegrationTest" \
+                        mvn test jacoco:report -Dtest="*IntegrationTest" \
                             -Dspring.datasource.url=jdbc:postgresql://postgres:5432/yazilimdogrulama_test \
                             -Dspring.datasource.username=postgres \
                             -Dspring.datasource.password=postgres
@@ -102,6 +110,13 @@ pipeline {
             post {
                 always {
                     junit 'backend/target/surefire-reports/*.xml'
+                    // JaCoCo coverage raporunu kaydet
+                    publishHTML([
+                        reportDir: 'backend/target/site/jacoco',
+                        reportFiles: 'index.html',
+                        reportName: 'JaCoCo Coverage Report (Integration Tests)',
+                        keepAll: true
+                    ])
                 }
             }
         }
@@ -120,7 +135,7 @@ pipeline {
                     '''
                 }
                 dir('backend') {
-                    sh 'mvn test -Dtest="*Selenium*Test" -Dselenium.headless=true'
+                    sh 'mvn test jacoco:report -Dtest="*Selenium*Test" -Dselenium.headless=true'
                 }
             }
             post {
@@ -128,6 +143,31 @@ pipeline {
                     junit 'backend/target/surefire-reports/*.xml'
                     // Selenium screenshot'larını kaydet (eğer varsa)
                     archiveArtifacts artifacts: 'backend/target/screenshots/**/*', allowEmptyArchive: true
+                }
+            }
+        }
+        
+        stage('Code Coverage Report') {
+            steps {
+                echo 'Tüm testler için birleşik coverage raporu oluşturuluyor...'
+                dir('backend') {
+                    // Tüm testler için birleşik coverage raporu oluştur
+                    sh 'mvn jacoco:report-aggregate'
+                }
+            }
+            post {
+                always {
+                    // Birleşik coverage raporunu kaydet
+                    publishHTML([
+                        reportDir: 'backend/target/site/jacoco-aggregate',
+                        reportFiles: 'index.html',
+                        reportName: 'JaCoCo Coverage Report (All Tests)',
+                        keepAll: true
+                    ])
+                    // JaCoCo XML raporunu da kaydet (Jenkins JaCoCo plugin için)
+                    publishCoverage adapters: [
+                        jacocoAdapter('backend/target/site/jacoco-aggregate/jacoco.xml')
+                    ], sourceFileResolver: sourceFiles('STORE_LAST_BUILD')
                 }
             }
         }
