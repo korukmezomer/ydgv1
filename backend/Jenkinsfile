@@ -1,6 +1,15 @@
 pipeline {
     agent any
     
+    // Otomatik build tetikleme: GitHub'a push yapıldığında veya belirli aralıklarla
+    triggers {
+        // Poll SCM: Her 2 dakikada bir GitHub'ı kontrol et (yeni commit varsa build başlatır)
+        pollSCM('H/2 * * * *')
+        
+        // Alternatif: GitHub webhook kullanmak isterseniz, Jenkins'te "GitHub hook trigger for GITScm polling" seçeneğini işaretleyin
+        // ve bu satırı yorum satırı yapın
+    }
+    
     environment {
         // Maven ve Java PATH'leri (container'da mevcut)
         PATH = "/usr/bin:/opt/java/openjdk/bin:${env.PATH}"
