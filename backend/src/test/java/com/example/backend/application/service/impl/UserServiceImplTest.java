@@ -126,5 +126,134 @@ class UserServiceImplTest {
         assertFalse(user.getIsActive());
         verify(userRepository, times(1)).save(user);
     }
+
+    @Test
+    void register_shouldThrowExceptionWhenUsernameExists() {
+        UserRegistrationRequest request = new UserRegistrationRequest();
+        request.setEmail("test@example.com");
+        request.setUsername("existinguser");
+
+        when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
+        when(userRepository.existsByUsername(request.getUsername())).thenReturn(true);
+
+        assertThrows(RuntimeException.class, () -> userService.register(request));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void findById_shouldReturnUserResponse() {
+        Long userId = 1L;
+        User user = new User();
+        user.setId(userId);
+        user.setEmail("test@example.com");
+        user.setUsername("testuser");
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        UserResponse response = userService.findById(userId);
+
+        assertNotNull(response);
+        assertEquals(userId, response.getId());
+        assertEquals("test@example.com", response.getEmail());
+    }
+
+    @Test
+    void findById_shouldThrowExceptionWhenNotFound() {
+        Long userId = 999L;
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> userService.findById(userId));
+    }
+
+    @Test
+    void findByEmail_shouldReturnUserResponse() {
+        String email = "test@example.com";
+        User user = new User();
+        user.setId(1L);
+        user.setEmail(email);
+        user.setUsername("testuser");
+
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+
+        UserResponse response = userService.findByEmail(email);
+
+        assertNotNull(response);
+        assertEquals(email, response.getEmail());
+    }
+
+    @Test
+    void findByEmail_shouldThrowExceptionWhenNotFound() {
+        String email = "nonexistent@example.com";
+        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> userService.findByEmail(email));
+    }
+
+    @Test
+    void update_shouldThrowExceptionWhenEmailExists() {
+        Long userId = 1L;
+        User user = new User();
+        user.setId(userId);
+        user.setEmail("old@example.com");
+
+        UserUpdateRequest request = new UserUpdateRequest();
+        request.setEmail("existing@example.com");
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
+
+        assertThrows(RuntimeException.class, () -> userService.update(userId, request));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void update_shouldUpdatePasswordWhenProvided() {
+        Long userId = 1L;
+        User user = new User();
+        user.setId(userId);
+        user.setEmail("test@example.com");
+        user.setPassword("old_encoded_password");
+
+        UserUpdateRequest request = new UserUpdateRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("newpassword123");
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode("newpassword123")).thenReturn("new_encoded_password");
+
+        User saved = new User();
+        saved.setId(userId);
+        saved.setPassword("new_encoded_password");
+        when(userRepository.save(any(User.class))).thenReturn(saved);
+
+        userService.update(userId, request);
+
+        verify(passwordEncoder, times(1)).encode("newpassword123");
+        verify(userRepository, times(1)).save(any(User.class));
+    }
+
+    @Test
+    void delete_shouldSetUserInactive() {
+        Long userId = 1L;
+        User user = new User();
+        user.setId(userId);
+        user.setIsActive(true);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        userService.delete(userId);
+
+        assertFalse(user.getIsActive());
+        verify(userRepository, times(1)).save(user);
+    }
+
+    @Test
+    void delete_shouldThrowExceptionWhenUserNotFound() {
+        Long userId = 999L;
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> userService.delete(userId));
+        verify(userRepository, never()).save(any(User.class));
+    }
 }
 

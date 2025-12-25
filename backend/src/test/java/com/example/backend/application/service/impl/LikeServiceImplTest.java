@@ -95,5 +95,143 @@ class LikeServiceImplTest {
         assertEquals(4L, story.getLikeCount());
         verify(storyRepository, times(1)).save(story);
     }
+
+    @Test
+    void like_shouldThrowExceptionWhenAlreadyLiked() {
+        Long storyId = 1L;
+        Long userId = 2L;
+
+        when(likeRepository.existsByUserIdAndStoryId(userId, storyId)).thenReturn(true);
+
+        assertThrows(RuntimeException.class, () -> likeService.like(storyId, userId));
+        verify(likeRepository, never()).save(any(Like.class));
+    }
+
+    @Test
+    void like_shouldNotSendNotificationWhenLikingOwnStory() {
+        Long storyId = 1L;
+        Long userId = 2L;
+
+        when(likeRepository.existsByUserIdAndStoryId(userId, storyId)).thenReturn(false);
+
+        Story story = new Story();
+        story.setId(storyId);
+        story.setLikeCount(0L);
+        story.setTitle("Test Story");
+        User storyOwner = new User();
+        storyOwner.setId(userId); // Same user
+        story.setUser(storyOwner);
+
+        User user = new User();
+        user.setId(userId);
+        user.setUsername("owner");
+
+        when(storyRepository.findById(storyId)).thenReturn(Optional.of(story));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        likeService.like(storyId, userId);
+
+        assertEquals(1L, story.getLikeCount());
+        verify(likeRepository, times(1)).save(any(Like.class));
+        verify(notificationService, never()).createNotification(anyLong(), anyString(), anyString(), any(), anyLong(), any());
+    }
+
+    @Test
+    void unlike_shouldThrowExceptionWhenLikeNotFound() {
+        Long storyId = 1L;
+        Long userId = 2L;
+
+        when(likeRepository.findByUserIdAndStoryId(userId, storyId)).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> likeService.unlike(storyId, userId));
+        verify(likeRepository, never()).delete(any(Like.class));
+    }
+
+    @Test
+    void isLiked_shouldReturnTrueWhenLiked() {
+        Long storyId = 1L;
+        Long userId = 2L;
+
+        when(likeRepository.existsByUserIdAndStoryId(userId, storyId)).thenReturn(true);
+
+        boolean result = likeService.isLiked(storyId, userId);
+
+        assertTrue(result);
+        verify(likeRepository, times(1)).existsByUserIdAndStoryId(userId, storyId);
+    }
+
+    @Test
+    void isLiked_shouldReturnFalseWhenNotLiked() {
+        Long storyId = 1L;
+        Long userId = 2L;
+
+        when(likeRepository.existsByUserIdAndStoryId(userId, storyId)).thenReturn(false);
+
+        boolean result = likeService.isLiked(storyId, userId);
+
+        assertFalse(result);
+        verify(likeRepository, times(1)).existsByUserIdAndStoryId(userId, storyId);
+    }
+
+    @Test
+    void getLikeCount_shouldReturnCount() {
+        Long storyId = 1L;
+        Long expectedCount = 10L;
+
+        when(likeRepository.countActiveByStoryId(storyId)).thenReturn(expectedCount);
+
+        Long result = likeService.getLikeCount(storyId);
+
+        assertEquals(expectedCount, result);
+        verify(likeRepository, times(1)).countActiveByStoryId(storyId);
+    }
+
+    @Test
+    void like_shouldThrowExceptionWhenStoryNotFound() {
+        Long storyId = 999L;
+        Long userId = 2L;
+
+        when(likeRepository.existsByUserIdAndStoryId(userId, storyId)).thenReturn(false);
+        when(storyRepository.findById(storyId)).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> likeService.like(storyId, userId));
+        verify(likeRepository, never()).save(any(Like.class));
+    }
+
+    @Test
+    void like_shouldThrowExceptionWhenUserNotFound() {
+        Long storyId = 1L;
+        Long userId = 999L;
+
+        Story story = new Story();
+        story.setId(storyId);
+
+        when(likeRepository.existsByUserIdAndStoryId(userId, storyId)).thenReturn(false);
+        when(storyRepository.findById(storyId)).thenReturn(Optional.of(story));
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> likeService.like(storyId, userId));
+        verify(likeRepository, never()).save(any(Like.class));
+    }
+
+    @Test
+    void unlike_shouldNotDecreaseBelowZero() {
+        Long storyId = 1L;
+        Long userId = 2L;
+
+        Story story = new Story();
+        story.setId(storyId);
+        story.setLikeCount(0L); // Already at zero
+
+        Like like = new Like();
+        like.setStory(story);
+
+        when(likeRepository.findByUserIdAndStoryId(userId, storyId)).thenReturn(Optional.of(like));
+
+        likeService.unlike(storyId, userId);
+
+        assertEquals(0L, story.getLikeCount()); // Should stay at 0, not go negative
+        verify(storyRepository, times(1)).save(story);
+    }
 }
 
