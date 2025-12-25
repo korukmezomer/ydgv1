@@ -118,25 +118,31 @@ public class Case4c_StoryCreationWithLinkTest extends BaseSeleniumTest {
                         linkTextInput.sendKeys(linkText);
                     }
                     // Onayla
-                    WebElement confirmButton = driver.findElement(
-                        By.cssSelector("button:contains('OK'), button:contains('Ekle'), button[type='submit']")
-                    );
-                    confirmButton.click();
-                    Thread.sleep(500);
+                    try {
+                        WebElement confirmButton = wait.until(
+                            ExpectedConditions.elementToBeClickable(
+                                By.xpath("//button[contains(text(), 'OK') or contains(text(), 'Ekle')]")
+                            )
+                        );
+                        confirmButton.click();
+                        Thread.sleep(500);
+                    } catch (Exception e2) {
+                        // Onay butonu bulunamadı
+                    }
                 }
             } catch (Exception e) {
                 // Link butonu bulunamadı, Markdown formatında devam et
                 System.out.println("Link butonu bulunamadı, Markdown formatında devam ediliyor");
             }
             
-            // Story'yi kaydet
+            // Story'yi yayınla (Frontend'de "Kaydet" yok, sadece "Yayınla" var)
             Thread.sleep(1000);
-            WebElement saveButton = wait.until(
+            WebElement publishButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.cssSelector("button:contains('Kaydet'), button:contains('kaydet'), button[type='submit'], .save-button")
+                    By.cssSelector(".publish-button, button.publish-button")
                 )
             );
-            saveButton.click();
+            publishButton.click();
             
             // Story'nin kaydedildiğini doğrula
             Thread.sleep(3000);

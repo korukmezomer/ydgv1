@@ -68,7 +68,7 @@ public class Case5_CommentTest extends BaseSeleniumTest {
                 // Yorum gönder butonunu bul ve tıkla
                 WebElement submitCommentButton = wait.until(
                     ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("button:contains('Gönder'), button:contains('Yorum'), button[type='submit']")
+                        By.xpath("//button[contains(text(), 'Gönder') or contains(text(), 'Yorum')] | //button[@type='submit']")
                     )
                 );
                 submitCommentButton.click();

@@ -57,7 +57,7 @@ public class Case8_SaveStoryTest extends BaseSeleniumTest {
             try {
                 WebElement saveButton = wait.until(
                     ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("button:contains('Kaydet'), button:contains('kaydet'), [aria-label*='save'], [aria-label*='kaydet']")
+                        By.xpath("//button[contains(text(), 'Kaydet') or contains(text(), 'kaydet')] | //button[@aria-label[contains(., 'save') or contains(., 'kaydet')]]")
                     )
                 );
                 saveButton.click();

@@ -156,14 +156,14 @@ public class Case4f_StoryCreationWithListTest extends BaseSeleniumTest {
             );
             assertNotNull(listBlock, "Case 4f: Liste bloğu eklenemedi");
             
-            // Story'yi kaydet
+            // Story'yi yayınla (Frontend'de "Kaydet" yok, sadece "Yayınla" var)
             Thread.sleep(1000);
-            WebElement saveButton = wait.until(
+            WebElement publishButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.cssSelector("button:contains('Kaydet'), button:contains('kaydet'), button[type='submit'], .save-button")
+                    By.cssSelector(".publish-button, button.publish-button")
                 )
             );
-            saveButton.click();
+            publishButton.click();
             
             // Story'nin kaydedildiğini doğrula
             Thread.sleep(3000);

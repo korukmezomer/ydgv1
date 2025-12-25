@@ -92,14 +92,14 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
                 "Test amaçlı bu içerik en az 100 karakter olmalıdır.";
             contentInput.sendKeys(content);
             
-            // Kaydet butonunu bul ve tıkla
+            // Yayınla butonunu bul ve tıkla (Frontend'de "Kaydet" yok, sadece "Yayınla" var)
             Thread.sleep(1000);
-            WebElement saveButton = wait.until(
+            WebElement publishButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.cssSelector("button:contains('Kaydet'), button:contains('kaydet'), button[type='submit'], .save-button")
+                    By.cssSelector(".publish-button, button.publish-button")
                 )
             );
-            saveButton.click();
+            publishButton.click();
             
             // Story'nin kaydedildiğini doğrula
             Thread.sleep(3000);

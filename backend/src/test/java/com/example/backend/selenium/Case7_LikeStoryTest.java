@@ -57,7 +57,7 @@ public class Case7_LikeStoryTest extends BaseSeleniumTest {
             try {
                 WebElement likeButton = wait.until(
                     ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("button:contains('Beğen'), button:contains('beğen'), [aria-label*='like'], [aria-label*='beğen']")
+                        By.xpath("//button[contains(text(), 'Beğen') or contains(text(), 'beğen')] | //button[@aria-label[contains(., 'like') or contains(., 'beğen')]]")
                     )
                 );
                 likeButton.click();

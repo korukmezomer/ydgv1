@@ -140,11 +140,17 @@ public class Case4e_StoryCreationWithVideoTest extends BaseSeleniumTest {
                 Thread.sleep(1000);
                 
                 // Onayla butonunu tıkla
-                WebElement confirmButton = driver.findElement(
-                    By.cssSelector("button:contains('Ekle'), button:contains('OK'), button[type='submit']")
-                );
-                confirmButton.click();
-                Thread.sleep(2000);
+                try {
+                    WebElement confirmButton = wait.until(
+                        ExpectedConditions.elementToBeClickable(
+                            By.xpath("//button[contains(text(), 'Ekle') or contains(text(), 'OK')]")
+                        )
+                    );
+                    confirmButton.click();
+                    Thread.sleep(2000);
+                } catch (Exception e2) {
+                    // Onay butonu bulunamadı
+                }
             } catch (Exception e) {
                 // Prompt kullanılıyorsa, JavaScript ile simüle et
                 ((JavascriptExecutor) driver).executeScript(
@@ -166,14 +172,14 @@ public class Case4e_StoryCreationWithVideoTest extends BaseSeleniumTest {
                 System.out.println("Video bloğu görünmüyor, devam ediliyor");
             }
             
-            // Story'yi kaydet
+            // Story'yi yayınla (Frontend'de "Kaydet" yok, sadece "Yayınla" var)
             Thread.sleep(1000);
-            WebElement saveButton = wait.until(
+            WebElement publishButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.cssSelector("button:contains('Kaydet'), button:contains('kaydet'), button[type='submit'], .save-button")
+                    By.cssSelector(".publish-button, button.publish-button")
                 )
             );
-            saveButton.click();
+            publishButton.click();
             
             // Story'nin kaydedildiğini doğrula
             Thread.sleep(3000);

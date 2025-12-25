@@ -138,27 +138,27 @@ public class Case4b_StoryCreationWithCodeTest extends BaseSeleniumTest {
             // Kod bloğunu onayla (varsa onay butonu)
             Thread.sleep(1000);
             try {
-                WebElement confirmButton = driver.findElement(
-                    By.cssSelector("button:contains('Onayla'), button:contains('Confirm'), .confirm-button")
+                WebElement confirmButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.xpath("//button[contains(text(), 'Onayla') or contains(text(), 'Confirm')]")
+                    )
                 );
-                if (confirmButton != null) {
-                    confirmButton.click();
-                    Thread.sleep(500);
-                }
+                confirmButton.click();
+                Thread.sleep(500);
             } catch (Exception e) {
                 // Onay butonu yoksa, Enter tuşuna bas
                 codeBlock.sendKeys(Keys.ENTER);
                 Thread.sleep(500);
             }
             
-            // Story'yi kaydet
+            // Story'yi yayınla (Frontend'de "Kaydet" yok, sadece "Yayınla" var)
             Thread.sleep(1000);
-            WebElement saveButton = wait.until(
+            WebElement publishButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.cssSelector("button:contains('Kaydet'), button:contains('kaydet'), button[type='submit'], .save-button")
+                    By.cssSelector(".publish-button, button.publish-button")
                 )
             );
-            saveButton.click();
+            publishButton.click();
             
             // Story'nin kaydedildiğini doğrula
             Thread.sleep(3000);

@@ -92,15 +92,15 @@ public class Case6_StoryPublishDecisionTableTest extends BaseSeleniumTest {
             );
             contentInput.sendKeys(longContent);
             
-            // Story'yi kaydet
+            // Story'yi yayınla (Frontend'de "Kaydet" yok, sadece "Yayınla" var)
             Thread.sleep(1000);
             try {
-                WebElement saveButton = wait.until(
+                WebElement publishButton = wait.until(
                     ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("button:contains('Kaydet'), button[type='submit']")
+                        By.cssSelector(".publish-button, button.publish-button")
                     )
                 );
-                saveButton.click();
+                publishButton.click();
                 Thread.sleep(2000);
             } catch (Exception e) {
                 // Buton bulunamadı, manuel kayıt yapılmış olabilir
