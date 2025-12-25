@@ -80,9 +80,10 @@ public class CategoryServiceImpl implements CategoryService {
             throw new BadRequestException("Bu kategori adı zaten kullanılıyor");
         }
 
+        String oldName = category.getName();
         category.setName(request.getName());
         category.setDescription(request.getDescription());
-        if (!category.getName().equals(request.getName())) {
+        if (!oldName.equals(request.getName())) {
             category.setSlug(generateUniqueSlug(request.getName()));
         }
 

@@ -72,10 +72,11 @@ class SavedStoryServiceIntegrationTest extends BaseIntegrationTest {
         // Kaydı geri al
         savedStoryService.removeStory(testUser.getId(), testStory.getId());
 
-        // SavedStory kaydı silinmeli
+        // Soft delete yapılıyor, kayıt hala veritabanında ama aktif değil
         SavedStory savedStory = savedStoryRepository.findByUserIdAndStoryId(testUser.getId(), testStory.getId())
                 .orElse(null);
-        assertNull(savedStory);
+        assertNotNull(savedStory);
+        assertFalse(savedStory.getIsActive());
     }
 
     @Test

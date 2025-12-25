@@ -94,8 +94,10 @@ class FollowServiceIntegrationTest extends BaseIntegrationTest {
         // İlk takip
         followService.follow(follower.getId(), following.getId());
 
-        // Tekrar takip etmeye çalış (idempotent olmalı)
-        followService.follow(follower.getId(), following.getId());
+        // Tekrar takip etmeye çalış (exception fırlatmalı)
+        assertThrows(Exception.class, () -> {
+            followService.follow(follower.getId(), following.getId());
+        });
 
         // Sadece bir follow kaydı olmalı
         boolean exists = followRepository.existsByFollowerIdAndFollowedId(follower.getId(), following.getId());

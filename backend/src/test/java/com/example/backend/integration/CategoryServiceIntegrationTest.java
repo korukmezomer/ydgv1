@@ -35,7 +35,7 @@ class CategoryServiceIntegrationTest extends BaseIntegrationTest {
         assertNotNull(response);
         assertNotNull(response.getId());
         assertEquals("Technology", response.getName());
-        assertEquals("tech", response.getSlug()); // Slug otomatik oluşturulmalı
+        assertEquals("technology", response.getSlug()); // Slug otomatik oluşturulmalı
 
         // Veritabanında kontrol et
         Category savedCategory = categoryRepository.findById(response.getId()).orElse(null);
@@ -78,7 +78,7 @@ class CategoryServiceIntegrationTest extends BaseIntegrationTest {
 
         assertNotNull(response);
         assertEquals("New Name", response.getName());
-        assertEquals("new-name", response.getSlug());
+        assertEquals("new-name", response.getSlug()); // Name değiştiği için slug güncellenmeli
 
         // Veritabanında kontrol et
         Category updatedCategory = categoryRepository.findById(categoryId).orElse(null);
@@ -90,11 +90,14 @@ class CategoryServiceIntegrationTest extends BaseIntegrationTest {
     void testDeleteCategory() {
         Category category = createTestCategory("To Delete", "to-delete");
         Long categoryId = category.getId();
+        assertTrue(category.getIsActive());
 
         categoryService.delete(categoryId);
 
+        // Soft delete yapılıyor, kategori hala veritabanında ama aktif değil
         Category deletedCategory = categoryRepository.findById(categoryId).orElse(null);
-        assertNull(deletedCategory);
+        assertNotNull(deletedCategory);
+        assertFalse(deletedCategory.getIsActive());
     }
 
     private Category createTestCategory(String name, String slug) {

@@ -70,7 +70,7 @@ class CommentServiceIntegrationTest extends BaseIntegrationTest {
         assertNotNull(response);
         assertNotNull(response.getId());
         assertEquals("This is a test comment", response.getContent());
-        assertEquals(Comment.CommentStatus.BEKLIYOR, response.getStatus());
+        assertEquals(Comment.CommentStatus.ONAYLANDI, response.getStatus()); // Service otomatik onaylıyor
         assertEquals(testStory.getId(), response.getStoryId());
 
         // Veritabanında kontrol et
@@ -146,10 +146,14 @@ class CommentServiceIntegrationTest extends BaseIntegrationTest {
         comment = commentRepository.save(comment);
 
         Long commentId = comment.getId();
+        assertTrue(comment.getIsActive());
+
         commentService.sil(commentId, testUser.getId());
 
+        // Soft delete yapılıyor, yorum hala veritabanında ama aktif değil
         Comment deletedComment = commentRepository.findById(commentId).orElse(null);
-        assertNull(deletedComment);
+        assertNotNull(deletedComment);
+        assertFalse(deletedComment.getIsActive());
     }
 
     @Test

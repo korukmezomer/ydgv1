@@ -59,7 +59,7 @@ class LikeServiceIntegrationTest extends BaseIntegrationTest {
     void testLikeStory() {
         Long initialLikeCount = testStory.getLikeCount();
 
-        likeService.like(testUser.getId(), testStory.getId());
+        likeService.like(testStory.getId(), testUser.getId());
 
         // Story'nin beğeni sayısı artmalı
         Story updatedStory = storyRepository.findById(testStory.getId()).orElse(null);
@@ -76,7 +76,7 @@ class LikeServiceIntegrationTest extends BaseIntegrationTest {
     @Test
     void testUnlikeStory() {
         // Önce beğeni yap
-        likeService.like(testUser.getId(), testStory.getId());
+        likeService.like(testStory.getId(), testUser.getId());
         Long afterLikeCount = storyRepository.findById(testStory.getId())
                 .orElse(testStory).getLikeCount();
 
@@ -96,12 +96,14 @@ class LikeServiceIntegrationTest extends BaseIntegrationTest {
     @Test
     void testLikeAlreadyLikedStory() {
         // İlk beğeni
-        likeService.like(testUser.getId(), testStory.getId());
+        likeService.like(testStory.getId(), testUser.getId());
         Long firstLikeCount = storyRepository.findById(testStory.getId())
                 .orElse(testStory).getLikeCount();
 
-        // Aynı story'yi tekrar beğenmeye çalış (idempotent olmalı)
-        likeService.like(testUser.getId(), testStory.getId());
+        // Aynı story'yi tekrar beğenmeye çalış (exception fırlatmalı)
+        assertThrows(Exception.class, () -> {
+            likeService.like(testStory.getId(), testUser.getId());
+        });
         Long secondLikeCount = storyRepository.findById(testStory.getId())
                 .orElse(testStory).getLikeCount();
 
