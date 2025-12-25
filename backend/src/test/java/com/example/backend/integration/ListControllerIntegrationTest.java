@@ -1,7 +1,6 @@
 package com.example.backend.integration;
 
 import com.example.backend.application.dto.request.ListCreateRequest;
-import com.example.backend.application.dto.response.ListResponse;
 import com.example.backend.domain.entity.ListEntity;
 import com.example.backend.domain.entity.Role;
 import com.example.backend.domain.entity.Story;
@@ -10,23 +9,18 @@ import com.example.backend.domain.repository.ListRepository;
 import com.example.backend.domain.repository.RoleRepository;
 import com.example.backend.domain.repository.StoryRepository;
 import com.example.backend.domain.repository.UserRepository;
-import com.example.backend.infrastructure.security.JwtTokenProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
