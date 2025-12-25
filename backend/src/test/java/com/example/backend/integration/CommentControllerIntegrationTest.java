@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -55,9 +54,11 @@ class CommentControllerIntegrationTest extends BaseIntegrationTest {
     private ObjectMapper objectMapper;
     private User user;
     private User admin;
+    private User writer;
     private Story story;
     private String userToken;
     private String adminToken;
+    private String writerToken;
 
     @BeforeEach
     void setUp() {
@@ -93,7 +94,7 @@ class CommentControllerIntegrationTest extends BaseIntegrationTest {
         admin = userRepository.save(admin);
         
         // Writer oluştur
-        User writer = new User();
+        writer = new User();
         writer.setEmail("writer@test.com");
         writer.setUsername("writer");
         writer.setPassword(passwordEncoder.encode("password123"));
@@ -114,8 +115,10 @@ class CommentControllerIntegrationTest extends BaseIntegrationTest {
         
         Set<String> userRoles = user.getRoles().stream().map(r -> r.getName()).collect(java.util.stream.Collectors.toSet());
         Set<String> adminRoles = admin.getRoles().stream().map(r -> r.getName()).collect(java.util.stream.Collectors.toSet());
+        Set<String> writerRoles = writer.getRoles().stream().map(r -> r.getName()).collect(java.util.stream.Collectors.toSet());
         userToken = "Bearer " + jwtUtil.generateToken(user.getEmail(), user.getId(), userRoles);
         adminToken = "Bearer " + jwtUtil.generateToken(admin.getEmail(), admin.getId(), adminRoles);
+        writerToken = "Bearer " + jwtUtil.generateToken(writer.getEmail(), writer.getId(), writerRoles);
     }
 
     @Test
@@ -237,7 +240,7 @@ class CommentControllerIntegrationTest extends BaseIntegrationTest {
         createTestComment("Author Comment 2", story.getId(), user.getId());
 
         mockMvc.perform(get("/api/yorumlar/yazar/{yazarId}", user.getId())
-                        .header("Authorization", userToken)
+                        .header("Authorization", writerToken)
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
@@ -249,7 +252,7 @@ class CommentControllerIntegrationTest extends BaseIntegrationTest {
         createTestComment("Author Story Comment", story.getId(), user.getId());
 
         mockMvc.perform(get("/api/yorumlar/yazar/{yazarId}/haber/{haberId}", user.getId(), story.getId())
-                        .header("Authorization", userToken)
+                        .header("Authorization", writerToken)
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())

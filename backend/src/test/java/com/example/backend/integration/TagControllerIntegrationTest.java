@@ -1,18 +1,26 @@
 package com.example.backend.integration;
 
 import com.example.backend.application.dto.request.TagCreateRequest;
+import com.example.backend.domain.entity.Role;
 import com.example.backend.domain.entity.Tag;
+import com.example.backend.domain.entity.User;
+import com.example.backend.domain.repository.RoleRepository;
 import com.example.backend.domain.repository.TagRepository;
+import com.example.backend.domain.repository.UserRepository;
+import com.example.backend.infrastructure.util.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -26,8 +34,22 @@ class TagControllerIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private TagRepository tagRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
+    private User user;
+    private String userToken;
 
     @BeforeEach
     void setUp() {
@@ -38,6 +60,19 @@ class TagControllerIntegrationTest extends BaseIntegrationTest {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
                 .apply(SecurityMockMvcConfigurers.springSecurity())
                 .build();
+        
+        Role userRole = createRoleIfNotExists("USER");
+        
+        user = new User();
+        user.setEmail("taguser@test.com");
+        user.setUsername("taguser");
+        user.setPassword(passwordEncoder.encode("password123"));
+        user.setIsActive(true);
+        user.setRoles(Set.of(userRole));
+        user = userRepository.save(user);
+        
+        Set<String> userRoles = user.getRoles().stream().map(r -> r.getName()).collect(java.util.stream.Collectors.toSet());
+        userToken = "Bearer " + jwtUtil.generateToken(user.getEmail(), user.getId(), userRoles);
     }
 
     @Test
@@ -46,6 +81,7 @@ class TagControllerIntegrationTest extends BaseIntegrationTest {
         request.setName("Test Tag");
 
         mockMvc.perform(post("/api/etiketler")
+                        .header("Authorization", userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -100,6 +136,7 @@ class TagControllerIntegrationTest extends BaseIntegrationTest {
         request.setName("Updated Tag");
 
         mockMvc.perform(put("/api/etiketler/{id}", tag.getId())
+                        .header("Authorization", userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -110,7 +147,8 @@ class TagControllerIntegrationTest extends BaseIntegrationTest {
     void testDeleteTag() throws Exception {
         Tag tag = createTestTag("Delete Tag");
 
-        mockMvc.perform(delete("/api/etiketler/{id}", tag.getId()))
+        mockMvc.perform(delete("/api/etiketler/{id}", tag.getId())
+                        .header("Authorization", userToken))
                 .andExpect(status().isNoContent());
 
         Tag deleted = tagRepository.findById(tag.getId()).orElse(null);
@@ -126,6 +164,7 @@ class TagControllerIntegrationTest extends BaseIntegrationTest {
         request.setName("Duplicate Tag");
 
         mockMvc.perform(post("/api/etiketler")
+                        .header("Authorization", userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
@@ -143,6 +182,16 @@ class TagControllerIntegrationTest extends BaseIntegrationTest {
         tag.setSlug(name.toLowerCase().replace(" ", "-"));
         tag.setIsActive(true);
         return tagRepository.save(tag);
+    }
+
+    private Role createRoleIfNotExists(String roleName) {
+        return roleRepository.findByName(roleName)
+                .orElseGet(() -> {
+                    Role role = new Role();
+                    role.setName(roleName);
+                    role.setIsActive(true);
+                    return roleRepository.save(role);
+                });
     }
 }
 
