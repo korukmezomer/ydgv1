@@ -261,7 +261,7 @@ class CommentControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post("/api/yorumlar/haber/{haberId}", story.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     private Comment createTestComment(String content, Long storyId, Long userId) {

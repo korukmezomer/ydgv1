@@ -143,7 +143,7 @@ class LikeControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void testLikeStoryUnauthorized() throws Exception {
         mockMvc.perform(post("/api/begeniler/haber/{haberId}", story.getId()))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
