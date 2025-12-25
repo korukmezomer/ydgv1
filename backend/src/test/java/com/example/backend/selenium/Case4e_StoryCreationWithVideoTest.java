@@ -3,6 +3,7 @@ package com.example.backend.selenium;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 
@@ -124,7 +125,7 @@ public class Case4e_StoryCreationWithVideoTest extends BaseSeleniumTest {
             String videoUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
             
             // JavaScript ile prompt'u override et
-            ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
+            ((JavascriptExecutor) driver).executeScript(
                 "window.prompt = function() { return arguments[0]; }"
             );
             
@@ -146,7 +147,7 @@ public class Case4e_StoryCreationWithVideoTest extends BaseSeleniumTest {
                 Thread.sleep(2000);
             } catch (Exception e) {
                 // Prompt kullanılıyorsa, JavaScript ile simüle et
-                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
+                ((JavascriptExecutor) driver).executeScript(
                     "if (window.prompt) { window.prompt = function() { return '" + videoUrl + "'; }; }"
                 );
                 Thread.sleep(2000);
