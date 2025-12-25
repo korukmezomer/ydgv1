@@ -197,7 +197,11 @@ public class Case1_UserRegistrationTest extends BaseSeleniumTest {
             ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
         );
         submitButton.click();
-        Thread.sleep(3000);
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         
         // Aynı email ile tekrar kayıt dene
         driver.get(BASE_URL + "/register");
@@ -216,7 +220,11 @@ public class Case1_UserRegistrationTest extends BaseSeleniumTest {
             ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
         );
         submitButton.click();
-        Thread.sleep(2000);
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         
         // Hata mesajı kontrolü
         try {
