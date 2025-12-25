@@ -71,20 +71,8 @@ pipeline {
                     junit 'backend/target/surefire-reports/*.xml'
                     // JaCoCo coverage raporunu artifact olarak kaydet
                     archiveArtifacts artifacts: 'backend/target/site/jacoco/**/*', allowEmptyArchive: true
-                    // HTML Publisher Plugin yüklüyse HTML raporunu yayınla
-                    script {
-                        try {
-                            publishHTML([
-                                reportDir: 'backend/target/site/jacoco',
-                                reportFiles: 'index.html',
-                                reportName: 'JaCoCo Coverage Report (Unit Tests)',
-                                keepAll: true
-                            ])
-                        } catch (Exception e) {
-                            echo "⚠️ HTML Publisher Plugin yüklü değil. Coverage raporları artifact olarak kaydedildi."
-                            echo "📊 HTML Publisher Plugin'i yüklemek için: Jenkins > Manage Jenkins > Plugins > HTML Publisher Plugin"
-                        }
-                    }
+                    echo "📊 Coverage raporu oluşturuldu. Artifacts bölümünden 'target/site/jacoco/index.html' dosyasını indirebilirsiniz."
+                    echo "💡 HTML Publisher Plugin yüklerseniz, raporlar otomatik olarak görüntülenebilir."
                 }
             }
         }
@@ -121,19 +109,7 @@ pipeline {
                     junit 'backend/target/surefire-reports/*.xml'
                     // JaCoCo coverage raporunu artifact olarak kaydet
                     archiveArtifacts artifacts: 'backend/target/site/jacoco/**/*', allowEmptyArchive: true
-                    // HTML Publisher Plugin yüklüyse HTML raporunu yayınla
-                    script {
-                        try {
-                            publishHTML([
-                                reportDir: 'backend/target/site/jacoco',
-                                reportFiles: 'index.html',
-                                reportName: 'JaCoCo Coverage Report (Integration Tests)',
-                                keepAll: true
-                            ])
-                        } catch (Exception e) {
-                            echo "⚠️ HTML Publisher Plugin yüklü değil. Coverage raporları artifact olarak kaydedildi."
-                        }
-                    }
+                    echo "📊 Coverage raporu oluşturuldu. Artifacts bölümünden 'target/site/jacoco/index.html' dosyasını indirebilirsiniz."
                 }
             }
         }
@@ -176,21 +152,9 @@ pipeline {
                 always {
                     // Birleşik coverage raporunu artifact olarak kaydet
                     archiveArtifacts artifacts: 'backend/target/site/jacoco-aggregate/**/*', allowEmptyArchive: true
-                    // HTML Publisher Plugin yüklüyse HTML raporunu yayınla
-                    script {
-                        try {
-                            publishHTML([
-                                reportDir: 'backend/target/site/jacoco-aggregate',
-                                reportFiles: 'index.html',
-                                reportName: 'JaCoCo Coverage Report (All Tests)',
-                                keepAll: true
-                            ])
-                        } catch (Exception e) {
-                            echo "⚠️ HTML Publisher Plugin yüklü değil. Coverage raporları artifact olarak kaydedildi."
-                            echo "📊 HTML Publisher Plugin'i yüklemek için: Jenkins > Manage Jenkins > Plugins > HTML Publisher Plugin"
-                            echo "📁 Coverage raporlarına erişmek için: Build sayfasında 'Artifacts' bölümünden 'target/site/jacoco-aggregate/index.html' dosyasını indirebilirsiniz."
-                        }
-                    }
+                    echo "✅ Birleşik coverage raporu oluşturuldu!"
+                    echo "📁 Coverage raporuna erişmek için: Build sayfasında 'Artifacts' bölümünden 'target/site/jacoco-aggregate/index.html' dosyasını indirin."
+                    echo "💡 HTML Publisher Plugin yüklerseniz, raporlar otomatik olarak görüntülenebilir."
                 }
             }
         }
@@ -220,6 +184,19 @@ pipeline {
                     returnStdout: true
                 ).trim()
                 echo "Test dosyası sayısı: ${testResults}"
+                
+                // Coverage raporu bilgisi
+                script {
+                    try {
+                        def coverageFile = 'backend/target/site/jacoco-aggregate/index.html'
+                        if (fileExists(coverageFile)) {
+                            echo "✅ Coverage raporu oluşturuldu: ${coverageFile}"
+                            echo "📊 Coverage raporunu görmek için: Build sayfasında 'Artifacts' bölümünden 'target/site/jacoco-aggregate/index.html' dosyasını indirin."
+                        }
+                    } catch (Exception e) {
+                        echo "⚠️ Coverage raporu kontrolü atlandı"
+                    }
+                }
             }
         }
         success {
