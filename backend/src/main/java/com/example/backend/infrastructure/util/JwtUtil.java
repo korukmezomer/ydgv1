@@ -3,6 +3,8 @@ package com.example.backend.infrastructure.util;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +18,8 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
+    private static final Logger logger = LoggerFactory.getLogger(JwtUtil.class);
+
     @Value("${jwt.secret}")
     private String secret;
 
@@ -27,56 +31,110 @@ public class JwtUtil {
     }
 
     public String generateToken(String email, Long userId, java.util.Set<String> roller) {
-        return Jwts.builder()
-                .subject(email)
-                .claim("userId", userId)
-                .claim("roller", new java.util.ArrayList<>(roller))
-                .claim("kullaniciAdi", email.split("@")[0]) // Basit kullanıcı adı
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(getSigningKey())
-                .compact();
+        try {
+            logger.debug("Generating token for email: {}, userId: {}, roles: {}", email, userId, roller);
+            String token = Jwts.builder()
+                    .subject(email)
+                    .claim("userId", userId)
+                    .claim("roller", new java.util.ArrayList<>(roller))
+                    .claim("kullaniciAdi", email.split("@")[0]) // Basit kullanıcı adı
+                    .issuedAt(new Date())
+                    .expiration(new Date(System.currentTimeMillis() + expiration))
+                    .signWith(getSigningKey())
+                    .compact();
+            logger.debug("Token generated successfully");
+            return token;
+        } catch (Exception e) {
+            logger.error("Error generating token for email: {}", email, e);
+            throw new RuntimeException("Token oluşturulurken hata oluştu", e);
+        }
     }
 
     public String extractEmail(String token) {
-        return extractClaim(token, Claims::getSubject);
+        try {
+            return extractClaim(token, Claims::getSubject);
+        } catch (Exception e) {
+            logger.error("Error extracting email from token", e);
+            return null;
+        }
     }
 
     public Long extractUserId(String token) {
-        return extractClaim(token, claims -> claims.get("userId", Long.class));
+        try {
+            return extractClaim(token, claims -> claims.get("userId", Long.class));
+        } catch (Exception e) {
+            logger.error("Error extracting user ID from token", e);
+            return null;
+        }
     }
 
     public Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
+        try {
+            return extractClaim(token, Claims::getExpiration);
+        } catch (Exception e) {
+            logger.error("Error extracting expiration from token", e);
+            return null;
+        }
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
+        try {
+            final Claims claims = extractAllClaims(token);
+            return claimsResolver.apply(claims);
+        } catch (Exception e) {
+            logger.error("Error extracting claim from token", e);
+            throw new RuntimeException("Token'dan claim çıkarılırken hata oluştu", e);
+        }
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        try {
+            return Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        } catch (Exception e) {
+            logger.error("Error parsing token claims", e);
+            throw new RuntimeException("Token parse edilemedi", e);
+        }
     }
 
     public Boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+        try {
+            Date expiration = extractExpiration(token);
+            if (expiration == null) {
+                return true;
+            }
+            return expiration.before(new Date());
+        } catch (Exception e) {
+            logger.error("Error checking token expiration", e);
+            return true;
+        }
     }
 
     public Boolean validateToken(String token, String email) {
-        final String tokenEmail = extractEmail(token);
-        return (tokenEmail.equals(email) && !isTokenExpired(token));
+        try {
+            final String tokenEmail = extractEmail(token);
+            if (tokenEmail == null) {
+                logger.warn("Token email is null");
+                return false;
+            }
+            boolean isValid = tokenEmail.equals(email) && !isTokenExpired(token);
+            logger.debug("Token validation result for email {}: {}", email, isValid);
+            return isValid;
+        } catch (Exception e) {
+            logger.error("Error validating token for email: {}", email, e);
+            return false;
+        }
     }
 
-    @SuppressWarnings("unchecked")
     public List<String> extractRoles(String token) {
         try {
             Claims claims = extractAllClaims(token);
             Object rollerObj = claims.get("roller");
+            logger.debug("Extracting roles from token, rollerObj type: {}", rollerObj != null ? rollerObj.getClass().getName() : "null");
+            
             if (rollerObj != null) {
                 if (rollerObj instanceof List) {
                     List<?> rollerList = (List<?>) rollerObj;
@@ -91,16 +149,20 @@ public class JwtUtil {
                             })
                             .filter(role -> role != null && !role.isEmpty())
                             .collect(java.util.stream.Collectors.toList());
+                    logger.debug("Extracted roles from token: {}", roles);
                     return roles;
                 } else if (rollerObj instanceof String) {
                     // Handle single role as string
+                    logger.debug("Single role found: {}", rollerObj);
                     return Collections.singletonList((String) rollerObj);
+                } else {
+                    logger.warn("Unexpected role object type: {}", rollerObj.getClass().getName());
                 }
+            } else {
+                logger.warn("No roles found in token claims");
             }
         } catch (Exception e) {
-            // Log error for debugging
-            System.err.println("Error extracting roles from token: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error extracting roles from token", e);
         }
         return Collections.emptyList();
     }

@@ -4,6 +4,7 @@ import com.example.backend.infrastructure.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -60,6 +61,16 @@ public class SecurityConfig {
                 .requestMatchers("/api/haberler/**").permitAll() // Public haberler için
                 .requestMatchers("/api/kategoriler/**").permitAll()
                 .requestMatchers("/api/dosyalar/**").permitAll() // Dosya erişimi için
+                // Public GET endpoints
+                .requestMatchers(HttpMethod.GET, "/api/yorumlar/**").permitAll() // Comment read endpoints
+                .requestMatchers(HttpMethod.GET, "/api/etiketler/**").permitAll() // Tag read endpoints
+                .requestMatchers(HttpMethod.GET, "/api/listeler/*").permitAll() // List read by ID
+                .requestMatchers(HttpMethod.GET, "/api/listeler/slug/**").permitAll() // List read by slug
+                .requestMatchers(HttpMethod.GET, "/api/takip/*/takipci-sayisi").permitAll() // Follower count
+                .requestMatchers(HttpMethod.GET, "/api/takip/*/takip-edilen-sayisi").permitAll() // Following count
+                .requestMatchers(HttpMethod.GET, "/api/takip/*/takipciler").permitAll() // Followers list
+                .requestMatchers(HttpMethod.GET, "/api/takip/*/takip-edilenler").permitAll() // Following list
+                .requestMatchers(HttpMethod.GET, "/api/begeniler/haber/*/sayi").permitAll() // Like count
                 .anyRequest().authenticated()
             )
             .exceptionHandling(exceptions -> exceptions
