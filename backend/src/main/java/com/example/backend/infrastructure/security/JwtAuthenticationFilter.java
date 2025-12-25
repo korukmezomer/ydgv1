@@ -44,6 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     
                     // Rolleri token'dan çıkar
                     List<SimpleGrantedAuthority> authorities = extractAuthoritiesFromToken(token);
+                    logger.debug("Setting authentication for user: " + email + " with authorities: " + authorities);
                     
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             email,
@@ -52,6 +53,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     );
                     authToken.setDetails(userId); // User ID'yi details'e ekle
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    logger.debug("Authentication set in SecurityContext");
+                } else {
+                    logger.warn("Token validation failed for email: " + email);
+                }
+            } else {
+                if (email == null) {
+                    logger.warn("Email is null in token");
+                }
+                if (SecurityContextHolder.getContext().getAuthentication() != null) {
+                    logger.debug("Authentication already exists in SecurityContext");
                 }
             }
         } catch (Exception e) {
@@ -64,13 +75,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private List<SimpleGrantedAuthority> extractAuthoritiesFromToken(String token) {
         try {
             List<String> roller = jwtUtil.extractRoles(token);
+            logger.debug("Extracted roles from token: " + roller);
             if (roller != null && !roller.isEmpty()) {
-                return roller.stream()
-                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                List<SimpleGrantedAuthority> authorities = roller.stream()
+                        .map(role -> {
+                            String authority = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+                            logger.debug("Creating authority: " + authority);
+                            return new SimpleGrantedAuthority(authority);
+                        })
                         .collect(Collectors.toList());
+                logger.debug("Created authorities: " + authorities);
+                return authorities;
+            } else {
+                logger.warn("No roles found in token or roles list is empty");
             }
         } catch (Exception e) {
             logger.error("Failed to extract roles from token", e);
+            e.printStackTrace();
         }
         return Collections.emptyList();
     }

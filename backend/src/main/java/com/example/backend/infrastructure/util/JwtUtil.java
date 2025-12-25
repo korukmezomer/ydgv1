@@ -80,14 +80,27 @@ public class JwtUtil {
             if (rollerObj != null) {
                 if (rollerObj instanceof List) {
                     List<?> rollerList = (List<?>) rollerObj;
-                    return rollerList.stream()
-                            .map(obj -> obj != null ? obj.toString() : null)
-                            .filter(obj -> obj != null)
+                    List<String> roles = rollerList.stream()
+                            .map(obj -> {
+                                if (obj == null) return null;
+                                // Handle both String and other types
+                                if (obj instanceof String) {
+                                    return (String) obj;
+                                }
+                                return obj.toString();
+                            })
+                            .filter(role -> role != null && !role.isEmpty())
                             .collect(java.util.stream.Collectors.toList());
+                    return roles;
+                } else if (rollerObj instanceof String) {
+                    // Handle single role as string
+                    return Collections.singletonList((String) rollerObj);
                 }
             }
         } catch (Exception e) {
-            // Log and return empty list if extraction fails
+            // Log error for debugging
+            System.err.println("Error extracting roles from token: " + e.getMessage());
+            e.printStackTrace();
         }
         return Collections.emptyList();
     }
