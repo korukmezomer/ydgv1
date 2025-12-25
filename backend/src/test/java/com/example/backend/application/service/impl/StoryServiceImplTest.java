@@ -306,6 +306,10 @@ class StoryServiceImplTest {
 
         User owner = new User();
         owner.setId(userId);
+        owner.setUsername("owner");
+        Role role = new Role();
+        role.setName("WRITER");
+        owner.setRoles(Set.of(role));
 
         Story story = new Story();
         story.setId(storyId);
@@ -322,6 +326,7 @@ class StoryServiceImplTest {
         Story saved = new Story();
         saved.setId(storyId);
         saved.setTitle("New Title");
+        saved.setUser(owner);
         when(storyRepository.save(any(Story.class))).thenReturn(saved);
 
         StoryResponse response = storyService.update(storyId, userId, request);
