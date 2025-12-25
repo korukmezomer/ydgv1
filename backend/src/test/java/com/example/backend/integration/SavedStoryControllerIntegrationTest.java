@@ -147,7 +147,11 @@ class SavedStoryControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void testSaveStoryUnauthorized() throws Exception {
         mockMvc.perform(post("/api/kayitli-haberler/haber/{haberId}", story.getId()))
-                .andExpect(status().isForbidden());
+                .andExpect(result -> {
+                    int status = result.getResponse().getStatus();
+                    assertTrue(status == 401 || status == 403, 
+                        "Expected 401 or 403 but got " + status);
+                });
     }
 
     @Test

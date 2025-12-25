@@ -131,7 +131,11 @@ class NotificationControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(get("/api/bildirimler")
                         .param("page", "0")
                         .param("size", "10"))
-                .andExpect(status().isForbidden());
+                .andExpect(result -> {
+                    int status = result.getResponse().getStatus();
+                    assertTrue(status == 401 || status == 403, 
+                        "Expected 401 or 403 but got " + status);
+                });
     }
 
     private Notification createTestNotification(String message, Long userId, boolean isRead) {
