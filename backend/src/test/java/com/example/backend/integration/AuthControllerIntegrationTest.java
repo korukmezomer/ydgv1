@@ -9,6 +9,8 @@ import com.example.backend.domain.entity.User;
 import com.example.backend.domain.repository.RoleRepository;
 import com.example.backend.domain.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +49,9 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
     void setUp() {
         // ObjectMapper'ı manuel olarak oluştur (Spring Boot 4.0.0'da otomatik bean olmayabilir)
         this.objectMapper = new ObjectMapper();
+        // Java 8 time module'ünü ekle (LocalDateTime, LocalDate vb. için)
+        this.objectMapper.registerModule(new JavaTimeModule());
+        this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         
         // MockMvc'yi oluştur
         this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
