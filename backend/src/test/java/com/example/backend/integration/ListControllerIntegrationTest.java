@@ -9,6 +9,7 @@ import com.example.backend.domain.repository.ListRepository;
 import com.example.backend.domain.repository.RoleRepository;
 import com.example.backend.domain.repository.StoryRepository;
 import com.example.backend.domain.repository.UserRepository;
+import com.example.backend.infrastructure.util.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,10 +47,14 @@ class ListControllerIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
     private User user;
     private Story story;
+    private String userToken;
 
     @BeforeEach
     void setUp() {
@@ -86,6 +91,9 @@ class ListControllerIntegrationTest extends BaseIntegrationTest {
         story.setStatus(Story.StoryStatus.YAYINLANDI);
         story.setIsActive(true);
         story = storyRepository.save(story);
+        
+        Set<String> userRoles = user.getRoles().stream().map(r -> r.getName()).collect(java.util.stream.Collectors.toSet());
+        userToken = "Bearer " + jwtUtil.generateToken(user.getEmail(), user.getId(), userRoles);
     }
 
     @Test
@@ -96,7 +104,7 @@ class ListControllerIntegrationTest extends BaseIntegrationTest {
         request.setIsPrivate(false);
 
         mockMvc.perform(post("/api/listeler")
-                        .principal(() -> user.getEmail())
+                        .header("Authorization", userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -127,7 +135,7 @@ class ListControllerIntegrationTest extends BaseIntegrationTest {
         createTestList("List 2", user.getId());
 
         mockMvc.perform(get("/api/listeler")
-                        .principal(() -> user.getEmail())
+                        .header("Authorization", userToken)
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
@@ -143,7 +151,7 @@ class ListControllerIntegrationTest extends BaseIntegrationTest {
         request.setDescription("Updated description");
 
         mockMvc.perform(put("/api/listeler/{id}", list.getId())
-                        .principal(() -> user.getEmail())
+                        .header("Authorization", userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -155,7 +163,7 @@ class ListControllerIntegrationTest extends BaseIntegrationTest {
         ListEntity list = createTestList("Delete List", user.getId());
 
         mockMvc.perform(delete("/api/listeler/{id}", list.getId())
-                        .principal(() -> user.getEmail()))
+                        .header("Authorization", userToken))
                 .andExpect(status().isNoContent());
 
         ListEntity deletedList = listRepository.findById(list.getId()).orElse(null);
@@ -168,7 +176,7 @@ class ListControllerIntegrationTest extends BaseIntegrationTest {
         ListEntity list = createTestList("Add Story List", user.getId());
 
         mockMvc.perform(post("/api/listeler/{listeId}/haber/{haberId}", list.getId(), story.getId())
-                        .principal(() -> user.getEmail()))
+                        .header("Authorization", userToken))
                 .andExpect(status().isOk());
 
         ListEntity updatedList = listRepository.findById(list.getId()).orElse(null);
@@ -183,7 +191,7 @@ class ListControllerIntegrationTest extends BaseIntegrationTest {
         listRepository.save(list);
 
         mockMvc.perform(delete("/api/listeler/{listeId}/haber/{haberId}", list.getId(), story.getId())
-                        .principal(() -> user.getEmail()))
+                        .header("Authorization", userToken))
                 .andExpect(status().isOk());
 
         ListEntity updatedList = listRepository.findById(list.getId()).orElse(null);
@@ -199,7 +207,7 @@ class ListControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post("/api/listeler")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     private ListEntity createTestList(String name, Long userId) {

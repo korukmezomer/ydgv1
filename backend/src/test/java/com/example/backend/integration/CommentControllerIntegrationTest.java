@@ -179,7 +179,7 @@ class CommentControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(put("/api/yorumlar/{id}", comment.getId())
                         .header("Authorization", userToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("\"Updated content\""))
+                        .content("Updated content"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").value("Updated content"));
     }
@@ -261,7 +261,7 @@ class CommentControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post("/api/yorumlar/haber/{haberId}", story.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     private Comment createTestComment(String content, Long storyId, Long userId) {

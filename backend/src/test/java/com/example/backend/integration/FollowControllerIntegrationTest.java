@@ -167,7 +167,7 @@ class FollowControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void testFollowUnauthorized() throws Exception {
         mockMvc.perform(post("/api/takip/{takipEdilenId}", followed.getId()))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
