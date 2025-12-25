@@ -72,7 +72,7 @@ class StoryControllerIntegrationTest extends BaseIntegrationTest {
         // Rolleri oluştur
         Role writerRole = createRoleIfNotExists("WRITER");
         Role adminRole = createRoleIfNotExists("ADMIN");
-        Role userRole = createRoleIfNotExists("USER");
+        createRoleIfNotExists("USER");
         
         // Writer kullanıcı oluştur
         writer = new User();

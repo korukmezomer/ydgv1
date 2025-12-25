@@ -1,7 +1,6 @@
 package com.example.backend.integration;
 
 import com.example.backend.application.dto.request.CommentCreateRequest;
-import com.example.backend.application.dto.response.CommentResponse;
 import com.example.backend.domain.entity.Comment;
 import com.example.backend.domain.entity.Role;
 import com.example.backend.domain.entity.Story;

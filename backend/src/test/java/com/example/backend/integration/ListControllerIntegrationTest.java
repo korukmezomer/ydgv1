@@ -92,13 +92,6 @@ class ListControllerIntegrationTest extends BaseIntegrationTest {
         story.setStatus(Story.StoryStatus.YAYINLANDI);
         story.setIsActive(true);
         story = storyRepository.save(story);
-        
-        // Authentication oluştur
-        Set<SimpleGrantedAuthority> authorities = user.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName()))
-                .collect(Collectors.toSet());
-        authentication = new UsernamePasswordAuthenticationToken(
-                user.getEmail(), null, authorities);
     }
 
     @Test
