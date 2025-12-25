@@ -6,6 +6,8 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 
+import java.util.Random;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -89,6 +91,97 @@ public class Case2_UserLoginTest extends BaseSeleniumTest {
             
         } catch (Exception e) {
             fail("Case 2: Giriş işlemi başarısız oldu: " + e.getMessage());
+        }
+    }
+    
+    @Test
+    @DisplayName("Case 2 Negative: Yanlış şifre ile giriş yapılamamalı")
+    public void case2_Negative_WrongPassword() {
+        driver.get(BASE_URL + "/login");
+        waitForPageLoad();
+        
+        // Önce bir kullanıcı kaydet
+        driver.get(BASE_URL + "/register");
+        waitForPageLoad();
+        
+        Random random = new Random();
+        String randomSuffix = String.valueOf(random.nextInt(10000));
+        String email = "loginuser" + randomSuffix + "@example.com";
+        
+        WebElement firstNameInput = wait.until(
+            ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
+        );
+        firstNameInput.sendKeys("Login");
+        driver.findElement(By.id("lastName")).sendKeys("User");
+        driver.findElement(By.id("email")).sendKeys(email);
+        driver.findElement(By.id("username")).sendKeys("loginuser" + randomSuffix);
+        driver.findElement(By.id("password")).sendKeys("CorrectPassword123");
+        
+        WebElement submitButton = wait.until(
+            ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
+        );
+        submitButton.click();
+        Thread.sleep(3000);
+        
+        // Yanlış şifre ile giriş dene
+        driver.get(BASE_URL + "/login");
+        waitForPageLoad();
+        
+        WebElement emailInput = wait.until(
+            ExpectedConditions.presenceOfElementLocated(By.id("email"))
+        );
+        emailInput.sendKeys(email);
+        driver.findElement(By.id("password")).sendKeys("WrongPassword123");
+        
+        submitButton = wait.until(
+            ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
+        );
+        submitButton.click();
+        Thread.sleep(2000);
+        
+        // Hata mesajı kontrolü
+        try {
+            WebElement errorElement = driver.findElement(
+                By.cssSelector(".error, .text-red-500, [role='alert'], .alert-danger")
+            );
+            assertTrue(errorElement.isDisplayed() || driver.getCurrentUrl().contains("/login"),
+                "Case 2 Negative: Yanlış şifre ile giriş yapılmamalı");
+        } catch (Exception e) {
+            // Hata mesajı görünmüyorsa login sayfasında kalınmalı
+            assertTrue(driver.getCurrentUrl().contains("/login"),
+                "Case 2 Negative: Yanlış şifre ile login sayfasında kalınmalı");
+        }
+    }
+    
+    @Test
+    @DisplayName("Case 2 Negative: Olmayan kullanıcı ile giriş yapılamamalı")
+    public void case2_Negative_NonExistentUser() {
+        driver.get(BASE_URL + "/login");
+        waitForPageLoad();
+        
+        WebElement emailInput = wait.until(
+            ExpectedConditions.presenceOfElementLocated(By.id("email"))
+        );
+        emailInput.sendKeys("nonexistent@example.com");
+        driver.findElement(By.id("password")).sendKeys("Test123456");
+        
+        WebElement submitButton = wait.until(
+            ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
+        );
+        submitButton.click();
+        Thread.sleep(2000);
+        
+        // Hata mesajı kontrolü
+        try {
+            WebElement errorElement = driver.findElement(
+                By.cssSelector(".error, .text-red-500, [role='alert'], .alert-danger")
+            );
+            assertTrue(errorElement.isDisplayed() || driver.getCurrentUrl().contains("/login"),
+                "Case 2 Negative: Olmayan kullanıcı ile giriş yapılmamalı");
+        } catch (Exception e) {
+            // Hata mesajı görünmüyorsa login sayfasında kalınmalı
+            assertTrue(driver.getCurrentUrl().contains("/login"),
+                "Case 2 Negative: Olmayan kullanıcı ile login sayfasında kalınmalı");
         }
     }
 }

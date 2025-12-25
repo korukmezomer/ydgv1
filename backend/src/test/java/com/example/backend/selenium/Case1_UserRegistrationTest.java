@@ -97,5 +97,135 @@ public class Case1_UserRegistrationTest extends BaseSeleniumTest {
             fail("Case 1: Kayıt işlemi başarısız oldu: " + e.getMessage());
         }
     }
+    
+    @Test
+    @DisplayName("Case 1 Negative: Geçersiz email ile kayıt yapılamamalı")
+    public void case1_Negative_InvalidEmail() {
+        driver.get(BASE_URL + "/register");
+        waitForPageLoad();
+        
+        // Geçersiz email formatı
+        WebElement emailInput = wait.until(
+            ExpectedConditions.presenceOfElementLocated(By.id("email"))
+        );
+        emailInput.sendKeys("gecersiz-email");
+        
+        driver.findElement(By.id("firstName")).sendKeys("Test");
+        driver.findElement(By.id("lastName")).sendKeys("User");
+        driver.findElement(By.id("username")).sendKeys("testuser");
+        driver.findElement(By.id("password")).sendKeys("Test123456");
+        
+        WebElement submitButton = wait.until(
+            ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
+        );
+        submitButton.click();
+        
+        Thread.sleep(2000);
+        
+        // Hata mesajı veya form validasyonu kontrolü
+        try {
+            WebElement errorElement = driver.findElement(
+                By.cssSelector(".error, .text-red-500, [role='alert']")
+            );
+            assertTrue(errorElement.isDisplayed() || driver.getCurrentUrl().contains("/register"),
+                "Case 1 Negative: Geçersiz email ile kayıt yapılmamalı");
+        } catch (Exception e) {
+            // Form validasyonu HTML5 ile yapılıyorsa sayfa değişmeyebilir
+            assertTrue(driver.getCurrentUrl().contains("/register"),
+                "Case 1 Negative: Geçersiz email ile kayıt sayfasında kalınmalı");
+        }
+    }
+    
+    @Test
+    @DisplayName("Case 1 Negative: Eksik alanlar ile kayıt yapılamamalı")
+    public void case1_Negative_MissingFields() {
+        driver.get(BASE_URL + "/register");
+        waitForPageLoad();
+        
+        // Sadece email gir, diğer alanları boş bırak
+        WebElement emailInput = wait.until(
+            ExpectedConditions.presenceOfElementLocated(By.id("email"))
+        );
+        emailInput.sendKeys("test@example.com");
+        
+        WebElement submitButton = wait.until(
+            ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
+        );
+        
+        // Submit butonu disabled olabilir veya form validasyonu çalışabilir
+        try {
+            if (submitButton.isEnabled()) {
+                submitButton.click();
+                Thread.sleep(2000);
+                // Form validasyonu varsa sayfa değişmemeli
+                assertTrue(driver.getCurrentUrl().contains("/register"),
+                    "Case 1 Negative: Eksik alanlar ile kayıt yapılmamalı");
+            } else {
+                assertTrue(true, "Case 1 Negative: Submit butonu disabled (beklenen)");
+            }
+        } catch (Exception e) {
+            assertTrue(driver.getCurrentUrl().contains("/register"),
+                "Case 1 Negative: Eksik alanlar ile kayıt sayfasında kalınmalı");
+        }
+    }
+    
+    @Test
+    @DisplayName("Case 1 Negative: Zaten var olan email ile kayıt yapılamamalı")
+    public void case1_Negative_DuplicateEmail() {
+        // Önce bir kullanıcı kaydet
+        driver.get(BASE_URL + "/register");
+        waitForPageLoad();
+        
+        Random random = new Random();
+        String randomSuffix = String.valueOf(random.nextInt(10000));
+        String email = "duplicate" + randomSuffix + "@example.com";
+        
+        WebElement firstNameInput = wait.until(
+            ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
+        );
+        firstNameInput.sendKeys("First");
+        driver.findElement(By.id("lastName")).sendKeys("User");
+        driver.findElement(By.id("email")).sendKeys(email);
+        driver.findElement(By.id("username")).sendKeys("firstuser" + randomSuffix);
+        driver.findElement(By.id("password")).sendKeys("Test123456");
+        
+        WebElement submitButton = wait.until(
+            ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
+        );
+        submitButton.click();
+        Thread.sleep(3000);
+        
+        // Aynı email ile tekrar kayıt dene
+        driver.get(BASE_URL + "/register");
+        waitForPageLoad();
+        
+        firstNameInput = wait.until(
+            ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
+        );
+        firstNameInput.sendKeys("Second");
+        driver.findElement(By.id("lastName")).sendKeys("User");
+        driver.findElement(By.id("email")).sendKeys(email); // Aynı email
+        driver.findElement(By.id("username")).sendKeys("seconduser" + randomSuffix);
+        driver.findElement(By.id("password")).sendKeys("Test123456");
+        
+        submitButton = wait.until(
+            ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
+        );
+        submitButton.click();
+        Thread.sleep(2000);
+        
+        // Hata mesajı kontrolü
+        try {
+            WebElement errorElement = driver.findElement(
+                By.cssSelector(".error, .text-red-500, [role='alert'], .alert-danger")
+            );
+            assertTrue(errorElement.isDisplayed() || driver.getCurrentUrl().contains("/register"),
+                "Case 1 Negative: Duplicate email ile kayıt yapılmamalı");
+        } catch (Exception e) {
+            // Hata mesajı görünmüyorsa sayfa değişmemeli
+            assertTrue(driver.getCurrentUrl().contains("/register"),
+                "Case 1 Negative: Duplicate email ile kayıt sayfasında kalınmalı");
+        }
+    }
 }
 

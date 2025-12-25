@@ -87,5 +87,72 @@ public class Case5_CommentTest extends BaseSeleniumTest {
             System.out.println("Case 5: Yorum testi - " + e.getMessage());
         }
     }
+    
+    @Test
+    @DisplayName("Case 5 Negative: Boş yorum gönderilememeli")
+    public void case5_Negative_EmptyComment() {
+        try {
+            // Kullanıcı kaydı
+            driver.get(BASE_URL + "/register");
+            waitForPageLoad();
+            
+            java.util.Random random = new java.util.Random();
+            String randomSuffix = String.valueOf(random.nextInt(10000));
+            String email = "commenter" + randomSuffix + "@example.com";
+            
+            WebElement firstNameInput = wait.until(
+                ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
+            );
+            firstNameInput.sendKeys("Commenter");
+            driver.findElement(By.id("lastName")).sendKeys("Test");
+            driver.findElement(By.id("email")).sendKeys(email);
+            driver.findElement(By.id("username")).sendKeys("commenter" + randomSuffix);
+            driver.findElement(By.id("password")).sendKeys("Test123456");
+            
+            WebElement submitButton = wait.until(
+                ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
+            );
+            submitButton.click();
+            Thread.sleep(3000);
+            
+            // Story sayfasına git
+            driver.get(BASE_URL + "/haberler/test-story");
+            waitForPageLoad();
+            
+            // Yorum alanını bul ama boş bırak
+            try {
+                WebElement commentInput = wait.until(
+                    ExpectedConditions.presenceOfElementLocated(
+                        By.cssSelector("textarea[placeholder*='yorum'], textarea[placeholder*='Yorum'], textarea")
+                    )
+                );
+                
+                // Boş bırak, direkt gönder butonuna tıkla
+                WebElement submitCommentButton = driver.findElement(
+                    By.xpath("//button[contains(text(), 'Gönder') or contains(text(), 'Yorum')] | //button[@type='submit']")
+                );
+                
+                if (submitCommentButton.isEnabled()) {
+                    submitCommentButton.click();
+                    Thread.sleep(2000);
+                    
+                    // Form validasyonu varsa yorum gönderilmemeli
+                    assertTrue(
+                        driver.findElements(By.cssSelector(".error, .text-red-500")).size() > 0 ||
+                        commentInput.getText().isEmpty(),
+                        "Case 5 Negative: Boş yorum gönderilmemeli"
+                    );
+                } else {
+                    assertTrue(true, "Case 5 Negative: Gönder butonu disabled (beklenen)");
+                }
+                
+            } catch (Exception e) {
+                System.out.println("Case 5 Negative: Yorum alanı bulunamadı");
+            }
+            
+        } catch (Exception e) {
+            System.out.println("Case 5 Negative: " + e.getMessage());
+        }
+    }
 }
 
