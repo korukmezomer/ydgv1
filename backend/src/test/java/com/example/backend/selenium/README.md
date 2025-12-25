@@ -2,6 +2,13 @@
 
 Bu klasör, uygulamanın frontend kısmını test etmek için Selenium WebDriver testlerini içerir.
 
+## Öncelik Sistemi
+
+Testler öncelik tabanlı olarak organize edilmiştir:
+- **YÜKSEK**: En önemli testler, detaylı olarak test edilmelidir (Story oluşturma, kullanıcı kaydı, giriş)
+- **ORTA**: Önemli testler (Video, liste ekleme)
+- **DÜŞÜK**: İkincil testler
+
 ## Test Case'ler
 
 ### Case 1: Kullanıcı Kaydı (User Registration)
@@ -30,15 +37,85 @@ Bu klasör, uygulamanın frontend kısmını test etmek için Selenium WebDriver
   - Rolüne göre doğru dashboard'a yönlendirildiğini doğrula
   - Dashboard sayfasının yüklendiğini doğrula
 
-### Case 4: Story Oluşturma (Story Creation)
-- **Dosya**: `Case4_StoryCreationTest.java`
-- **Use Case**: WRITER rolündeki kullanıcı yeni story oluşturabilmeli
+### Case 4: Story Oluşturma (Story Creation) - Öncelik: YÜKSEK
+Story oluşturma en önemli testlerden biridir ve detaylı olarak test edilmelidir.
+
+#### Case 4a: Story Oluşturma - Sadece Yazı (Text Only)
+- **Dosya**: `Case4_StoryCreationTextOnlyTest.java`
+- **Öncelik**: YÜKSEK
+- **Use Case**: WRITER rolündeki kullanıcı sadece yazı içeren story oluşturabilmeli
 - **Senaryo**:
   - WRITER olarak giriş yap
   - Yeni story oluştur sayfasına git
-  - Başlık ve içerik gir
+  - Başlık gir
+  - Sadece yazı (text) bloğu ekle
+  - İçerik gir (en az 100 karakter)
   - Story'yi kaydet
-  - Story'nin oluşturulduğunu doğrula
+  - Story'nin oluşturulduğunu ve içeriğin doğru kaydedildiğini doğrula
+
+#### Case 4b: Story Oluşturma - Kod Bloğu Ekleme
+- **Dosya**: `Case4b_StoryCreationWithCodeTest.java`
+- **Öncelik**: YÜKSEK
+- **Use Case**: WRITER rolündeki kullanıcı kod bloğu içeren story oluşturabilmeli
+- **Senaryo**:
+  - WRITER olarak giriş yap
+  - Yeni story oluştur sayfasına git
+  - Başlık gir
+  - Kod bloğu ekle
+  - Kod içeriği gir
+  - Story'yi kaydet
+  - Story'nin kod bloğu ile birlikte oluşturulduğunu doğrula
+
+#### Case 4c: Story Oluşturma - Link Ekleme
+- **Dosya**: `Case4c_StoryCreationWithLinkTest.java`
+- **Öncelik**: YÜKSEK
+- **Use Case**: WRITER rolündeki kullanıcı link içeren story oluşturabilmeli
+- **Senaryo**:
+  - WRITER olarak giriş yap
+  - Yeni story oluştur sayfasına git
+  - Başlık gir
+  - Yazı bloğuna link ekle (Markdown formatında veya rich text)
+  - Story'yi kaydet
+  - Story'nin link ile birlikte oluşturulduğunu doğrula
+
+#### Case 4d: Story Oluşturma - Resim Ekleme
+- **Dosya**: `Case4d_StoryCreationWithImageTest.java`
+- **Öncelik**: YÜKSEK
+- **Use Case**: WRITER rolündeki kullanıcı resim içeren story oluşturabilmeli
+- **Senaryo**:
+  - WRITER olarak giriş yap
+  - Yeni story oluştur sayfasına git
+  - Başlık gir
+  - Resim bloğu ekle
+  - Resim yükle
+  - Story'yi kaydet
+  - Story'nin resim ile birlikte oluşturulduğunu doğrula
+
+#### Case 4e: Story Oluşturma - Video Ekleme
+- **Dosya**: `Case4e_StoryCreationWithVideoTest.java`
+- **Öncelik**: ORTA
+- **Use Case**: WRITER rolündeki kullanıcı video içeren story oluşturabilmeli
+- **Senaryo**:
+  - WRITER olarak giriş yap
+  - Yeni story oluştur sayfasına git
+  - Başlık gir
+  - Video bloğu ekle
+  - Video URL'si gir (YouTube, Vimeo vb.)
+  - Story'yi kaydet
+  - Story'nin video ile birlikte oluşturulduğunu doğrula
+
+#### Case 4f: Story Oluşturma - Liste Ekleme
+- **Dosya**: `Case4f_StoryCreationWithListTest.java`
+- **Öncelik**: ORTA
+- **Use Case**: WRITER rolündeki kullanıcı liste içeren story oluşturabilmeli
+- **Senaryo**:
+  - WRITER olarak giriş yap
+  - Yeni story oluştur sayfasına git
+  - Başlık gir
+  - Liste bloğu ekle (sıralı veya sırasız)
+  - Liste öğeleri gir
+  - Story'yi kaydet
+  - Story'nin liste ile birlikte oluşturulduğunu doğrula
 
 ### Case 5: Yorum Yapma (Comment Creation)
 - **Dosya**: `Case5_CommentTest.java`
