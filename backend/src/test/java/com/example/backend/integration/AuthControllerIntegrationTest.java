@@ -154,7 +154,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post("/api/auth/giris")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isUnauthorized()); // 401 Unauthorized (doğru HTTP status code)
     }
 
     private void createRoleIfNotExists(String roleName) {
