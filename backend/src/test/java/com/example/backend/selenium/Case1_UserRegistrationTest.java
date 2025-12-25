@@ -120,7 +120,11 @@ public class Case1_UserRegistrationTest extends BaseSeleniumTest {
         );
         submitButton.click();
         
-        Thread.sleep(2000);
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         
         // Hata mesajı veya form validasyonu kontrolü
         try {

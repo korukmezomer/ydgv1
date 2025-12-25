@@ -121,7 +121,11 @@ public class Case2_UserLoginTest extends BaseSeleniumTest {
             ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
         );
         submitButton.click();
-        Thread.sleep(3000);
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         
         // Yanlış şifre ile giriş dene
         driver.get(BASE_URL + "/login");
@@ -137,7 +141,11 @@ public class Case2_UserLoginTest extends BaseSeleniumTest {
             ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
         );
         submitButton.click();
-        Thread.sleep(2000);
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         
         // Hata mesajı kontrolü
         try {
@@ -169,7 +177,11 @@ public class Case2_UserLoginTest extends BaseSeleniumTest {
             ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
         );
         submitButton.click();
-        Thread.sleep(2000);
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         
         // Hata mesajı kontrolü
         try {
