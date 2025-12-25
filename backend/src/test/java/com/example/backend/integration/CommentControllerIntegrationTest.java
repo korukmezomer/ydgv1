@@ -274,6 +274,62 @@ class CommentControllerIntegrationTest extends BaseIntegrationTest {
                 });
     }
 
+    @Test
+    void testCreateCommentWithEmptyContent() throws Exception {
+        CommentCreateRequest request = new CommentCreateRequest();
+        request.setContent("");
+
+        mockMvc.perform(post("/api/yorumlar/haber/{haberId}", story.getId())
+                        .header("Authorization", userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testCreateCommentWithNullContent() throws Exception {
+        CommentCreateRequest request = new CommentCreateRequest();
+        request.setContent(null);
+
+        mockMvc.perform(post("/api/yorumlar/haber/{haberId}", story.getId())
+                        .header("Authorization", userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testCreateCommentWithVeryLongContent() throws Exception {
+        CommentCreateRequest request = new CommentCreateRequest();
+        request.setContent("a".repeat(10000)); // Very long content
+
+        mockMvc.perform(post("/api/yorumlar/haber/{haberId}", story.getId())
+                        .header("Authorization", userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(result -> {
+                    int status = result.getResponse().getStatus();
+                    assertTrue(status == 201 || status == 400, 
+                        "Expected 201 or 400 but got " + status);
+                });
+    }
+
+    @Test
+    void testFindByHaberIdWithInvalidId() throws Exception {
+        mockMvc.perform(get("/api/yorumlar/haber/{haberId}", -1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void testFindByHaberIdSayfaliWithInvalidPagination() throws Exception {
+        mockMvc.perform(get("/api/yorumlar/haber/{haberId}/sayfali", story.getId())
+                        .param("page", "-1")
+                        .param("size", "-1"))
+                .andExpect(status().isBadRequest()); // Spring validation rejects invalid pagination
+    }
+
     private Comment createTestComment(String content, Long storyId, Long userId) {
         Comment comment = new Comment();
         comment.setContent(content);

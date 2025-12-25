@@ -353,6 +353,51 @@ class StoryControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    void testCreateStoryWithEmptyTitle() throws Exception {
+        StoryCreateRequest request = new StoryCreateRequest();
+        request.setBaslik("");
+        request.setIcerik("Content");
+
+        mockMvc.perform(post("/api/haberler")
+                        .header("Authorization", writerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testCreateStoryWithNullContent() throws Exception {
+        StoryCreateRequest request = new StoryCreateRequest();
+        request.setBaslik("Title");
+        request.setIcerik(null);
+
+        mockMvc.perform(post("/api/haberler")
+                        .header("Authorization", writerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testFindBySlugWithSpecialCharacters() throws Exception {
+        Story story = createTestStory("Test Story", writer.getId());
+        story.setSlug("test-story-with-special-chars-123");
+        storyRepository.save(story);
+
+        mockMvc.perform(get("/api/haberler/slug/{slug}", story.getSlug()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.slug").value(story.getSlug()));
+    }
+
+    @Test
+    void testFindAllWithInvalidPagination() throws Exception {
+        mockMvc.perform(get("/api/haberler")
+                        .param("page", "-1")
+                        .param("size", "-1"))
+                .andExpect(status().isBadRequest()); // Spring validation rejects invalid pagination
+    }
+
+    @Test
     void testUpdateStoryUnauthorized() throws Exception {
         Story story = createTestStory("Unauthorized Update", writer.getId());
         

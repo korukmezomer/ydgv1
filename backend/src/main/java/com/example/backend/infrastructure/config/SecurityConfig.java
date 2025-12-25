@@ -71,6 +71,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/takip/*/takipciler").permitAll() // Followers list
                 .requestMatchers(HttpMethod.GET, "/api/takip/*/takip-edilenler").permitAll() // Following list
                 .requestMatchers(HttpMethod.GET, "/api/begeniler/haber/*/sayi").permitAll() // Like count
+                .requestMatchers(HttpMethod.GET, "/api/kullanicilar/**").permitAll() // User read endpoints
+                .requestMatchers(HttpMethod.GET, "/api/yazar-profilleri/**").permitAll() // Author profile read endpoints
                 .anyRequest().authenticated()
             )
             .exceptionHandling(exceptions -> exceptions
