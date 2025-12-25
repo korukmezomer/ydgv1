@@ -8,7 +8,9 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.function.Function;
 
 @Component
@@ -69,5 +71,24 @@ public class JwtUtil {
         final String tokenEmail = extractEmail(token);
         return (tokenEmail.equals(email) && !isTokenExpired(token));
     }
-}
 
+    @SuppressWarnings("unchecked")
+    public List<String> extractRoles(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+            Object rollerObj = claims.get("roller");
+            if (rollerObj != null) {
+                if (rollerObj instanceof List) {
+                    List<?> rollerList = (List<?>) rollerObj;
+                    return rollerList.stream()
+                            .map(obj -> obj != null ? obj.toString() : null)
+                            .filter(obj -> obj != null)
+                            .collect(java.util.stream.Collectors.toList());
+                }
+            }
+        } catch (Exception e) {
+            // Log and return empty list if extraction fails
+        }
+        return Collections.emptyList();
+    }
+}

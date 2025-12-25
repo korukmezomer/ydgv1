@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -43,13 +42,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (jwtUtil.validateToken(token, email)) {
                     Long userId = jwtUtil.extractUserId(token);
                     
-                    // Basit authentication - gerçek uygulamada kullanıcıyı DB'den çekip rollerini almalısınız
+                    // Rolleri token'dan çıkar
+                    List<SimpleGrantedAuthority> authorities = extractAuthoritiesFromToken(token);
+                    
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             email,
                             null,
-                            Collections.emptyList() // Roller burada set edilebilir
+                            authorities
                     );
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    authToken.setDetails(userId); // User ID'yi details'e ekle
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
@@ -58,6 +59,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private List<SimpleGrantedAuthority> extractAuthoritiesFromToken(String token) {
+        try {
+            List<String> roller = jwtUtil.extractRoles(token);
+            if (roller != null && !roller.isEmpty()) {
+                return roller.stream()
+                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                        .collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            logger.error("Failed to extract roles from token", e);
+        }
+        return Collections.emptyList();
     }
 }
 
