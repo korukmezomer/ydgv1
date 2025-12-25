@@ -157,17 +157,15 @@ pipeline {
             }
             post {
                 always {
-                    // Birleşik coverage raporunu kaydet
-                    publishHTML([
-                        reportDir: 'backend/target/site/jacoco-aggregate',
-                        reportFiles: 'index.html',
-                        reportName: 'JaCoCo Coverage Report (All Tests)',
-                        keepAll: true
-                    ])
-                    // JaCoCo XML raporunu da kaydet (Jenkins JaCoCo plugin için)
-                    publishCoverage adapters: [
-                        jacocoAdapter('backend/target/site/jacoco-aggregate/jacoco.xml')
-                    ], sourceFileResolver: sourceFiles('STORE_LAST_BUILD')
+                    // Birleşik coverage raporunu kaydet (HTML Publisher Plugin gerekli)
+                    script {
+                        publishHTML([
+                            reportDir: 'backend/target/site/jacoco-aggregate',
+                            reportFiles: 'index.html',
+                            reportName: 'JaCoCo Coverage Report (All Tests)',
+                            keepAll: true
+                        ])
+                    }
                 }
             }
         }
