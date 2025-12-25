@@ -198,9 +198,36 @@ mvn test -Dtest="*Selenium*Test"
 mvn test -Dtest="*Selenium*Test" -Dselenium.headless=true
 ```
 
+## Negative Test Cases (Olumsuz Senaryolar)
+
+Tüm önemli test case'ler için negative (olumsuz) senaryolar da test edilmektedir:
+
+### Case 1 Negative Test Cases:
+- **Geçersiz Email**: Geçersiz email formatı ile kayıt yapılamamalı
+- **Eksik Alanlar**: Zorunlu alanlar boş bırakıldığında kayıt yapılamamalı
+- **Duplicate Email**: Zaten var olan email ile kayıt yapılamamalı
+
+### Case 2 Negative Test Cases:
+- **Yanlış Şifre**: Yanlış şifre ile giriş yapılamamalı
+- **Olmayan Kullanıcı**: Sistemde olmayan kullanıcı ile giriş yapılamamalı
+
+### Case 4a Negative Test Cases:
+- **Boş Başlık**: Başlık olmadan story oluşturulamamalı
+- **Yetersiz İçerik**: 100 karakterden kısa içerik ile story oluşturulamamalı
+
+### Case 5 Negative Test Cases:
+- **Boş Yorum**: Boş yorum gönderilememeli
+
+### Case 7 Negative Test Cases:
+- **Zaten Beğenilmiş**: Zaten beğenilmiş story tekrar beğenilememeli
+
+### Case 8 Negative Test Cases:
+- **Zaten Kaydedilmiş**: Zaten kaydedilmiş story tekrar kaydedilememeli
+
 ## Notlar
 
 - Testler frontend'in `http://localhost:5173` adresinde çalıştığını varsayar
 - CI/CD ortamında headless mod otomatik olarak etkinleştirilir
 - Her test case bağımsız çalışır ve kendi test verilerini oluşturur
 - Karar tablosu testi (Case 6) farklı koşul kombinasyonlarını test eder
+- Negative test case'ler form validasyonu, hata mesajları ve yetki kontrollerini test eder
