@@ -220,16 +220,28 @@ pipeline {
                 ).trim()
                 echo "Test dosyası sayısı: ${testResults}"
                 
-                // Coverage raporu bilgisi
+                // Coverage raporu bilgisi ve artifact kaydetme
                 script {
                     try {
                         def coverageFile = 'backend/target/site/jacoco-aggregate/index.html'
                         if (fileExists(coverageFile)) {
                             echo "✅ Coverage raporu oluşturuldu: ${coverageFile}"
-                            echo "📊 Coverage raporunu görmek için: Build sayfasında 'Artifacts' bölümünden 'target/site/jacoco-aggregate/index.html' dosyasını indirin."
+                            // Global post'ta da artifact kaydet (Jenkins UI'da görünmesi için)
+                            archiveArtifacts artifacts: 'backend/target/site/jacoco-aggregate/**/*', allowEmptyArchive: false, fingerprint: true
+                            echo "📊 Coverage raporu artifact olarak kaydedildi!"
+                            echo "📁 Coverage raporunu görmek için: Build sayfasında 'Artifacts' bölümünden 'backend/target/site/jacoco-aggregate/index.html' dosyasını indirin."
+                        } else {
+                            // Alternatif: Normal jacoco raporunu kaydet
+                            def normalCoverageFile = 'backend/target/site/jacoco/index.html'
+                            if (fileExists(normalCoverageFile)) {
+                                archiveArtifacts artifacts: 'backend/target/site/jacoco/**/*', allowEmptyArchive: false, fingerprint: true
+                                echo "📊 Coverage raporu (normal) artifact olarak kaydedildi!"
+                            } else {
+                                echo "⚠️ Coverage raporu bulunamadı"
+                            }
                         }
                     } catch (Exception e) {
-                        echo "⚠️ Coverage raporu kontrolü atlandı"
+                        echo "⚠️ Coverage raporu kontrolü atlandı: ${e.getMessage()}"
                     }
                 }
             }
