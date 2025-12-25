@@ -69,10 +69,15 @@ pipeline {
                 always {
                     // Test sonuçlarını kaydet
                     junit 'backend/target/surefire-reports/*.xml'
-                    // JaCoCo coverage raporunu artifact olarak kaydet
-                    archiveArtifacts artifacts: 'backend/target/site/jacoco/**/*', allowEmptyArchive: true
-                    echo "📊 Coverage raporu oluşturuldu. Artifacts bölümünden 'target/site/jacoco/index.html' dosyasını indirebilirsiniz."
-                    echo "💡 HTML Publisher Plugin yüklerseniz, raporlar otomatik olarak görüntülenebilir."
+                    // JaCoCo coverage raporunu artifact olarak kaydet (sadece dosya varsa)
+                    script {
+                        if (fileExists('backend/target/site/jacoco/index.html')) {
+                            archiveArtifacts artifacts: 'backend/target/site/jacoco/**/*', allowEmptyArchive: false
+                            echo "📊 Coverage raporu artifact olarak kaydedildi."
+                        } else {
+                            echo "⚠️ Coverage raporu bulunamadı (Unit Tests)"
+                        }
+                    }
                 }
             }
         }
@@ -107,9 +112,15 @@ pipeline {
             post {
                 always {
                     junit 'backend/target/surefire-reports/*.xml'
-                    // JaCoCo coverage raporunu artifact olarak kaydet
-                    archiveArtifacts artifacts: 'backend/target/site/jacoco/**/*', allowEmptyArchive: true
-                    echo "📊 Coverage raporu oluşturuldu. Artifacts bölümünden 'target/site/jacoco/index.html' dosyasını indirebilirsiniz."
+                    // JaCoCo coverage raporunu artifact olarak kaydet (sadece dosya varsa)
+                    script {
+                        if (fileExists('backend/target/site/jacoco/index.html')) {
+                            archiveArtifacts artifacts: 'backend/target/site/jacoco/**/*', allowEmptyArchive: false
+                            echo "📊 Coverage raporu artifact olarak kaydedildi."
+                        } else {
+                            echo "⚠️ Coverage raporu bulunamadı (Integration Tests)"
+                        }
+                    }
                 }
             }
         }
@@ -146,13 +157,37 @@ pipeline {
                 dir('backend') {
                     // Tüm testler için birleşik coverage raporu oluştur
                     sh 'mvn jacoco:report-aggregate'
+                    
+                    // Dosyanın oluştuğunu kontrol et
+                    sh '''
+                        if [ -f "target/site/jacoco-aggregate/index.html" ]; then
+                            echo "✅ Coverage raporu başarıyla oluşturuldu"
+                            ls -la target/site/jacoco-aggregate/
+                        else
+                            echo "⚠️ Coverage raporu bulunamadı, jacoco:report çalıştırılıyor..."
+                            mvn jacoco:report
+                        fi
+                    '''
                 }
             }
             post {
                 always {
-                    // Birleşik coverage raporunu artifact olarak kaydet
-                    archiveArtifacts artifacts: 'backend/target/site/jacoco-aggregate/**/*', allowEmptyArchive: true
-                    echo "✅ Birleşik coverage raporu oluşturuldu!"
+                    script {
+                        // Dosyanın varlığını kontrol et ve artifact olarak kaydet
+                        def coverageFile = 'backend/target/site/jacoco-aggregate/index.html'
+                        if (fileExists(coverageFile)) {
+                            archiveArtifacts artifacts: 'backend/target/site/jacoco-aggregate/**/*', allowEmptyArchive: false
+                            echo "✅ Birleşik coverage raporu artifact olarak kaydedildi!"
+                        } else {
+                            // Alternatif: Normal jacoco raporunu kaydet
+                            if (fileExists('backend/target/site/jacoco/index.html')) {
+                                archiveArtifacts artifacts: 'backend/target/site/jacoco/**/*', allowEmptyArchive: false
+                                echo "✅ Coverage raporu (normal) artifact olarak kaydedildi!"
+                            } else {
+                                echo "⚠️ Coverage raporu bulunamadı, artifact kaydedilemedi"
+                            }
+                        }
+                    }
                     echo "📁 Coverage raporuna erişmek için: Build sayfasında 'Artifacts' bölümünden 'target/site/jacoco-aggregate/index.html' dosyasını indirin."
                     echo "💡 HTML Publisher Plugin yüklerseniz, raporlar otomatik olarak görüntülenebilir."
                 }
