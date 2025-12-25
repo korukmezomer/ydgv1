@@ -58,7 +58,8 @@ public class Case2_UserLoginTest extends BaseSeleniumTest {
                 By.cssSelector("button[type='submit']")
             )
         );
-        submitButton.click();
+        WebElement form = driver.findElement(By.tagName("form"));
+        safeSubmitForm(submitButton, form);
         
         // API çağrısının tamamlanmasını bekle
         try {
@@ -120,7 +121,8 @@ public class Case2_UserLoginTest extends BaseSeleniumTest {
         WebElement submitButton = wait.until(
             ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
         );
-        submitButton.click();
+        WebElement form = driver.findElement(By.tagName("form"));
+        safeSubmitForm(submitButton, form);
         try {
             Thread.sleep(3000);
         } catch (InterruptedException e) {
@@ -176,7 +178,8 @@ public class Case2_UserLoginTest extends BaseSeleniumTest {
         WebElement submitButton = wait.until(
             ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
         );
-        submitButton.click();
+        WebElement form = driver.findElement(By.tagName("form"));
+        safeSubmitForm(submitButton, form);
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {

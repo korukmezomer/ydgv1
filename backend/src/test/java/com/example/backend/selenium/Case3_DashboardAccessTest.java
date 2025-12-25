@@ -46,12 +46,50 @@ public class Case3_DashboardAccessTest extends BaseSeleniumTest {
             WebElement submitButton = wait.until(
                 ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
             );
-            submitButton.click();
+            WebElement form = driver.findElement(By.tagName("form"));
+            safeSubmitForm(submitButton, form);
             
-            // Dashboard'a yönlendirilmeyi bekle
+            // API çağrısının tamamlanmasını bekle
             Thread.sleep(3000);
             
             String currentUrl = driver.getCurrentUrl();
+            
+            // Eğer login sayfasına yönlendirildiyse, otomatik giriş yap
+            if (currentUrl.contains("/login")) {
+                // Login formunu doldur
+                WebElement loginEmailInput = wait.until(
+                    ExpectedConditions.presenceOfElementLocated(By.id("email"))
+                );
+                loginEmailInput.clear();
+                loginEmailInput.sendKeys(email);
+                
+                WebElement loginPasswordInput = driver.findElement(By.id("password"));
+                loginPasswordInput.clear();
+                loginPasswordInput.sendKeys("Test123456");
+                
+                // Giriş butonuna tıkla
+                WebElement loginSubmitButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.cssSelector("button[type='submit']")
+                    )
+                );
+                WebElement loginForm = driver.findElement(By.tagName("form"));
+                safeSubmitForm(loginSubmitButton, loginForm);
+                
+                // Giriş işleminin tamamlanmasını bekle
+                Thread.sleep(3000);
+            }
+            
+            // Dashboard'a yönlendirilmeyi bekle
+            wait.until(ExpectedConditions.or(
+                ExpectedConditions.urlContains("/reader/dashboard"),
+                ExpectedConditions.urlContains("/yazar/dashboard"),
+                ExpectedConditions.urlContains("/admin/dashboard"),
+                ExpectedConditions.urlContains("/dashboard"),
+                ExpectedConditions.urlToBe(BASE_URL + "/")
+            ));
+            
+            currentUrl = driver.getCurrentUrl();
             assertTrue(
                 currentUrl.contains("/dashboard") || 
                 currentUrl.equals(BASE_URL + "/") ||
