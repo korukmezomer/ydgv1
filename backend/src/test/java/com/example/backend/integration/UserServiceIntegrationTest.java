@@ -100,11 +100,14 @@ class UserServiceIntegrationTest extends BaseIntegrationTest {
     void testDeleteUser() {
         User user = createTestUser("delete@test.com", "delete");
         Long userId = user.getId();
+        assertTrue(user.getIsActive());
 
         userService.delete(userId);
 
+        // Soft delete yapılıyor, kullanıcı hala veritabanında ama aktif değil
         User deletedUser = userRepository.findById(userId).orElse(null);
-        assertNull(deletedUser);
+        assertNotNull(deletedUser);
+        assertFalse(deletedUser.getIsActive());
     }
 
     private User createTestUser(String email, String username) {
