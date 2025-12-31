@@ -46,7 +46,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             
             driver.get(BASE_URL + "/reader/new-story");
             waitForPageLoad();
-            Thread.sleep(2000);
+            Thread.sleep(5000);
             
             WebElement titleInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
@@ -54,10 +54,11 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
                 )
             );
             titleInput.sendKeys(originalTitle);
+            Thread.sleep(2000);
             
             WebElement firstTextBlock = waitForTextBlock();
             firstTextBlock.sendKeys("Bu düzenlenecek bir story'dir.");
-            Thread.sleep(1000);
+            Thread.sleep(3000);
             
             publishStory();
             
@@ -73,7 +74,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             // 3. Düzenleme sayfasına git
             driver.get(BASE_URL + "/yazar/haber-duzenle/" + storyId);
             waitForPageLoad();
-            Thread.sleep(3000);
+            Thread.sleep(5000);
 
             // 4. Başlık düzenleme
             WebElement editTitleInput = wait.until(
@@ -156,7 +157,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
         
         // Bekleme süresi - story'nin veritabanına kaydedilmesi için
         try {
-            Thread.sleep(5000); // Daha uzun bekleme
+            Thread.sleep(5000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -171,7 +172,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
                 // Dashboard'dan story'yi bulmak için sayfayı yenile ve story linkini bul
                 driver.navigate().refresh();
                 try {
-                    Thread.sleep(5000); // Daha uzun bekleme
+                    Thread.sleep(5000);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -212,11 +213,11 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             System.out.println("Case 14: URL'den story ID alınamadı: " + e.getMessage());
         }
         
-        // 2. Veritabanından almayı dene (retry ile - daha fazla deneme)
+        // 2. Veritabanından almayı dene (retry ile)
         if (storyId == null && storyTitle != null) {
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 3; i++) {
                 try {
-                    Thread.sleep(3000); // Veritabanına kaydedilmesi için daha uzun bekle
+                    Thread.sleep(5000); // Veritabanına kaydedilmesi için bekle
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -225,14 +226,13 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
                     System.out.println("Case 14: Story ID veritabanından alındı (deneme " + (i+1) + "): " + storyId);
                     break;
                 }
-                System.out.println("Case 14: Story ID bulunamadı, deneme " + (i+1) + "/5");
             }
         }
         
         // 3. Son çare: Kullanıcının en son story'sini al
         if (storyId == null && writerEmail != null) {
             try {
-                Thread.sleep(3000);
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -266,7 +266,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
     private void addCodeBlock(WebElement textBlock, String codeContent) throws Exception {
         Actions actions = new Actions(driver);
         actions.moveToElement(textBlock).perform();
-        Thread.sleep(1000);
+        Thread.sleep(3000);
         
         WebElement addButton = wait.until(
             ExpectedConditions.elementToBeClickable(
@@ -274,7 +274,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             )
         );
         addButton.click();
-        Thread.sleep(1000);
+        Thread.sleep(3000);
         
         WebElement codeMenuButton = wait.until(
             ExpectedConditions.elementToBeClickable(
@@ -282,7 +282,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             )
         );
         codeMenuButton.click();
-        Thread.sleep(1000);
+        Thread.sleep(3000);
         
         WebElement codeBlock = wait.until(
             ExpectedConditions.presenceOfElementLocated(
@@ -292,20 +292,20 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
         codeBlock.clear();
         codeBlock.sendKeys(codeContent);
         
-        Thread.sleep(1000);
+        Thread.sleep(2000);
         WebElement confirmButton = wait.until(
             ExpectedConditions.elementToBeClickable(
                 By.cssSelector(".code-editor-btn.confirm, button.code-editor-btn[title='Onayla']")
             )
         );
         confirmButton.click();
-        Thread.sleep(2000);
+        Thread.sleep(5000);
     }
     
     private void addHeadingBlock(WebElement textBlock, String headingText) throws Exception {
         Actions actions = new Actions(driver);
         actions.moveToElement(textBlock).perform();
-        Thread.sleep(1000);
+        Thread.sleep(3000);
         
         WebElement addButton = wait.until(
             ExpectedConditions.elementToBeClickable(
@@ -313,7 +313,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             )
         );
         addButton.click();
-        Thread.sleep(1000);
+        Thread.sleep(3000);
         
         WebElement headingMenuButton = wait.until(
             ExpectedConditions.elementToBeClickable(
@@ -321,7 +321,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             )
         );
         headingMenuButton.click();
-        Thread.sleep(1000);
+        Thread.sleep(3000);
         
         WebElement headingInput = wait.until(
             ExpectedConditions.presenceOfElementLocated(
@@ -329,9 +329,9 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             )
         );
         headingInput.sendKeys(headingText);
-        Thread.sleep(500);
+        Thread.sleep(2000);
         headingInput.sendKeys(Keys.ENTER);
-        Thread.sleep(1000);
+        Thread.sleep(3000);
     }
     
     @Test
@@ -365,14 +365,14 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             
             WebElement firstTextBlock = waitForTextBlock();
             firstTextBlock.sendKeys("Bu bir test story'sidir.");
-            Thread.sleep(1000);
+            Thread.sleep(3000);
             
             WebElement emptyTextBlock = waitForNewTextBlock();
             addCodeBlock(emptyTextBlock, "console.log('test');");
             
             WebElement lastTextBlock = waitForNewTextBlock();
             lastTextBlock.sendKeys("Son paragraf.");
-            Thread.sleep(1000);
+            Thread.sleep(3000);
             
             publishStory();
             
@@ -385,7 +385,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             // 3. Düzenleme sayfasına git
             driver.get(BASE_URL + "/yazar/haber-duzenle/" + storyId);
             waitForPageLoad();
-            Thread.sleep(3000);
+            Thread.sleep(5000);
 
             // 4. Code bloğunu bul ve sil
             WebElement codeBlock = wait.until(
@@ -657,7 +657,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             // 3. Düzenleme sayfasına git
             driver.get(BASE_URL + "/yazar/haber-duzenle/" + storyId);
             waitForPageLoad();
-            Thread.sleep(3000);
+            Thread.sleep(5000);
 
             // 4. Image bloğunu bul ve sil
             WebElement imageBlock = wait.until(
@@ -1104,7 +1104,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             // 3. Düzenleme sayfasına git
             driver.get(BASE_URL + "/yazar/haber-duzenle/" + storyId);
             waitForPageLoad();
-            Thread.sleep(3000);
+            Thread.sleep(5000);
 
             // 4. Sil butonunu bul ve tıkla
             ((JavascriptExecutor) driver).executeScript(

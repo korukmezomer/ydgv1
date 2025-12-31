@@ -503,48 +503,48 @@ public abstract class BaseSeleniumTest {
         try {
             driver.get(BASE_URL + "/register");
             waitForPageLoad();
-            Thread.sleep(3000); // Sayfanın tam yüklenmesi için bekle
+            Thread.sleep(5000); // Sayfanın tam yüklenmesi için bekle
             
             // Form alanlarını temizle ve doldur
             WebElement firstNameInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
             );
             firstNameInput.clear();
-            Thread.sleep(200);
+            Thread.sleep(1000);
             firstNameInput.sendKeys(firstName);
-            Thread.sleep(500);
+            Thread.sleep(1000);
             
             WebElement lastNameInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("lastName"))
             );
             lastNameInput.clear();
-            Thread.sleep(200);
+            Thread.sleep(1000);
             lastNameInput.sendKeys(lastName);
-            Thread.sleep(500);
+            Thread.sleep(1000);
             
             WebElement emailInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("email"))
             );
             emailInput.clear();
-            Thread.sleep(200);
+            Thread.sleep(1000);
             emailInput.sendKeys(email);
-            Thread.sleep(500);
+            Thread.sleep(1000);
             
             WebElement usernameInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("username"))
             );
             usernameInput.clear();
-            Thread.sleep(200);
+            Thread.sleep(1000);
             usernameInput.sendKeys(username);
-            Thread.sleep(500);
+            Thread.sleep(1000);
             
             WebElement passwordInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("password"))
             );
             passwordInput.clear();
-            Thread.sleep(200);
+            Thread.sleep(1000);
             passwordInput.sendKeys(password);
-            Thread.sleep(500);
+            Thread.sleep(1000);
             
             // Role seçimi - WRITER (önemli!)
             try {
@@ -554,7 +554,7 @@ public abstract class BaseSeleniumTest {
                 
                 // Scroll to element
                 ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", roleSelectElement);
-                Thread.sleep(500);
+                Thread.sleep(2000);
                 
                 org.openqa.selenium.support.ui.Select roleSelect = new org.openqa.selenium.support.ui.Select(roleSelectElement);
                 
@@ -565,7 +565,7 @@ public abstract class BaseSeleniumTest {
                 // WRITER seç
                 try {
                     roleSelect.selectByValue("WRITER");
-                    Thread.sleep(500);
+                    Thread.sleep(2000);
                     String newValue = roleSelectElement.getAttribute("value");
                     System.out.println("Yeni role değeri: " + newValue);
                     if (!"WRITER".equals(newValue)) {
@@ -574,7 +574,10 @@ public abstract class BaseSeleniumTest {
                             "arguments[0].value = 'WRITER'; arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", 
                             roleSelectElement
                         );
-                        Thread.sleep(500);
+                        Thread.sleep(2000);
+                        // Tekrar kontrol et
+                        newValue = roleSelectElement.getAttribute("value");
+                        System.out.println("JavaScript sonrası role değeri: " + newValue);
                     }
                 } catch (Exception e) {
                     System.out.println("selectByValue başarısız, JavaScript ile deneniyor: " + e.getMessage());
@@ -582,7 +585,7 @@ public abstract class BaseSeleniumTest {
                         "arguments[0].value = 'WRITER'; arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", 
                         roleSelectElement
                     );
-                    Thread.sleep(500);
+                    Thread.sleep(2000);
                 }
             } catch (Exception e) {
                 System.out.println("Role select bulunamadı veya seçilemedi: " + e.getMessage());
@@ -598,7 +601,7 @@ public abstract class BaseSeleniumTest {
             // Butonun disabled olmadığından emin ol
             if (submitButton.getAttribute("disabled") != null) {
                 System.out.println("Submit butonu disabled, bekleme yapılıyor...");
-                Thread.sleep(2000);
+                Thread.sleep(5000);
                 submitButton = wait.until(
                     ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit'], .auth-submit-btn"))
                 );
@@ -606,7 +609,7 @@ public abstract class BaseSeleniumTest {
             
             // Scroll to button
             ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", submitButton);
-            Thread.sleep(500);
+            Thread.sleep(2000);
             
             // Önce normal click dene
             try {
@@ -617,11 +620,12 @@ public abstract class BaseSeleniumTest {
             }
             
             // Kayıt işleminin tamamlanmasını bekle
-            Thread.sleep(3000);
+            Thread.sleep(5000);
             
-            // URL değişikliğini bekle (maksimum 10 saniye)
+            // URL değişikliğini bekle (maksimum 30 saniye)
             try {
-                wait.until(ExpectedConditions.or(
+                WebDriverWait urlWait = new WebDriverWait(driver, java.time.Duration.ofSeconds(30));
+                urlWait.until(ExpectedConditions.or(
                     ExpectedConditions.urlContains("/dashboard"),
                     ExpectedConditions.urlContains("/yazar"),
                     ExpectedConditions.urlToBe(BASE_URL + "/"),
@@ -631,7 +635,7 @@ public abstract class BaseSeleniumTest {
                 System.out.println("URL değişikliği beklenirken timeout: " + e.getMessage());
             }
             
-            Thread.sleep(2000); // Ek bekleme
+            Thread.sleep(5000); // Ek bekleme
             
             // Kayıt başarılı kontrolü
             String currentUrl = driver.getCurrentUrl();
@@ -836,7 +840,7 @@ public abstract class BaseSeleniumTest {
             "};"
         );
         
-        Thread.sleep(2000);
+        Thread.sleep(3000);
         WebElement publishButton = wait.until(
             ExpectedConditions.elementToBeClickable(
                 By.cssSelector(".publish-button, button.publish-button")
@@ -845,11 +849,11 @@ public abstract class BaseSeleniumTest {
         
         // Scroll to button
         ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", publishButton);
-        Thread.sleep(1000);
+        Thread.sleep(2000);
         
         publishButton.click();
         
-        Thread.sleep(5000); // Yayınlama işlemi için daha uzun bekle
+        Thread.sleep(5000); // Yayınlama işlemi için bekle
         
         // Alert'leri kontrol et ve kabul et
         try {
@@ -863,7 +867,7 @@ public abstract class BaseSeleniumTest {
         }
         
         waitForPageLoad();
-        Thread.sleep(5000); // Sayfa yönlendirmesi için daha uzun bekle
+        Thread.sleep(5000);
     }
     
     /**
