@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
 
@@ -25,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * - WRITER olarak giriş yap
  * - Yeni story oluştur sayfasına git
  * - Başlık gir
- * - Resim bloğu ekle
+ * - Resim bloğu ekle (artı butonundan)
  * - Resim yükle
  * - Story'yi kaydet
  * - Story'nin resim ile birlikte oluşturulduğunu doğrula
@@ -37,7 +38,7 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
     @DisplayName("Case 4d: WRITER resim ile story oluşturabilmeli")
     public void case4d_StoryCreationWithImage() {
         try {
-            // Önce WRITER rolünde kullanıcı kaydı yap
+            // 1. WRITER olarak kayıt ol
             driver.get(BASE_URL + "/register");
             waitForPageLoad();
             
@@ -46,7 +47,6 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
             String email = "writer" + randomSuffix + "@example.com";
             String username = "writer" + randomSuffix;
             
-            // Kayıt formunu doldur
             WebElement firstNameInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
             );
@@ -56,7 +56,6 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
             driver.findElement(By.id("username")).sendKeys(username);
             driver.findElement(By.id("password")).sendKeys("Test123456");
             
-            // Rol seçimi (WRITER) - Select elementini kullan
             WebElement roleSelectElement = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("roleName"))
             );
@@ -78,7 +77,6 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
             WebElement form = driver.findElement(By.tagName("form"));
             safeSubmitForm(submitButton, form);
             
-            // Frontend'de kayıt sonrası otomatik login yapılıyor
             Thread.sleep(3000);
             wait.until(ExpectedConditions.or(
                 ExpectedConditions.urlContains("/yazar/dashboard"),
@@ -87,12 +85,12 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
             ));
             Thread.sleep(2000);
             
-            // Story oluştur sayfasına git (/reader/new-story)
+            // 2. Story oluştur sayfasına git
             driver.get(BASE_URL + "/reader/new-story");
             waitForPageLoad();
             Thread.sleep(2000);
             
-            // Başlık alanını bul ve doldur
+            // 3. Başlık gir
             WebElement titleInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
                     By.cssSelector("input.story-title-input, input[placeholder*='Başlık'], input[placeholder*='başlık']")
@@ -101,70 +99,89 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
             String storyTitle = "Test Story - Resim " + randomSuffix;
             titleInput.sendKeys(storyTitle);
             
-            // İlk text bloğuna yazı ekle
+            // 4. İlk text bloğunu bul (BOŞ BIRAK)
             Thread.sleep(1000);
             WebElement firstTextBlock = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector("textarea, div[contenteditable='true'], .editor-blocks textarea")
+                    By.cssSelector("textarea.block-textarea, .editor-blocks textarea, textarea[placeholder*='Hikayenizi']")
                 )
             );
-            firstTextBlock.sendKeys("Bu story resim içermektedir. ");
             
-            // Resim bloğu eklemek için '+' butonunu veya '/' tuşunu kullan
+            // 5. Text bloğuna hover yap ve resim ekle
+            Actions actions = new Actions(driver);
+            actions.moveToElement(firstTextBlock).perform();
             Thread.sleep(1000);
-            firstTextBlock.sendKeys("/");
+            
+            WebElement addButton = wait.until(
+                ExpectedConditions.elementToBeClickable(
+                    By.cssSelector(".block-add-button.visible, .editor-block .block-add-button.visible")
+                )
+            );
+            addButton.click();
             Thread.sleep(1000);
             
-            // Resim seçeneğini bul ve tıkla
-            try {
-                WebElement imageOption = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        By.xpath("//*[contains(text(), 'Resim') or contains(text(), 'Image') or contains(text(), 'image')]")
-                    )
-                );
-                imageOption.click();
-                Thread.sleep(2000);
-            } catch (Exception e) {
-                // Alternatif: '+' butonunu bul ve tıkla
-                WebElement addButton = driver.findElement(
-                    By.cssSelector(".add-block-button, .add-button, button[aria-label*='add']")
-                );
-                if (addButton != null) {
-                    addButton.click();
-                    Thread.sleep(1000);
-                    WebElement imageOption = wait.until(
-                        ExpectedConditions.elementToBeClickable(
-                            By.xpath("//*[contains(text(), 'Resim') or contains(text(), 'Image')]")
-                        )
-                    );
-                    imageOption.click();
-                    Thread.sleep(2000);
-                }
-            }
+            // Resim butonuna tıkla (1. buton)
+            WebElement imageMenuButton = wait.until(
+                ExpectedConditions.elementToBeClickable(
+                    By.cssSelector(".block-add-menu button[title='Resim'], .block-add-menu button:nth-child(1)")
+                )
+            );
+            imageMenuButton.click();
+            Thread.sleep(2000);
             
-            // Resim yükleme input'unu bul
+            // 6. Resim yükleme input'unu bul (hidden input)
             WebElement fileInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
                     By.cssSelector("input[type='file'], input[accept*='image']")
                 )
             );
             
-            // Test resmi oluştur (1x1 pixel PNG)
+            // Test resmi oluştur
             Path testImagePath = createTestImage();
+            
+            // 7. Resmi yükle
             fileInput.sendKeys(testImagePath.toAbsolutePath().toString());
             
-            // Resim yüklenene kadar bekle
-            Thread.sleep(3000);
+            // 8. Loading overlay'in kaybolmasını bekle (resim yüklenene kadar)
+            Thread.sleep(2000);
+            try {
+                wait.until(ExpectedConditions.invisibilityOfElementLocated(
+                    By.cssSelector(".loading-overlay, .loading-spinner")
+                ));
+            } catch (Exception e) {
+                // Loading overlay yoksa devam et
+            }
             
-            // Resmin yüklendiğini doğrula
-            WebElement imageElement = wait.until(
+            // 9. Resim bloğunun oluşmasını bekle (image-block-container)
+            Thread.sleep(2000);
+            WebElement imageBlockContainer = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector("img, .image-block img, .uploaded-image")
+                    By.cssSelector(".image-block-container, .editor-block.image-block-container")
                 )
             );
-            assertNotNull(imageElement, "Case 4d: Resim yüklenemedi");
+            assertNotNull(imageBlockContainer, "Case 4d: Resim bloğu oluşturulamadı");
             
-            // Story'yi yayınla (Frontend'de "Kaydet" yok, sadece "Yayınla" var)
+            // 10. Resim elementinin görünür olduğunu doğrula
+            WebElement imageElement = wait.until(
+                ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector(".block-image, .image-block-container img, img[src*='http']")
+                )
+            );
+            assertNotNull(imageElement, "Case 4d: Resim elementi bulunamadı");
+            
+            // 11. Resim URL'sinin doğru olduğunu kontrol et
+            String imageSrc = imageElement.getAttribute("src");
+            assertTrue(
+                imageSrc != null && (imageSrc.startsWith("http") || imageSrc.startsWith("/") || imageSrc.startsWith("data:")),
+                "Case 4d: Resim URL'si geçersiz. URL: " + imageSrc
+            );
+            
+            // 12. Resmin yüklendiğini doğrula (resmin görünür olduğunu kontrol et)
+            assertTrue(imageElement.isDisplayed(), "Case 4d: Resim görünür değil");
+            
+            System.out.println("Case 4d: Resim başarıyla yüklendi. URL: " + imageSrc);
+            
+            // 13. Story'yi yayınla
             Thread.sleep(1000);
             WebElement publishButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
@@ -173,16 +190,39 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
             );
             publishButton.click();
             
-            // Story'nin kaydedildiğini doğrula
+            // 14. Story'nin kaydedildiğini doğrula
             Thread.sleep(3000);
             String currentUrl = driver.getCurrentUrl();
             assertTrue(
                 currentUrl.contains("/dashboard") || 
                 currentUrl.contains("/yazar") ||
                 currentUrl.contains("/story") ||
-                currentUrl.contains("/reader"),
+                currentUrl.contains("/reader") ||
+                currentUrl.contains("/haberler"),
                 "Case 4d: Story kaydedildikten sonra yönlendirme yapılmadı. URL: " + currentUrl
             );
+            
+            // 15. Yayınlandıktan sonra resmin görünür olduğunu doğrula
+            if (currentUrl.contains("/haberler") || currentUrl.contains("/story")) {
+                Thread.sleep(2000);
+                try {
+                    WebElement publishedImage = wait.until(
+                        ExpectedConditions.visibilityOfElementLocated(
+                            By.cssSelector("img, .story-content img, .article-content img, .block-image")
+                        )
+                    );
+                    assertTrue(publishedImage.isDisplayed(), 
+                        "Case 4d: Yayınlandıktan sonra resim görünür değil");
+                    String publishedImageSrc = publishedImage.getAttribute("src");
+                    assertTrue(
+                        publishedImageSrc != null && !publishedImageSrc.isEmpty(),
+                        "Case 4d: Yayınlandıktan sonra resim URL'si boş. URL: " + publishedImageSrc
+                    );
+                    System.out.println("Case 4d: Yayınlandıktan sonra resim görünür. URL: " + publishedImageSrc);
+                } catch (Exception e) {
+                    System.out.println("Case 4d: Yayınlandıktan sonra resim kontrolü yapılamadı: " + e.getMessage());
+                }
+            }
             
             // Test resmini temizle
             try {
@@ -196,7 +236,7 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
         } catch (Exception e) {
             System.out.println("Case 4d: Story oluşturma (resim) testi - " + e.getMessage());
             e.printStackTrace();
-            // Test ortamında gerekli setup yapılmadıysa test geçer
+            fail("Case 4d: Test başarısız oldu: " + e.getMessage());
         }
     }
     
@@ -223,4 +263,3 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
         return testImagePath;
     }
 }
-

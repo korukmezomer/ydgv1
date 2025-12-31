@@ -170,7 +170,15 @@ public class CommentServiceImpl implements CommentService {
         Comment comment = commentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Yorum bulunamadı"));
 
-        if (!comment.getUser().getId().equals(userId)) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı"));
+
+        // Admin veya yorum sahibi silebilir
+        boolean isAdmin = user.getRoles().stream()
+                .anyMatch(role -> "ADMIN".equalsIgnoreCase(role.getName()));
+        boolean isOwner = comment.getUser().getId().equals(userId);
+
+        if (!isAdmin && !isOwner) {
             throw new BadRequestException("Bu yorumu silme yetkiniz yok");
         }
 

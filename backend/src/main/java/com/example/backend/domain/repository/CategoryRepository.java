@@ -16,5 +16,9 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     boolean existsBySlug(String slug);
     
     boolean existsByName(String name);
+    
+    java.util.List<Category> findByIsActiveTrue();
+    
+    org.springframework.data.domain.Page<Category> findByIsActiveTrue(org.springframework.data.domain.Pageable pageable);
 }
 

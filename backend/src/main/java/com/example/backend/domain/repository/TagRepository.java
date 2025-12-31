@@ -19,5 +19,9 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
     boolean existsByName(String name);
     
     Set<Tag> findByNameIn(Set<String> names);
+    
+    java.util.List<Tag> findByIsActiveTrue();
+    
+    org.springframework.data.domain.Page<Tag> findByIsActiveTrue(org.springframework.data.domain.Pageable pageable);
 }
 

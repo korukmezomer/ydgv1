@@ -58,21 +58,11 @@ public class Case2_UserLoginTest extends BaseSeleniumTest {
         }
         String registerCurrentUrl = driver.getCurrentUrl();
         if (!registerCurrentUrl.contains("/login")) {
-            // Çıkış yapmak için logout butonunu bul ve tıkla
+            // Çıkış yapmak için logout yap
             try {
-                WebElement logoutButton = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        By.xpath("//button[contains(text(), 'Çıkış') or contains(text(), 'Logout')]")
-                    )
-                );
-                logoutButton.click();
-                try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+                logout();
             } catch (Exception e) {
-                // Logout butonu bulunamazsa direkt login sayfasına git
+                // Logout başarısız olursa direkt login sayfasına git
                 driver.get(BASE_URL + "/login");
                 waitForPageLoad();
             }

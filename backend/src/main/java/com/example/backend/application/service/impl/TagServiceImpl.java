@@ -58,7 +58,7 @@ public class TagServiceImpl implements TagService {
     @Override
     @Transactional(readOnly = true)
     public List<TagResponse> findAll() {
-        return tagRepository.findAll().stream()
+        return tagRepository.findByIsActiveTrue().stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -66,7 +66,7 @@ public class TagServiceImpl implements TagService {
     @Override
     @Transactional(readOnly = true)
     public Page<TagResponse> findAll(Pageable pageable) {
-        return tagRepository.findAll(pageable)
+        return tagRepository.findByIsActiveTrue(pageable)
                 .map(this::toResponse);
     }
 

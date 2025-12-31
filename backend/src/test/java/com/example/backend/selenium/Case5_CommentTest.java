@@ -26,33 +26,57 @@ public class Case5_CommentTest extends BaseSeleniumTest {
     @DisplayName("Case 5: Kullanıcı story'ye yorum yapabilmeli")
     public void case5_CommentCreation() {
         try {
-            // Önce kullanıcı kaydı yap
-            driver.get(BASE_URL + "/register");
-            waitForPageLoad();
-            
+            // 1. Writer kullanıcısı oluştur (BaseSeleniumTest'teki registerWriter helper metodunu kullan)
             java.util.Random random = new java.util.Random();
             String randomSuffix = String.valueOf(random.nextInt(10000));
-            String email = "commenter" + randomSuffix + "@example.com";
+            String writerEmail = "writer_comment_" + randomSuffix + "@example.com";
+            String writerPassword = "Test123456";
+            String writerUsername = "writer_comment_" + randomSuffix;
             
-            WebElement firstNameInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
-            );
-            firstNameInput.sendKeys("Commenter");
-            driver.findElement(By.id("lastName")).sendKeys("Test");
-            driver.findElement(By.id("email")).sendKeys(email);
-            driver.findElement(By.id("username")).sendKeys("commenter" + randomSuffix);
-            driver.findElement(By.id("password")).sendKeys("Test123456");
+            boolean writerRegistered = registerWriter("Writer", "Comment", writerEmail, writerUsername, writerPassword);
+            if (!writerRegistered) {
+                fail("Case 5: Writer kaydı başarısız");
+                return;
+            }
             
-            WebElement submitButton = wait.until(
-                ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
-            );
-            submitButton.click();
+            // Writer olarak zaten giriş yapılmış durumda (kayıt sonrası dashboard'a yönlendirildi)
             
-            Thread.sleep(3000);
+            // 1.1. Story oluştur ve yayınla
+            String storyTitle = "Yorum Test Story " + System.currentTimeMillis();
+            String storyContent = "Bu bir yorum test story'sidir.";
+            String storySlug = createStory(writerEmail, writerPassword, storyTitle, storyContent);
             
-            // Bir story sayfasına git (örnek slug)
-            // Not: Gerçek test ortamında mevcut bir story slug'ı kullanılmalı
-            driver.get(BASE_URL + "/haberler/test-story");
+            if (storySlug == null) {
+                System.out.println("Case 5: Story oluşturulamadı");
+                return;
+            }
+            
+            // 1.2. Admin olarak giriş yap ve story'yi onayla
+            storySlug = approveStoryAsAdmin(storyTitle);
+            if (storySlug == null) {
+                System.out.println("Case 5: Story onaylanamadı");
+                return;
+            }
+            
+            // 2. Kullanıcı (Commenter) oluştur (BaseSeleniumTest'teki registerUser helper metodunu kullan)
+            String commenterEmail = "commenter" + randomSuffix + "@example.com";
+            String commenterUsername = "commenter" + randomSuffix;
+            
+            try {
+                driver.get(BASE_URL + "/logout");
+                Thread.sleep(2000);
+            } catch (Exception e) {
+                // Logout sayfası yoksa devam et
+            }
+            
+            boolean commenterRegistered = registerUser("Commenter", "Test", commenterEmail, commenterUsername, "Test123456");
+            if (!commenterRegistered) {
+                fail("Case 5: Commenter kaydı başarısız");
+                return;
+            }
+            
+            // Story sayfasına git
+            driver.get(BASE_URL + "/haberler/" + storySlug);
             waitForPageLoad();
             
             // Yorum alanını bul
@@ -92,28 +116,17 @@ public class Case5_CommentTest extends BaseSeleniumTest {
     @DisplayName("Case 5 Negative: Boş yorum gönderilememeli")
     public void case5_Negative_EmptyComment() {
         try {
-            // Kullanıcı kaydı
-            driver.get(BASE_URL + "/register");
-            waitForPageLoad();
-            
+            // Kullanıcı kaydı (BaseSeleniumTest'teki registerUser helper metodunu kullan)
             java.util.Random random = new java.util.Random();
             String randomSuffix = String.valueOf(random.nextInt(10000));
             String email = "commenter" + randomSuffix + "@example.com";
+            String username = "commenter" + randomSuffix;
             
-            WebElement firstNameInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
-            );
-            firstNameInput.sendKeys("Commenter");
-            driver.findElement(By.id("lastName")).sendKeys("Test");
-            driver.findElement(By.id("email")).sendKeys(email);
-            driver.findElement(By.id("username")).sendKeys("commenter" + randomSuffix);
-            driver.findElement(By.id("password")).sendKeys("Test123456");
-            
-            WebElement submitButton = wait.until(
-                ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
-            );
-            submitButton.click();
-            Thread.sleep(3000);
+            boolean userRegistered = registerUser("Commenter", "Test", email, username, "Test123456");
+            if (!userRegistered) {
+                fail("Case 5 Negative: Kullanıcı kaydı başarısız");
+                return;
+            }
             
             // Story sayfasına git
             driver.get(BASE_URL + "/haberler/test-story");

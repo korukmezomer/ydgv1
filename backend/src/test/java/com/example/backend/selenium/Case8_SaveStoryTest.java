@@ -25,48 +25,107 @@ public class Case8_SaveStoryTest extends BaseSeleniumTest {
     @DisplayName("Case 8: Kullanıcı story'yi kaydedebilmeli")
     public void case8_SaveStory() {
         try {
-            // Kullanıcı kaydı
-            driver.get(BASE_URL + "/register");
-            waitForPageLoad();
-            
+            // 1. Writer oluştur (BaseSeleniumTest'teki registerWriter helper metodunu kullan)
             java.util.Random random = new java.util.Random();
             String randomSuffix = String.valueOf(random.nextInt(10000));
-            String email = "saver" + randomSuffix + "@example.com";
+            String writerEmail = "writer_save_" + randomSuffix + "@example.com";
+            String writerPassword = "Test123456";
+            String writerUsername = "writer_save_" + randomSuffix;
             
-            WebElement firstNameInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
-            );
-            firstNameInput.sendKeys("Saver");
-            driver.findElement(By.id("lastName")).sendKeys("Test");
-            driver.findElement(By.id("email")).sendKeys(email);
-            driver.findElement(By.id("username")).sendKeys("saver" + randomSuffix);
-            driver.findElement(By.id("password")).sendKeys("Test123456");
+            boolean writerRegistered = registerWriter("Writer", "Save", writerEmail, writerUsername, writerPassword);
+            if (!writerRegistered) {
+                fail("Case 8: Writer kaydı başarısız");
+                return;
+            }
             
-            WebElement submitButton = wait.until(
-                ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
-            );
-            submitButton.click();
+            // Writer olarak zaten giriş yapılmış durumda (kayıt sonrası dashboard'a yönlendirildi)
+            
+            // Story oluştur ve yayınla (BaseSeleniumTest'teki createStory metodunu kullan)
+            String storyTitle = "Kaydet Test Story " + System.currentTimeMillis();
+            String storyContent = "Bu bir kaydet test story'sidir.";
+            String storySlug = createStory(writerEmail, writerPassword, storyTitle, storyContent);
+            
+            if (storySlug == null) {
+                fail("Case 8: Story oluşturulamadı");
+                return;
+            }
+            
+            // 2. Admin olarak story'yi onayla (Case7b işlemi - BaseSeleniumTest'teki approveStoryAsAdmin metodunu kullan)
+            storySlug = approveStoryAsAdmin(storyTitle);
+            if (storySlug == null) {
+                fail("Case 8: Story onaylanamadı");
+                return;
+            }
+            
+            // 3. Kullanıcı (Saver) oluştur (BaseSeleniumTest'teki registerUser helper metodunu kullan)
+            java.util.Random saverRandom = new java.util.Random();
+            String saverRandomSuffix = String.valueOf(saverRandom.nextInt(10000));
+            String saverEmail = "saver" + saverRandomSuffix + "@example.com";
+            String saverUsername = "saver" + saverRandomSuffix;
+            
+            try {
+                driver.get(BASE_URL + "/logout");
+                Thread.sleep(2000);
+            } catch (Exception e) {
+                // Logout sayfası yoksa devam et
+            }
+            
+            boolean saverRegistered = registerUser("Saver", "Test", saverEmail, saverUsername, "Test123456");
+            if (!saverRegistered) {
+                fail("Case 8: Saver kaydı başarısız");
+                return;
+            }
             
             Thread.sleep(3000);
             
-            // Story sayfasına git
-            driver.get(BASE_URL + "/haberler/test-story");
+            // Story sayfasına git (kullanıcı zaten giriş yapmış durumda)
+            driver.get(BASE_URL + "/haberler/" + storySlug);
             waitForPageLoad();
+            Thread.sleep(3000); // Sayfanın tam yüklenmesi için bekle
             
-            // Kaydet butonunu bul ve tıkla
-            try {
-                WebElement saveButton = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        By.xpath("//button[contains(text(), 'Kaydet') or contains(text(), 'kaydet')] | //button[@aria-label[contains(., 'save') or contains(., 'kaydet')]]")
-                    )
-                );
-                saveButton.click();
-                Thread.sleep(1000);
-                
-                assertTrue(true, "Case 8: Story kaydetme işlemi tamamlandı");
-            } catch (Exception e) {
-                System.out.println("Case 8: Kaydet butonu bulunamadı (story sayfası mevcut değil olabilir)");
+            // Kaydet butonunu bul ve tıkla (Medium temasında title="Kaydet" kullanılıyor)
+            // Beğeni butonundan sonra gelen 3. action-btn butonu kaydet butonu
+            WebElement saveButton = wait.until(
+                ExpectedConditions.elementToBeClickable(
+                    By.xpath("//button[@title='Kaydet']")
+                )
+            );
+            saveButton.click();
+            Thread.sleep(3000); // Kaydetme işleminin tamamlanması için bekle
+            
+            // Story ID'sini al
+            Long storyId = getStoryIdFromSlug(storySlug);
+            if (storyId == null) {
+                fail("Case 8: Story ID alınamadı");
+                return;
             }
+            
+            // Kullanıcı ID'sini al
+            Long userId = getUserIdByEmail(saverEmail);
+            if (userId == null) {
+                fail("Case 8: Kullanıcı ID alınamadı");
+                return;
+            }
+            
+            // Kaydetmenin veritabanına kaydedildiğini doğrula
+            boolean savedExists = false;
+            try (java.sql.Connection conn = getTestDatabaseConnection()) {
+                String sql = "SELECT COUNT(*) FROM saved_stories WHERE kullanici_id = ? AND story_id = ? AND is_active = true";
+                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setLong(1, userId);
+                    stmt.setLong(2, storyId);
+                    try (java.sql.ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            savedExists = rs.getInt(1) > 0;
+                        }
+                    }
+                }
+            } catch (java.sql.SQLException e) {
+                System.err.println("Case 8: Kaydetme kontrolü hatası: " + e.getMessage());
+            }
+            
+            assertTrue(savedExists, "Case 8: Story kaydetme işlemi veritabanına kaydedilmedi. User ID: " + userId + ", Story ID: " + storyId);
+            System.out.println("Case 8: Story kaydetme işlemi başarıyla tamamlandı ve veritabanına kaydedildi");
             
         } catch (Exception e) {
             System.out.println("Case 8: " + e.getMessage());
@@ -74,79 +133,158 @@ public class Case8_SaveStoryTest extends BaseSeleniumTest {
     }
     
     @Test
-    @DisplayName("Case 8 Negative: Zaten kaydedilmiş story tekrar kaydedilememeli")
-    public void case8_Negative_AlreadySaved() {
+    @DisplayName("Case 8 Negative: Kaydetme toggle işlevi - kaydedilmiş story tekrar tıklanınca kaydetme kaldırılmalı")
+    public void case8_Negative_ToggleSave() {
         try {
-            // Kullanıcı kaydı
-            driver.get(BASE_URL + "/register");
-            waitForPageLoad();
-            
+            // 1. Writer oluştur (BaseSeleniumTest'teki registerWriter helper metodunu kullan)
             java.util.Random random = new java.util.Random();
             String randomSuffix = String.valueOf(random.nextInt(10000));
-            String email = "saver" + randomSuffix + "@example.com";
+            String writerEmail = "writer_save_neg_" + randomSuffix + "@example.com";
+            String writerPassword = "Test123456";
+            String writerUsername = "writer_save_neg_" + randomSuffix;
             
-            WebElement firstNameInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
-            );
-            firstNameInput.sendKeys("Saver");
-            driver.findElement(By.id("lastName")).sendKeys("Test");
-            driver.findElement(By.id("email")).sendKeys(email);
-            driver.findElement(By.id("username")).sendKeys("saver" + randomSuffix);
-            driver.findElement(By.id("password")).sendKeys("Test123456");
+            boolean writerRegistered = registerWriter("Writer", "Save", writerEmail, writerUsername, writerPassword);
+            if (!writerRegistered) {
+                fail("Case 8 Negative: Writer kaydı başarısız");
+                return;
+            }
             
-            WebElement submitButton = wait.until(
-                ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
-            );
-            submitButton.click();
+            // Writer olarak zaten giriş yapılmış durumda (kayıt sonrası dashboard'a yönlendirildi)
+            
+            // Story oluştur ve yayınla (BaseSeleniumTest'teki createStory metodunu kullan)
+            String storyTitle = "Kaydet Negative Test Story " + System.currentTimeMillis();
+            String storyContent = "Bu bir kaydet negative test story'sidir.";
+            String storySlug = createStory(writerEmail, writerPassword, storyTitle, storyContent);
+            
+            if (storySlug == null) {
+                fail("Case 8 Negative: Story oluşturulamadı");
+                return;
+            }
+            
+            // 2. Admin olarak story'yi onayla (Case7b işlemi - BaseSeleniumTest'teki approveStoryAsAdmin metodunu kullan)
+            storySlug = approveStoryAsAdmin(storyTitle);
+            if (storySlug == null) {
+                fail("Case 8 Negative: Story onaylanamadı");
+                return;
+            }
+            
+            // 3. Kullanıcı (Saver) oluştur (BaseSeleniumTest'teki registerUser helper metodunu kullan)
+            java.util.Random saverRandom = new java.util.Random();
+            String saverRandomSuffix = String.valueOf(saverRandom.nextInt(10000));
+            String saverEmail = "saver_neg" + saverRandomSuffix + "@example.com";
+            String saverUsername = "saver_neg" + saverRandomSuffix;
+            
+            try {
+                driver.get(BASE_URL + "/logout");
+                Thread.sleep(2000);
+            } catch (Exception e) {
+                // Logout sayfası yoksa devam et
+            }
+            
+            boolean saverRegistered = registerUser("Saver", "Test", saverEmail, saverUsername, "Test123456");
+            if (!saverRegistered) {
+                fail("Case 8 Negative: Saver kaydı başarısız");
+                return;
+            }
             Thread.sleep(3000);
             
-            // Story sayfasına git
-            driver.get(BASE_URL + "/haberler/test-story");
+            // Story sayfasına git (kullanıcı zaten giriş yapmış durumda)
+            driver.get(BASE_URL + "/haberler/" + storySlug);
             waitForPageLoad();
+            Thread.sleep(3000); // Sayfanın tam yüklenmesi için bekle
+            
+            // Story ID'sini al
+            Long storyId = getStoryIdFromSlug(storySlug);
+            if (storyId == null) {
+                fail("Case 8 Negative: Story ID alınamadı");
+                return;
+            }
+            
+            // Kullanıcı ID'sini al
+            Long userId = getUserIdByEmail(saverEmail);
+            if (userId == null) {
+                fail("Case 8 Negative: Kullanıcı ID alınamadı");
+                return;
+            }
             
             // İlk kaydetme
-            try {
-                WebElement saveButton = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        By.xpath("//button[contains(text(), 'Kaydet') or contains(text(), 'kaydet')] | //button[@aria-label[contains(., 'save') or contains(., 'kaydet')]]")
-                    )
-                );
-                saveButton.click();
-                Thread.sleep(2000);
-                
-                // Tekrar kaydetmeyi dene
-                try {
-                    WebElement saveButtonAgain = driver.findElement(
-                        By.xpath("//button[contains(text(), 'Kaydet') or contains(text(), 'kaydet')] | //button[@aria-label[contains(., 'save') or contains(., 'kaydet')]]")
-                    );
-                    
-                    // Buton disabled olabilir veya "Kaydedildi" durumunda olabilir
-                    if (!saveButtonAgain.isEnabled() || 
-                        saveButtonAgain.getText().contains("Kaydedildi") ||
-                        saveButtonAgain.getText().contains("kaydedildi")) {
-                        assertTrue(true, "Case 8 Negative: Zaten kaydedilmiş story tekrar kaydedilemez (beklenen)");
-                    } else {
-                        // Hata mesajı kontrolü
-                        try {
-                            WebElement errorElement = driver.findElement(
-                                By.cssSelector(".error, .text-red-500, [role='alert']")
-                            );
-                            assertTrue(errorElement.isDisplayed(),
-                                "Case 8 Negative: Zaten kaydedilmiş story için hata mesajı gösterilmeli");
-                        } catch (Exception e) {
-                            // Hata mesajı görünmüyorsa buton disabled olmalı
-                            assertTrue(!saveButtonAgain.isEnabled(),
-                                "Case 8 Negative: Zaten kaydedilmiş story için kaydet butonu disabled olmalı");
+            WebElement saveButton = wait.until(
+                ExpectedConditions.elementToBeClickable(
+                    By.xpath("//button[@title='Kaydet']")
+                )
+            );
+            
+            // İlk tıklamadan önce butonun active olmadığını kontrol et
+            String buttonClassBefore = saveButton.getAttribute("class");
+            assertTrue(buttonClassBefore == null || !buttonClassBefore.contains("active"),
+                "Case 8 Negative: İlk kaydetmeden önce buton active olmamalı");
+            
+            saveButton.click();
+            Thread.sleep(3000); // Kaydetme işleminin tamamlanması için bekle
+            
+            // Kaydetmenin veritabanına kaydedildiğini doğrula
+            boolean savedExists = false;
+            try (java.sql.Connection conn = getTestDatabaseConnection()) {
+                String sql = "SELECT COUNT(*) FROM saved_stories WHERE kullanici_id = ? AND story_id = ? AND is_active = true";
+                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setLong(1, userId);
+                    stmt.setLong(2, storyId);
+                    try (java.sql.ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            savedExists = rs.getInt(1) > 0;
                         }
                     }
-                } catch (Exception e) {
-                    // Buton bulunamadı, muhtemelen "Kaydedildi" durumuna geçti
-                    assertTrue(true, "Case 8 Negative: Story zaten kaydedilmiş durumda");
                 }
-                
-            } catch (Exception e) {
-                System.out.println("Case 8 Negative: Kaydet butonu bulunamadı");
+            } catch (java.sql.SQLException e) {
+                System.err.println("Case 8 Negative: Kaydetme kontrolü hatası: " + e.getMessage());
             }
+            
+            assertTrue(savedExists, "Case 8 Negative: İlk kaydetme veritabanına kaydedilmedi");
+            
+            // Buton artık active olmalı
+            WebElement saveButtonAfter = wait.until(
+                ExpectedConditions.presenceOfElementLocated(
+                    By.xpath("//button[@title='Kaydet']")
+                )
+            );
+            String buttonClassAfter = saveButtonAfter.getAttribute("class");
+            assertTrue(buttonClassAfter != null && buttonClassAfter.contains("active"),
+                "Case 8 Negative: Kaydedildikten sonra buton active olmalı");
+            
+            // Tekrar tıkla - kaydetme kaldırılmalı (toggle)
+            saveButtonAfter.click();
+            Thread.sleep(3000); // Kaydetmenin kaldırılması için bekle
+            
+            // Kaydetmenin veritabanından kaldırıldığını doğrula
+            boolean savedStillExists = false;
+            try (java.sql.Connection conn = getTestDatabaseConnection()) {
+                String sql = "SELECT COUNT(*) FROM saved_stories WHERE kullanici_id = ? AND story_id = ? AND is_active = true";
+                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setLong(1, userId);
+                    stmt.setLong(2, storyId);
+                    try (java.sql.ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            savedStillExists = rs.getInt(1) > 0;
+                        }
+                    }
+                }
+            } catch (java.sql.SQLException e) {
+                System.err.println("Case 8 Negative: Kaydetme kontrolü hatası: " + e.getMessage());
+            }
+            
+            assertTrue(!savedStillExists, "Case 8 Negative: İkinci tıklamadan sonra kaydetme veritabanından kaldırılmalı");
+            
+            // Buton artık active olmamalı
+            WebElement saveButtonFinal = wait.until(
+                ExpectedConditions.presenceOfElementLocated(
+                    By.xpath("//button[@title='Kaydet']")
+                )
+            );
+            String buttonClassFinal = saveButtonFinal.getAttribute("class");
+            assertTrue(buttonClassFinal == null || !buttonClassFinal.contains("active"),
+                "Case 8 Negative: Kaydetme kaldırıldıktan sonra buton active olmamalı");
+            
+            System.out.println("Case 8 Negative: Kaydetme toggle işlevi başarıyla test edildi");
             
         } catch (Exception e) {
             System.out.println("Case 8 Negative: " + e.getMessage());

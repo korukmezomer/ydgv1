@@ -58,7 +58,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(readOnly = true)
     public List<CategoryResponse> findAll() {
-        return categoryRepository.findAll().stream()
+        return categoryRepository.findByIsActiveTrue().stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -66,7 +66,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(readOnly = true)
     public Page<CategoryResponse> findAll(Pageable pageable) {
-        return categoryRepository.findAll(pageable)
+        return categoryRepository.findByIsActiveTrue(pageable)
                 .map(this::toResponse);
     }
 

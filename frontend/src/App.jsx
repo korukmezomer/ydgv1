@@ -1,8 +1,6 @@
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from './context/AuthContext';
-import Header from './components/Header';
-import Footer from './components/Footer';
 import ReaderHeader from './components/ReaderHeader';
 import ReaderSidebar from './components/ReaderSidebar';
 import WriterSidebar from './components/WriterSidebar';
@@ -96,8 +94,6 @@ function AppContent() {
           <ReaderHeader onSidebarToggle={() => setSidebarOpen(!sidebarOpen)} />
           <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(!sidebarOpen)} />
         </>
-      ) : !isHomePage && !isNewStoryPage && !isAuthPage && !isMembershipPage && !isAboutPage ? (
-        <Header />
       ) : null}
       <main className={`main-content ${(isReaderPage || isYazarPage || isAdminPage) ? 'reader-main-wrapper' : ''}`}>
         <Routes>
