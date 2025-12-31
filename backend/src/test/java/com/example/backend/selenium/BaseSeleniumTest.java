@@ -503,17 +503,46 @@ public abstract class BaseSeleniumTest {
         try {
             driver.get(BASE_URL + "/register");
             waitForPageLoad();
+            Thread.sleep(1000); // Sayfanın yüklenmesini bekle
             
-            // Form alanlarını doldur (Case1 ve Case4g'deki gibi basit yaklaşım)
+            // Form alanlarını doldur ve React onChange event'ini tetikle
             WebElement firstNameInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
             );
+            firstNameInput.clear();
             firstNameInput.sendKeys(firstName);
+            // React onChange event'ini tetikle
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", firstNameInput);
+            Thread.sleep(200);
             
-            driver.findElement(By.id("lastName")).sendKeys(lastName);
-            driver.findElement(By.id("email")).sendKeys(email);
-            driver.findElement(By.id("username")).sendKeys(username);
-            driver.findElement(By.id("password")).sendKeys(password);
+            WebElement lastNameInput = driver.findElement(By.id("lastName"));
+            lastNameInput.clear();
+            lastNameInput.sendKeys(lastName);
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", lastNameInput);
+            Thread.sleep(200);
+            
+            WebElement emailInput = driver.findElement(By.id("email"));
+            emailInput.clear();
+            emailInput.sendKeys(email);
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", emailInput);
+            Thread.sleep(200);
+            
+            WebElement usernameInput = driver.findElement(By.id("username"));
+            usernameInput.clear();
+            usernameInput.sendKeys(username);
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", usernameInput);
+            Thread.sleep(200);
+            
+            WebElement passwordInput = driver.findElement(By.id("password"));
+            passwordInput.clear();
+            passwordInput.sendKeys(password);
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", passwordInput);
+            Thread.sleep(200);
             
             // Role seçimi - WRITER (Case4g'deki gibi basit yaklaşım)
             try {
@@ -528,18 +557,35 @@ public abstract class BaseSeleniumTest {
                         roleSelect.selectByVisibleText("WRITER");
                     } catch (Exception e2) {
                         ((JavascriptExecutor) driver)
-                            .executeScript("arguments[0].value = 'WRITER';", roleSelectElement);
+                            .executeScript("arguments[0].value = 'WRITER'; arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", roleSelectElement);
                     }
                 }
+                // Change event'ini tetikle
+                ((JavascriptExecutor) driver).executeScript(
+                    "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", roleSelectElement);
+                Thread.sleep(200);
             } catch (Exception e) {
                 System.out.println("Role select bulunamadı: " + e.getMessage());
                 return false;
             }
             
+            // Form değerlerini kontrol et (debug için)
+            String firstNameValue = firstNameInput.getAttribute("value");
+            String emailValue = emailInput.getAttribute("value");
+            String roleValue = roleSelectElement.getAttribute("value");
+            System.out.println("Form değerleri - firstName: " + firstNameValue + ", email: " + emailValue + ", role: " + roleValue);
+            
             // Submit butonuna tıkla (Case1 ve Case4g'deki gibi safeSubmitForm kullan)
             WebElement submitButton = wait.until(
                 ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
             );
+            
+            // Butonun disabled olmadığından emin ol
+            if (submitButton.getAttribute("disabled") != null) {
+                System.out.println("Submit butonu disabled, form değerlerini kontrol ediyoruz...");
+                Thread.sleep(2000);
+            }
+            
             WebElement form = driver.findElement(By.tagName("form"));
             safeSubmitForm(submitButton, form);
             
@@ -547,6 +593,19 @@ public abstract class BaseSeleniumTest {
             Thread.sleep(3000);
             
             String currentUrl = driver.getCurrentUrl();
+            System.out.println("Kayıt sonrası URL: " + currentUrl);
+            
+            // Hata mesajı kontrolü
+            try {
+                WebElement errorElement = driver.findElement(By.cssSelector(".auth-error, .error, [role='alert']"));
+                if (errorElement.isDisplayed()) {
+                    String errorText = errorElement.getText();
+                    System.out.println("Kayıt hatası: " + errorText);
+                    return false;
+                }
+            } catch (Exception e) {
+                // Hata mesajı yoksa devam et
+            }
             
             // Eğer login sayfasına yönlendirildiyse, otomatik giriş yap (Case1'deki mantık)
             if (currentUrl.contains("/login")) {
