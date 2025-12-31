@@ -543,23 +543,50 @@ public abstract class BaseSeleniumTest {
             WebElement form = driver.findElement(By.tagName("form"));
             safeSubmitForm(submitButton, form);
             
-            // Kayıt işleminin tamamlanmasını bekle
+            // API çağrısının tamamlanmasını bekle (Case1'deki gibi)
             Thread.sleep(3000);
             
-            // URL değişikliğini bekle (Case4g'deki gibi)
+            String currentUrl = driver.getCurrentUrl();
+            
+            // Eğer login sayfasına yönlendirildiyse, otomatik giriş yap (Case1'deki mantık)
+            if (currentUrl.contains("/login")) {
+                // Login formunu doldur
+                WebElement loginEmailInput = wait.until(
+                    ExpectedConditions.presenceOfElementLocated(By.id("email"))
+                );
+                loginEmailInput.clear();
+                loginEmailInput.sendKeys(email);
+                
+                WebElement loginPasswordInput = driver.findElement(By.id("password"));
+                loginPasswordInput.clear();
+                loginPasswordInput.sendKeys(password);
+                
+                // Giriş butonuna tıkla
+                WebElement loginSubmitButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
+                );
+                WebElement loginForm = driver.findElement(By.tagName("form"));
+                safeSubmitForm(loginSubmitButton, loginForm);
+                
+                // Giriş işleminin tamamlanmasını bekle
+                Thread.sleep(3000);
+            }
+            
+            // Dashboard'a yönlendirilmeyi bekle (Case1'deki gibi)
             wait.until(ExpectedConditions.or(
+                ExpectedConditions.urlContains("/reader/dashboard"),
                 ExpectedConditions.urlContains("/yazar/dashboard"),
+                ExpectedConditions.urlContains("/admin/dashboard"),
                 ExpectedConditions.urlContains("/dashboard"),
                 ExpectedConditions.urlToBe(BASE_URL + "/")
             ));
-            Thread.sleep(2000);
             
-            // Kayıt başarılı kontrolü
-            String currentUrl = driver.getCurrentUrl();
-            boolean success = !currentUrl.contains("/register") && 
-                   (currentUrl.contains("/dashboard") || 
-                    currentUrl.contains("/yazar") || 
-                    currentUrl.equals(BASE_URL + "/"));
+            currentUrl = driver.getCurrentUrl();
+            boolean success = currentUrl.contains("/dashboard") || 
+                   currentUrl.equals(BASE_URL + "/") ||
+                   currentUrl.equals(BASE_URL + "/reader/dashboard") ||
+                   currentUrl.equals(BASE_URL + "/yazar/dashboard") ||
+                   currentUrl.equals(BASE_URL + "/admin/dashboard");
             
             return success;
         } catch (Exception e) {
