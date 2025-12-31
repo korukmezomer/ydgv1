@@ -503,175 +503,63 @@ public abstract class BaseSeleniumTest {
         try {
             driver.get(BASE_URL + "/register");
             waitForPageLoad();
-            Thread.sleep(2000); // Sayfanın tam yüklenmesi için bekle
             
-            // Form alanlarını temizle ve doldur
+            // Form alanlarını doldur (Case1 ve Case4g'deki gibi basit yaklaşım)
             WebElement firstNameInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
             );
-            firstNameInput.clear();
-            Thread.sleep(200);
             firstNameInput.sendKeys(firstName);
-            Thread.sleep(500);
             
-            WebElement lastNameInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("lastName"))
-            );
-            lastNameInput.clear();
-            Thread.sleep(200);
-            lastNameInput.sendKeys(lastName);
-            Thread.sleep(500);
+            driver.findElement(By.id("lastName")).sendKeys(lastName);
+            driver.findElement(By.id("email")).sendKeys(email);
+            driver.findElement(By.id("username")).sendKeys(username);
+            driver.findElement(By.id("password")).sendKeys(password);
             
-            WebElement emailInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("email"))
-            );
-            emailInput.clear();
-            Thread.sleep(200);
-            emailInput.sendKeys(email);
-            Thread.sleep(500);
-            
-            WebElement usernameInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("username"))
-            );
-            usernameInput.clear();
-            Thread.sleep(200);
-            usernameInput.sendKeys(username);
-            Thread.sleep(500);
-            
-            WebElement passwordInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("password"))
-            );
-            passwordInput.clear();
-            Thread.sleep(200);
-            passwordInput.sendKeys(password);
-            Thread.sleep(500);
-            
-            // Role seçimi - WRITER (önemli!)
+            // Role seçimi - WRITER (Case4g'deki gibi basit yaklaşım)
             try {
                 WebElement roleSelectElement = wait.until(
                     ExpectedConditions.presenceOfElementLocated(By.id("roleName"))
                 );
-                
-                // Scroll to element
-                ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", roleSelectElement);
-                Thread.sleep(500);
-                
                 org.openqa.selenium.support.ui.Select roleSelect = new org.openqa.selenium.support.ui.Select(roleSelectElement);
-                
-                // Önce mevcut değeri kontrol et
-                String currentValue = roleSelectElement.getAttribute("value");
-                System.out.println("Mevcut role değeri: " + currentValue);
-                
-                // WRITER seç
                 try {
                     roleSelect.selectByValue("WRITER");
-                    Thread.sleep(500);
-                    String newValue = roleSelectElement.getAttribute("value");
-                    System.out.println("Yeni role değeri: " + newValue);
-                    if (!"WRITER".equals(newValue)) {
-                        // JavaScript ile zorla set et
-                        ((JavascriptExecutor) driver).executeScript(
-                            "arguments[0].value = 'WRITER'; arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", 
-                            roleSelectElement
-                        );
-                        Thread.sleep(500);
-                        // Tekrar kontrol et
-                        newValue = roleSelectElement.getAttribute("value");
-                        System.out.println("JavaScript sonrası role değeri: " + newValue);
-                    }
                 } catch (Exception e) {
-                    System.out.println("selectByValue başarısız, JavaScript ile deneniyor: " + e.getMessage());
-                    ((JavascriptExecutor) driver).executeScript(
-                        "arguments[0].value = 'WRITER'; arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", 
-                        roleSelectElement
-                    );
-                    Thread.sleep(500);
+                    try {
+                        roleSelect.selectByVisibleText("WRITER");
+                    } catch (Exception e2) {
+                        ((JavascriptExecutor) driver)
+                            .executeScript("arguments[0].value = 'WRITER';", roleSelectElement);
+                    }
                 }
             } catch (Exception e) {
-                System.out.println("Role select bulunamadı veya seçilemedi: " + e.getMessage());
-                e.printStackTrace();
-                return false; // Role seçimi başarısız olursa kayıt başarısız
+                System.out.println("Role select bulunamadı: " + e.getMessage());
+                return false;
             }
             
-            // Submit butonunu bul ve kontrol et
+            // Submit butonuna tıkla (Case1 ve Case4g'deki gibi safeSubmitForm kullan)
             WebElement submitButton = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.cssSelector("button[type='submit'], .auth-submit-btn"))
+                ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
             );
-            
-            // Butonun disabled olmadığından emin ol
-            if (submitButton.getAttribute("disabled") != null) {
-                System.out.println("Submit butonu disabled, bekleme yapılıyor...");
-                Thread.sleep(2000);
-                submitButton = wait.until(
-                    ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit'], .auth-submit-btn"))
-                );
-            }
-            
-            // Scroll to button
-            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", submitButton);
-            Thread.sleep(500);
-            
-            // Önce normal click dene
-            try {
-                submitButton.click();
-            } catch (Exception e) {
-                // Normal click başarısız olursa JavaScript click
-                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", submitButton);
-            }
+            WebElement form = driver.findElement(By.tagName("form"));
+            safeSubmitForm(submitButton, form);
             
             // Kayıt işleminin tamamlanmasını bekle
             Thread.sleep(3000);
             
-            // URL değişikliğini bekle (maksimum 10 saniye)
-            try {
-                wait.until(ExpectedConditions.or(
-                    ExpectedConditions.urlContains("/dashboard"),
-                    ExpectedConditions.urlContains("/yazar"),
-                    ExpectedConditions.urlToBe(BASE_URL + "/"),
-                    ExpectedConditions.not(ExpectedConditions.urlContains("/register"))
-                ));
-            } catch (Exception e) {
-                System.out.println("URL değişikliği beklenirken timeout: " + e.getMessage());
-            }
-            
-            Thread.sleep(2000); // Ek bekleme
+            // URL değişikliğini bekle (Case4g'deki gibi)
+            wait.until(ExpectedConditions.or(
+                ExpectedConditions.urlContains("/yazar/dashboard"),
+                ExpectedConditions.urlContains("/dashboard"),
+                ExpectedConditions.urlToBe(BASE_URL + "/")
+            ));
+            Thread.sleep(2000);
             
             // Kayıt başarılı kontrolü
             String currentUrl = driver.getCurrentUrl();
-            System.out.println("Writer kaydı sonrası URL: " + currentUrl);
-            
-            // Hata mesajlarını kontrol et
-            try {
-                WebElement errorElement = driver.findElement(By.cssSelector(".auth-error, .error, .text-danger, [role='alert']"));
-                if (errorElement.isDisplayed()) {
-                    String errorText = errorElement.getText();
-                    System.out.println("Writer kaydı sonrası hata mesajı: " + errorText);
-                    if (errorText != null && !errorText.trim().isEmpty()) {
-                        return false;
-                    }
-                }
-            } catch (Exception e) {
-                // Hata mesajı yoksa devam et
-            }
-            
-            // URL kontrolü - kayıt başarılı ise /register sayfasında olmamalı
             boolean success = !currentUrl.contains("/register") && 
                    (currentUrl.contains("/dashboard") || 
                     currentUrl.contains("/yazar") || 
-                    currentUrl.equals(BASE_URL + "/") ||
-                    currentUrl.equals(BASE_URL + "/reader/dashboard"));
-            
-            if (!success) {
-                System.out.println("Writer kaydı başarısız görünüyor. URL: " + currentUrl);
-                // Sayfa kaynağını kontrol et
-                String pageSource = driver.getPageSource();
-                if (pageSource.contains("Kayıt olurken bir hata oluştu") || 
-                    pageSource.contains("error") || 
-                    pageSource.contains("hata")) {
-                    System.out.println("Sayfada hata mesajı bulundu");
-                    return false;
-                }
-            }
+                    currentUrl.equals(BASE_URL + "/"));
             
             return success;
         } catch (Exception e) {
