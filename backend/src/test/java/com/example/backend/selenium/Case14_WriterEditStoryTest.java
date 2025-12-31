@@ -87,6 +87,9 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             String updatedTitle = "Güncellenmiş Başlık " + System.currentTimeMillis();
             editTitleInput.clear();
             editTitleInput.sendKeys(updatedTitle);
+            // React onChange event'ini tetikle
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", editTitleInput);
             Thread.sleep(1000);
 
             // 5. İçerik düzenleme - text bloğunu güncelle
@@ -97,10 +100,78 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             );
             editTextBlock.clear();
             editTextBlock.sendKeys("Güncellenmiş içerik paragrafı.");
+            // React onChange event'ini tetikle
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", editTextBlock);
             Thread.sleep(1000);
 
-            // 6. Yayınla butonuna bas (kaydet ve yayınla)
-            publishStory();
+            // 6. Yayınla butonunu bul ve bas (header içindeki publish-button)
+            // Alert ve confirm'i override et
+            ((JavascriptExecutor) driver).executeScript(
+                "window.alert = function(text) { console.log('Alert: ' + text); return true; };"
+            );
+            ((JavascriptExecutor) driver).executeScript(
+                "window.confirm = function(text) { console.log('Confirm: ' + text); return true; };"
+            );
+            
+            Thread.sleep(1000);
+            
+            // Header içindeki Yayınla butonunu bul (delete-button olmayan)
+            WebElement publishButton = wait.until(
+                ExpectedConditions.elementToBeClickable(
+                    By.cssSelector(".story-header-actions .publish-button:not(.delete-button), " +
+                                  "header .publish-button:not(.delete-button), " +
+                                  "button.publish-button:not(.delete-button)")
+                )
+            );
+            
+            // Butonun disabled olmadığından emin ol
+            String disabledAttr = publishButton.getAttribute("disabled");
+            if (disabledAttr != null && !disabledAttr.equals("false")) {
+                System.out.println("Yayınla butonu disabled, başlık kontrolü yapılıyor...");
+                // Başlık değerini tekrar kontrol et
+                String titleValue = editTitleInput.getAttribute("value");
+                if (titleValue == null || titleValue.trim().isEmpty()) {
+                    editTitleInput.sendKeys("Test Başlık " + System.currentTimeMillis());
+                    ((JavascriptExecutor) driver).executeScript(
+                        "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", editTitleInput);
+                    Thread.sleep(1000);
+                }
+                // Butonu tekrar bul
+                publishButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.cssSelector(".story-header-actions .publish-button:not(.delete-button)")
+                    )
+                );
+            }
+            
+            // Butonun görünür olduğundan emin ol
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", publishButton);
+            Thread.sleep(500);
+            
+            // Butona tıkla
+            try {
+                publishButton.click();
+            } catch (Exception e) {
+                // Normal click başarısız olursa JavaScript click
+                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", publishButton);
+            }
+            
+            Thread.sleep(5000); // Yayınlama işlemi için bekle
+            
+            // Alert'leri kontrol et ve kabul et
+            try {
+                org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                String alertText = alert.getText();
+                System.out.println("Yayınla sonrası alert: " + alertText);
+                alert.accept();
+                Thread.sleep(2000);
+            } catch (Exception alertEx) {
+                // Alert yoksa devam et
+            }
+            
+            waitForPageLoad();
+            Thread.sleep(3000);
 
             // 7. Veritabanından güncellenmiş story'yi kontrol et
             try (java.sql.Connection conn = getTestDatabaseConnection()) {
