@@ -545,8 +545,9 @@ public abstract class BaseSeleniumTest {
             Thread.sleep(200);
             
             // Role seçimi - WRITER (Case4g'deki gibi basit yaklaşım)
+            WebElement roleSelectElement = null;
             try {
-                WebElement roleSelectElement = wait.until(
+                roleSelectElement = wait.until(
                     ExpectedConditions.presenceOfElementLocated(By.id("roleName"))
                 );
                 org.openqa.selenium.support.ui.Select roleSelect = new org.openqa.selenium.support.ui.Select(roleSelectElement);
@@ -572,7 +573,7 @@ public abstract class BaseSeleniumTest {
             // Form değerlerini kontrol et (debug için)
             String firstNameValue = firstNameInput.getAttribute("value");
             String emailValue = emailInput.getAttribute("value");
-            String roleValue = roleSelectElement.getAttribute("value");
+            String roleValue = roleSelectElement != null ? roleSelectElement.getAttribute("value") : "null";
             System.out.println("Form değerleri - firstName: " + firstNameValue + ", email: " + emailValue + ", role: " + roleValue);
             
             // Submit butonuna tıkla (Case1 ve Case4g'deki gibi safeSubmitForm kullan)
