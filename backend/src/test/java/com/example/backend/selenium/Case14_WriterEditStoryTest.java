@@ -46,7 +46,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             
             driver.get(BASE_URL + "/reader/new-story");
             waitForPageLoad();
-            Thread.sleep(5000);
+            Thread.sleep(2000);
             
             WebElement titleInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
@@ -54,11 +54,11 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
                 )
             );
             titleInput.sendKeys(originalTitle);
-            Thread.sleep(5000);
+            Thread.sleep(1000);
             
             WebElement firstTextBlock = waitForTextBlock();
             firstTextBlock.sendKeys("Bu düzenlenecek bir story'dir.");
-            Thread.sleep(3000);
+            Thread.sleep(1000);
             
             publishStory();
             
