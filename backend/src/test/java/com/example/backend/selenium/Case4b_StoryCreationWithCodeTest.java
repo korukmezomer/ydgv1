@@ -3,7 +3,6 @@ package com.example.backend.selenium;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
-import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -127,13 +126,6 @@ public class Case4b_StoryCreationWithCodeTest extends BaseSeleniumTest {
             Thread.sleep(1000);
             
             // Menü açıldıktan sonra kod butonunu bul ve tıkla
-            // Kod butonu: block-add-menu içindeki kod butonu (title="Kod")
-            WebElement codeButton = wait.until(
-                ExpectedConditions.elementToBeClickable(
-                    By.cssSelector(".block-add-menu button[title='Kod'], .block-add-menu button[title='Code'], " +
-                        ".block-add-menu button:has(svg), .block-add-menu button")
-                )
-            );
             // Kod butonunu bulmak için tüm menü butonlarını kontrol et
             java.util.List<WebElement> menuButtons = driver.findElements(
                 By.cssSelector(".block-add-menu button")
