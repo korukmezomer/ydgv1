@@ -98,23 +98,27 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             // Eğer ana sayfaya yönlendirildiyse, Home.jsx otomatik olarak /yazar/dashboard'a yönlendirecek
             Thread.sleep(2000);
             
-            // WRITER rolü için yeni story oluştur sayfasına git
-            driver.get(BASE_URL + "/yazar/haber-olustur");
+            // Story oluştur sayfasına git (/reader/new-story)
+            driver.get(BASE_URL + "/reader/new-story");
             waitForPageLoad();
             Thread.sleep(2000);
             
-            // /yazar/haber-olustur sayfası için başlık alanını bul ve doldur
+            // Başlık alanını bul ve doldur
             WebElement titleInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("baslik"))
+                ExpectedConditions.presenceOfElementLocated(
+                    By.cssSelector("input.story-title-input, input[placeholder*='Başlık'], input[placeholder*='başlık']")
+                )
             );
             String storyTitle = "Test Story - Sadece Yazı " + randomSuffix;
             titleInput.clear();
             titleInput.sendKeys(storyTitle);
             
-            // İçerik alanını bul (icerik textarea)
+            // İçerik alanını bul (ilk text bloğu - textarea.block-textarea)
             Thread.sleep(1000);
             WebElement contentInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("icerik"))
+                ExpectedConditions.presenceOfElementLocated(
+                    By.cssSelector("textarea.block-textarea, .editor-blocks textarea, textarea[placeholder*='Hikayenizi']")
+                )
             );
             
             // En az 100 karakter içerik gir
@@ -125,14 +129,14 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             contentInput.clear();
             contentInput.sendKeys(content);
             
-            // Kaydet butonunu bul ve tıkla
+            // Yayınla butonunu bul ve tıkla
             Thread.sleep(1000);
-            WebElement saveButton = wait.until(
+            WebElement publishButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.cssSelector("button[type='submit'], button.btn-primary")
+                    By.cssSelector(".publish-button, button.publish-button")
                 )
             );
-            saveButton.click();
+            publishButton.click();
             
             // Story'nin kaydedildiğini doğrula
             Thread.sleep(3000);
@@ -231,14 +235,16 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             // Eğer ana sayfaya yönlendirildiyse, Home.jsx otomatik olarak /yazar/dashboard'a yönlendirecek
             Thread.sleep(2000);
             
-            // WRITER rolü için story oluştur sayfasına git
-            driver.get(BASE_URL + "/yazar/haber-olustur");
+            // Story oluştur sayfasına git (/reader/new-story)
+            driver.get(BASE_URL + "/reader/new-story");
             waitForPageLoad();
             Thread.sleep(2000);
             
             // Başlık alanını boş bırak, sadece içerik gir
             WebElement contentInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("icerik"))
+                ExpectedConditions.presenceOfElementLocated(
+                    By.cssSelector("textarea.block-textarea, .editor-blocks textarea, textarea[placeholder*='Hikayenizi']")
+                )
             );
             contentInput.clear();
             contentInput.sendKeys("Bu bir test içeriğidir. En az 100 karakter olmalıdır. " +
@@ -246,25 +252,25 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             
             Thread.sleep(1000);
             
-            // Kaydet butonunu bul ve tıkla
+            // Yayınla butonunu bul ve tıkla
             try {
-                WebElement saveButton = driver.findElement(
-                    By.cssSelector("button[type='submit'], button.btn-primary")
+                WebElement publishButton = driver.findElement(
+                    By.cssSelector(".publish-button, button.publish-button")
                 );
                 
-                if (saveButton.isEnabled()) {
-                    saveButton.click();
+                if (publishButton.isEnabled()) {
+                    publishButton.click();
                     Thread.sleep(2000);
                     
                     // Form validasyonu varsa sayfa değişmemeli veya hata mesajı görünmeli
                     String currentUrl = driver.getCurrentUrl();
                     assertTrue(
-                        currentUrl.contains("/haber-olustur") || 
+                        currentUrl.contains("/new-story") || 
                         driver.findElements(By.cssSelector(".error-message, .error, .text-red-500")).size() > 0,
                         "Case 4a Negative: Boş başlık ile story oluşturulmamalı"
                     );
                 } else {
-                    assertTrue(true, "Case 4a Negative: Kaydet butonu disabled (beklenen)");
+                    assertTrue(true, "Case 4a Negative: Yayınla butonu disabled (beklenen - başlık boş)");
                 }
             } catch (Exception e) {
                 // Buton bulunamadı veya disabled
@@ -338,14 +344,16 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             // Eğer ana sayfaya yönlendirildiyse, Home.jsx otomatik olarak /yazar/dashboard'a yönlendirecek
             Thread.sleep(2000);
             
-            // WRITER rolü için story oluştur sayfasına git
-            driver.get(BASE_URL + "/yazar/haber-olustur");
+            // Story oluştur sayfasına git (/reader/new-story)
+            driver.get(BASE_URL + "/reader/new-story");
             waitForPageLoad();
             Thread.sleep(2000);
             
             // Başlık gir
             WebElement titleInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("baslik"))
+                ExpectedConditions.presenceOfElementLocated(
+                    By.cssSelector("input.story-title-input, input[placeholder*='Başlık'], input[placeholder*='başlık']")
+                )
             );
             titleInput.clear();
             titleInput.sendKeys("Kısa İçerik Test");
@@ -353,32 +361,34 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             // Kısa içerik gir (100 karakterden kısa)
             Thread.sleep(1000);
             WebElement contentInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("icerik"))
+                ExpectedConditions.presenceOfElementLocated(
+                    By.cssSelector("textarea.block-textarea, .editor-blocks textarea, textarea[placeholder*='Hikayenizi']")
+                )
             );
             contentInput.clear();
             contentInput.sendKeys("Kısa içerik");
             
             Thread.sleep(1000);
             
-            // Kaydet butonunu bul ve tıkla
+            // Yayınla butonunu bul ve tıkla
             try {
-                WebElement saveButton = driver.findElement(
-                    By.cssSelector("button[type='submit'], button.btn-primary")
+                WebElement publishButton = driver.findElement(
+                    By.cssSelector(".publish-button, button.publish-button")
                 );
                 
-                if (saveButton.isEnabled()) {
-                    saveButton.click();
+                if (publishButton.isEnabled()) {
+                    publishButton.click();
                     Thread.sleep(2000);
                     
                     // Form validasyonu varsa sayfa değişmemeli veya hata mesajı görünmeli
                     String currentUrl = driver.getCurrentUrl();
                     assertTrue(
-                        currentUrl.contains("/haber-olustur") || 
+                        currentUrl.contains("/new-story") || 
                         driver.findElements(By.cssSelector(".error-message, .error, .text-red-500")).size() > 0,
                         "Case 4a Negative: Yetersiz içerik ile story oluşturulmamalı"
                     );
                 } else {
-                    assertTrue(true, "Case 4a Negative: Kaydet butonu disabled (beklenen)");
+                    assertTrue(true, "Case 4a Negative: Yayınla butonu disabled (beklenen)");
                 }
             } catch (Exception e) {
                 // Buton bulunamadı veya disabled

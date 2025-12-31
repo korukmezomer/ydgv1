@@ -87,8 +87,8 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
             ));
             Thread.sleep(2000);
             
-            // WRITER rolü için story oluştur sayfasına git
-            driver.get(BASE_URL + "/yazar/haber-olustur");
+            // Story oluştur sayfasına git (/reader/new-story)
+            driver.get(BASE_URL + "/reader/new-story");
             waitForPageLoad();
             Thread.sleep(2000);
             
