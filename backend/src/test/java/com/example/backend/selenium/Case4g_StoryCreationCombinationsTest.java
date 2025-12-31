@@ -588,27 +588,6 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         Thread.sleep(1000);
     }
     
-    private void publishStory() throws Exception {
-        Thread.sleep(1000);
-        WebElement publishButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".publish-button, button.publish-button")
-            )
-        );
-        publishButton.click();
-        
-        Thread.sleep(3000);
-        String currentUrl = driver.getCurrentUrl();
-        assertTrue(
-            currentUrl.contains("/dashboard") || 
-            currentUrl.contains("/yazar") ||
-            currentUrl.contains("/story") ||
-            currentUrl.contains("/reader") ||
-            currentUrl.contains("/haberler"),
-            "Story kaydedildikten sonra yönlendirme yapılmadı. URL: " + currentUrl
-        );
-    }
-    
     private java.nio.file.Path createTestImage() throws Exception {
         java.nio.file.Path testImagePath = java.nio.file.Paths.get(
             System.getProperty("java.io.tmpdir"), 
