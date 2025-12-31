@@ -51,7 +51,11 @@ public class Case2_UserLoginTest extends BaseSeleniumTest {
         safeSubmitForm(registerSubmitButton, registerForm);
         
         // Kayıt sonrası otomatik login yapılıyor, çıkış yap
-        Thread.sleep(3000);
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         String registerCurrentUrl = driver.getCurrentUrl();
         if (!registerCurrentUrl.contains("/login")) {
             // Çıkış yapmak için logout butonunu bul ve tıkla
@@ -62,7 +66,11 @@ public class Case2_UserLoginTest extends BaseSeleniumTest {
                     )
                 );
                 logoutButton.click();
-                Thread.sleep(2000);
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             } catch (Exception e) {
                 // Logout butonu bulunamazsa direkt login sayfasına git
                 driver.get(BASE_URL + "/login");
@@ -73,7 +81,11 @@ public class Case2_UserLoginTest extends BaseSeleniumTest {
         // Giriş sayfasına git
         driver.get(BASE_URL + "/login");
         waitForPageLoad();
-        Thread.sleep(1000);
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         
         // URL'in /login olduğunu doğrula
         assertTrue(driver.getCurrentUrl().contains("/login"), 
