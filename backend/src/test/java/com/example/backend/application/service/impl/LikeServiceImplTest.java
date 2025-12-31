@@ -1,5 +1,7 @@
 package com.example.backend.application.service.impl;
 
+import com.example.backend.application.exception.BadRequestException;
+import com.example.backend.application.exception.ResourceNotFoundException;
 import com.example.backend.domain.entity.Like;
 import com.example.backend.domain.entity.Story;
 import com.example.backend.domain.entity.User;
@@ -103,7 +105,7 @@ class LikeServiceImplTest {
 
         when(likeRepository.existsByUserIdAndStoryId(userId, storyId)).thenReturn(true);
 
-        assertThrows(RuntimeException.class, () -> likeService.like(storyId, userId));
+        assertThrows(BadRequestException.class, () -> likeService.like(storyId, userId));
         verify(likeRepository, never()).save(any(Like.class));
     }
 
@@ -143,7 +145,7 @@ class LikeServiceImplTest {
 
         when(likeRepository.findByUserIdAndStoryId(userId, storyId)).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> likeService.unlike(storyId, userId));
+        assertThrows(ResourceNotFoundException.class, () -> likeService.unlike(storyId, userId));
         verify(likeRepository, never()).delete(any(Like.class));
     }
 
@@ -194,7 +196,7 @@ class LikeServiceImplTest {
         when(likeRepository.existsByUserIdAndStoryId(userId, storyId)).thenReturn(false);
         when(storyRepository.findById(storyId)).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> likeService.like(storyId, userId));
+        assertThrows(ResourceNotFoundException.class, () -> likeService.like(storyId, userId));
         verify(likeRepository, never()).save(any(Like.class));
     }
 
@@ -210,8 +212,125 @@ class LikeServiceImplTest {
         when(storyRepository.findById(storyId)).thenReturn(Optional.of(story));
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> likeService.like(storyId, userId));
+        assertThrows(ResourceNotFoundException.class, () -> likeService.like(storyId, userId));
         verify(likeRepository, never()).save(any(Like.class));
+    }
+
+    @Test
+    void like_shouldHandleNullUsername() {
+        Long storyId = 1L;
+        Long userId = 2L;
+
+        when(likeRepository.existsByUserIdAndStoryId(userId, storyId)).thenReturn(false);
+
+        Story story = new Story();
+        story.setId(storyId);
+        story.setLikeCount(0L);
+        story.setTitle("Test Story");
+        User storyOwner = new User();
+        storyOwner.setId(3L);
+        story.setUser(storyOwner);
+
+        User user = new User();
+        user.setId(userId);
+        user.setUsername(null);
+        user.setFirstName("John");
+
+        when(storyRepository.findById(storyId)).thenReturn(Optional.of(story));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        Like savedLike = new Like();
+        savedLike.setId(1L);
+        when(likeRepository.save(any(Like.class))).thenReturn(savedLike);
+
+        likeService.like(storyId, userId);
+
+        verify(notificationService, times(1)).createNotification(
+                eq(3L),
+                eq("Yazınız Beğenildi"),
+                contains("John"),
+                eq(Notification.NotificationType.HABER_BEGENILDI),
+                eq(storyId),
+                isNull()
+        );
+    }
+
+    @Test
+    void like_shouldHandleNullUsernameAndFirstName() {
+        Long storyId = 1L;
+        Long userId = 2L;
+
+        when(likeRepository.existsByUserIdAndStoryId(userId, storyId)).thenReturn(false);
+
+        Story story = new Story();
+        story.setId(storyId);
+        story.setLikeCount(0L);
+        story.setTitle("Test Story");
+        User storyOwner = new User();
+        storyOwner.setId(3L);
+        story.setUser(storyOwner);
+
+        User user = new User();
+        user.setId(userId);
+        user.setUsername(null);
+        user.setFirstName(null);
+
+        when(storyRepository.findById(storyId)).thenReturn(Optional.of(story));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        Like savedLike = new Like();
+        savedLike.setId(1L);
+        when(likeRepository.save(any(Like.class))).thenReturn(savedLike);
+
+        likeService.like(storyId, userId);
+
+        verify(notificationService, times(1)).createNotification(
+                eq(3L),
+                eq("Yazınız Beğenildi"),
+                contains("Bir kullanıcı"),
+                eq(Notification.NotificationType.HABER_BEGENILDI),
+                eq(storyId),
+                isNull()
+        );
+    }
+
+    @Test
+    void like_shouldTruncateLongTitle() {
+        Long storyId = 1L;
+        Long userId = 2L;
+
+        when(likeRepository.existsByUserIdAndStoryId(userId, storyId)).thenReturn(false);
+
+        Story story = new Story();
+        story.setId(storyId);
+        story.setLikeCount(0L);
+        String longTitle = "a".repeat(100);
+        story.setTitle(longTitle);
+        User storyOwner = new User();
+        storyOwner.setId(3L);
+        story.setUser(storyOwner);
+
+        User user = new User();
+        user.setId(userId);
+        user.setUsername("liker");
+
+        when(storyRepository.findById(storyId)).thenReturn(Optional.of(story));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        Like savedLike = new Like();
+        savedLike.setId(1L);
+        when(likeRepository.save(any(Like.class))).thenReturn(savedLike);
+
+        likeService.like(storyId, userId);
+
+        verify(notificationService, times(1)).createNotification(
+                eq(3L),
+                eq("Yazınız Beğenildi"),
+                argThat(message -> message.contains("...") && message.length() < longTitle.length() + 50),
+                eq(Notification.NotificationType.HABER_BEGENILDI),
+                eq(storyId),
+                isNull()
+        );
     }
 
     @Test
