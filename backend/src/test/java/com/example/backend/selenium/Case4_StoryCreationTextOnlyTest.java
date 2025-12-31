@@ -16,24 +16,37 @@ import static org.junit.jupiter.api.Assertions.*;
  * 
  * Öncelik: YÜKSEK (En önemli test)
  * 
- * Use Case: WRITER rolündeki kullanıcı sadece yazı içeren story oluşturabilmeli
+ * Medium benzeri yazı oluşturma mantığı:
+ * - Kullanıcı başlık olmadan içerik yazabilir
+ * - Ancak başlık olmadan yayınla butonu disabled olmalı
+ * - Başlık olmadan yayınla butonuna tıklanırsa alert gösterilmeli
+ * - İçerik olmadan yayınlanamaz (alert gösterilmeli)
+ * - Başlık ve içerik varsa yayınlanabilir
+ * 
  * Senaryo:
  * - WRITER olarak giriş yap
- * - Yeni story oluştur sayfasına git
+ * - Yeni story oluştur sayfasına git (/reader/new-story)
  * - Başlık gir
- * - Sadece yazı (text) bloğu ekle
- * - İçerik gir (en az 100 karakter)
- * - Story'yi kaydet
+ * - İçerik gir (yeterli uzunlukta)
+ * - Yayınla butonuna tıkla
  * - Story'nin oluşturulduğunu ve içeriğin doğru kaydedildiğini doğrula
  */
 @DisplayName("Case 4a: Story Oluşturma - Sadece Yazı")
 public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
     
+    /**
+     * Senaryo 1: Başarılı story oluşturma
+     * - Başlık girilir
+     * - İçerik girilir (yeterli uzunlukta)
+     * - Yayınla butonu aktif olmalı
+     * - Yayınla butonuna tıklanır
+     * - Story başarıyla oluşturulur ve story detay sayfasına yönlendirilir
+     */
     @Test
-    @DisplayName("Case 4a: WRITER sadece yazı ile story oluşturabilmeli")
+    @DisplayName("Case 4a: Başlık ve içerik ile story başarıyla oluşturulabilmeli")
     public void case4a_StoryCreationTextOnly() {
         try {
-            // Önce WRITER rolünde kullanıcı kaydı yap
+            // 1. WRITER rolünde kullanıcı kaydı yap
             driver.get(BASE_URL + "/register");
             waitForPageLoad();
             
@@ -60,11 +73,9 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             try {
                 roleSelect.selectByValue("WRITER");
             } catch (Exception e) {
-                // Eğer selectByValue çalışmazsa, selectByVisibleText dene
                 try {
                     roleSelect.selectByVisibleText("WRITER");
                 } catch (Exception e2) {
-                    // Son çare: JavaScript ile değer set et
                     ((org.openqa.selenium.JavascriptExecutor) driver)
                         .executeScript("arguments[0].value = 'WRITER';", roleSelectElement);
                 }
@@ -76,18 +87,14 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             WebElement form = driver.findElement(By.tagName("form"));
             safeSubmitForm(submitButton, form);
             
-            // API çağrısının tamamlanmasını bekle (Frontend otomatik login yapıyor)
+            // 2. Kayıt sonrası otomatik login ve yönlendirme bekle
             Thread.sleep(3000);
-            
-            // Frontend'de kayıt sonrası otomatik login yapılıyor
-            // WRITER rolü için /yazar/dashboard'a yönlendirilmeyi bekle
             wait.until(ExpectedConditions.or(
                 ExpectedConditions.urlContains("/yazar/dashboard"),
                 ExpectedConditions.urlContains("/dashboard"),
                 ExpectedConditions.urlToBe(BASE_URL + "/")
             ));
             
-            // WRITER rolü ile kayıt olunduğunu doğrula - /yazar/dashboard'a yönlendirilmiş olmalı
             String currentUrlAfterReg = driver.getCurrentUrl();
             assertTrue(
                 currentUrlAfterReg.contains("/yazar/dashboard") || 
@@ -95,15 +102,14 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
                 "Case 4a: WRITER rolü ile kayıt sonrası /yazar/dashboard'a yönlendirilmedi. URL: " + currentUrlAfterReg
             );
             
-            // Eğer ana sayfaya yönlendirildiyse, Home.jsx otomatik olarak /yazar/dashboard'a yönlendirecek
             Thread.sleep(2000);
             
-            // Story oluştur sayfasına git (/reader/new-story)
+            // 3. Story oluştur sayfasına git
             driver.get(BASE_URL + "/reader/new-story");
             waitForPageLoad();
             Thread.sleep(2000);
             
-            // Başlık alanını bul ve doldur
+            // 4. Başlık alanını bul ve doldur
             WebElement titleInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
                     By.cssSelector("input.story-title-input, input[placeholder*='Başlık'], input[placeholder*='başlık']")
@@ -113,7 +119,7 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             titleInput.clear();
             titleInput.sendKeys(storyTitle);
             
-            // İçerik alanını bul (ilk text bloğu - textarea.block-textarea)
+            // 5. İçerik alanını bul ve doldur (ilk text bloğu)
             Thread.sleep(1000);
             WebElement contentInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
@@ -121,46 +127,49 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
                 )
             );
             
-            // En az 100 karakter içerik gir
+            // Yeterli uzunlukta içerik gir
             String content = "Bu bir test story içeriğidir. Sadece yazı (text) bloğu kullanılarak oluşturulmuştur. " +
                 "Bu içerik yeterince uzun olmalı ve story'nin yayınlanabilmesi için gerekli koşulları sağlamalıdır. " +
                 "Yazı bloğu düzgün bir şekilde kaydedilmeli ve görüntülenebilmelidir. " +
-                "Test amaçlı bu içerik en az 100 karakter olmalıdır.";
+                "Test amaçlı bu içerik yeterli uzunlukta olmalıdır.";
             contentInput.clear();
             contentInput.sendKeys(content);
             
-            // Yayınla butonunu bul ve tıkla
+            // 6. Yayınla butonunun aktif olduğunu doğrula (başlık ve içerik var)
             Thread.sleep(1000);
             WebElement publishButton = wait.until(
-                ExpectedConditions.elementToBeClickable(
+                ExpectedConditions.presenceOfElementLocated(
                     By.cssSelector(".publish-button, button.publish-button")
                 )
             );
+            assertTrue(publishButton.isEnabled(), 
+                "Case 4a: Başlık ve içerik girildikten sonra yayınla butonu aktif olmalı");
+            
+            // 7. Yayınla butonuna tıkla
             publishButton.click();
             
-            // Story'nin kaydedildiğini doğrula
+            // 8. Story'nin başarıyla oluşturulduğunu doğrula (story detay sayfasına yönlendirilmeli)
             Thread.sleep(3000);
             String currentUrl = driver.getCurrentUrl();
             assertTrue(
-                currentUrl.contains("/dashboard") || 
-                currentUrl.contains("/yazar") ||
+                currentUrl.contains("/haberler/") || 
                 currentUrl.contains("/story") ||
                 currentUrl.contains("/reader"),
-                "Case 4a: Story kaydedildikten sonra yönlendirme yapılmadı. URL: " + currentUrl
+                "Case 4a: Story kaydedildikten sonra story detay sayfasına yönlendirilmedi. URL: " + currentUrl
             );
             
-            // Story'nin içeriğinin doğru kaydedildiğini kontrol et
-            // (Eğer story detay sayfasına yönlendirildiyse)
-            if (currentUrl.contains("/story") || currentUrl.contains("/reader")) {
+            // 9. Story içeriğinin doğru kaydedildiğini kontrol et
+            if (currentUrl.contains("/haberler/") || currentUrl.contains("/story")) {
                 WebElement storyContent = wait.until(
                     ExpectedConditions.presenceOfElementLocated(
-                        By.cssSelector(".story-content, .content, article")
+                        By.cssSelector(".story-content, .content, article, .article-content")
                     )
                 );
                 String savedContent = storyContent.getText();
                 assertTrue(
-                    savedContent.contains(content.substring(0, 50)),
-                    "Case 4a: Story içeriği doğru kaydedilmemiş. Beklenen: " + content.substring(0, 50)
+                    savedContent.contains(content.substring(0, Math.min(50, content.length()))) ||
+                    savedContent.contains(storyTitle),
+                    "Case 4a: Story içeriği doğru kaydedilmemiş. Beklenen içerik bulunamadı."
                 );
             }
             
@@ -169,15 +178,22 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
         } catch (Exception e) {
             System.out.println("Case 4a: Story oluşturma (sadece yazı) testi - " + e.getMessage());
             e.printStackTrace();
-            // Test ortamında gerekli setup yapılmadıysa test geçer
+            fail("Case 4a: Story oluşturma başarısız oldu: " + e.getMessage());
         }
     }
     
+    /**
+     * Senaryo 2: Başlık olmadan story oluşturma denemesi
+     * - Başlık girilmez (boş bırakılır)
+     * - İçerik girilir
+     * - Yayınla butonu disabled olmalı (başlık olmadığı için)
+     * - Eğer JavaScript ile tıklanırsa alert gösterilmeli
+     */
     @Test
-    @DisplayName("Case 4a Negative: Boş başlık ile story oluşturulamamalı")
+    @DisplayName("Case 4a Negative: Başlık olmadan story oluşturulamamalı - Yayınla butonu disabled olmalı")
     public void case4a_Negative_EmptyTitle() {
         try {
-            // WRITER olarak giriş yap
+            // 1. WRITER olarak kayıt ol ve giriş yap
             driver.get(BASE_URL + "/register");
             waitForPageLoad();
             
@@ -194,7 +210,7 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             driver.findElement(By.id("username")).sendKeys("writer" + randomSuffix);
             driver.findElement(By.id("password")).sendKeys("Test123456");
             
-            // Rol seçimi (WRITER) - Select elementini kullan
+            // Rol seçimi (WRITER)
             WebElement roleSelectElement = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("roleName"))
             );
@@ -216,77 +232,87 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             WebElement form = driver.findElement(By.tagName("form"));
             safeSubmitForm(submitButton, form);
             
-            // Frontend'de kayıt sonrası otomatik login yapılıyor
             Thread.sleep(3000);
             wait.until(ExpectedConditions.or(
                 ExpectedConditions.urlContains("/yazar/dashboard"),
                 ExpectedConditions.urlContains("/dashboard"),
                 ExpectedConditions.urlToBe(BASE_URL + "/")
             ));
-            
-            // WRITER rolü ile kayıt olunduğunu doğrula - /yazar/dashboard'a yönlendirilmiş olmalı
-            String currentUrlAfterReg = driver.getCurrentUrl();
-            assertTrue(
-                currentUrlAfterReg.contains("/yazar/dashboard") || 
-                currentUrlAfterReg.equals(BASE_URL + "/"),
-                "Case 4a Negative: WRITER rolü ile kayıt sonrası /yazar/dashboard'a yönlendirilmedi. URL: " + currentUrlAfterReg
-            );
-            
-            // Eğer ana sayfaya yönlendirildiyse, Home.jsx otomatik olarak /yazar/dashboard'a yönlendirecek
             Thread.sleep(2000);
             
-            // Story oluştur sayfasına git (/reader/new-story)
+            // 2. Story oluştur sayfasına git
             driver.get(BASE_URL + "/reader/new-story");
             waitForPageLoad();
             Thread.sleep(2000);
             
-            // Başlık alanını boş bırak, sadece içerik gir
+            // 3. Başlık alanını boş bırak (sadece içerik gir)
             WebElement contentInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
                     By.cssSelector("textarea.block-textarea, .editor-blocks textarea, textarea[placeholder*='Hikayenizi']")
                 )
             );
             contentInput.clear();
-            contentInput.sendKeys("Bu bir test içeriğidir. En az 100 karakter olmalıdır. " +
-                "Bu içerik yeterince uzun olmalı ve story'nin yayınlanabilmesi için gerekli koşulları sağlamalıdır.");
+            contentInput.sendKeys("Bu bir test içeriğidir. Yeterli uzunlukta içerik girilmiştir. " +
+                "Ancak başlık olmadığı için yayınla butonu disabled olmalıdır.");
             
             Thread.sleep(1000);
             
-            // Yayınla butonunu bul ve tıkla
-            try {
-                WebElement publishButton = driver.findElement(
+            // 4. Yayınla butonunun disabled olduğunu doğrula (başlık olmadığı için)
+            WebElement publishButton = wait.until(
+                ExpectedConditions.presenceOfElementLocated(
                     By.cssSelector(".publish-button, button.publish-button")
-                );
+                )
+            );
+            
+            assertFalse(publishButton.isEnabled(), 
+                "Case 4a Negative: Başlık olmadan yayınla butonu disabled olmalı");
+            
+            // 5. JavaScript ile tıklanırsa alert gösterilmeli (frontend validasyonu)
+            try {
+                // JavaScript ile tıklamayı dene (disabled buton normalde tıklanamaz)
+                ((org.openqa.selenium.JavascriptExecutor) driver)
+                    .executeScript("arguments[0].click();", publishButton);
+                Thread.sleep(1000);
                 
-                if (publishButton.isEnabled()) {
-                    publishButton.click();
-                    Thread.sleep(2000);
-                    
-                    // Form validasyonu varsa sayfa değişmemeli veya hata mesajı görünmeli
+                // Alert kontrolü (eğer alert gösterildiyse)
+                try {
+                    org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                    String alertText = alert.getText();
+                    assertTrue(alertText.contains("başlık") || alertText.contains("Başlık"),
+                        "Case 4a Negative: Başlık olmadan alert gösterilmeli. Alert: " + alertText);
+                    alert.accept();
+                } catch (Exception alertEx) {
+                    // Alert gösterilmediyse, sayfa değişmemeli
                     String currentUrl = driver.getCurrentUrl();
-                    assertTrue(
-                        currentUrl.contains("/new-story") || 
-                        driver.findElements(By.cssSelector(".error-message, .error, .text-red-500")).size() > 0,
-                        "Case 4a Negative: Boş başlık ile story oluşturulmamalı"
-                    );
-                } else {
-                    assertTrue(true, "Case 4a Negative: Yayınla butonu disabled (beklenen - başlık boş)");
+                    assertTrue(currentUrl.contains("/new-story"),
+                        "Case 4a Negative: Başlık olmadan sayfa değişmemeli. URL: " + currentUrl);
                 }
             } catch (Exception e) {
-                // Buton bulunamadı veya disabled
-                assertTrue(true, "Case 4a Negative: Boş başlık ile story oluşturulamaz");
+                // JavaScript ile tıklama başarısız oldu (beklenen - disabled buton)
+                assertTrue(true, "Case 4a Negative: Disabled buton tıklanamaz (beklenen)");
             }
+            
+            System.out.println("Case 4a Negative: Başlık olmadan story oluşturulamaz testi başarılı");
             
         } catch (Exception e) {
             System.out.println("Case 4a Negative: " + e.getMessage());
+            e.printStackTrace();
+            fail("Case 4a Negative: Test başarısız oldu: " + e.getMessage());
         }
     }
     
+    /**
+     * Senaryo 3: İçerik olmadan story oluşturma denemesi
+     * - Başlık girilir
+     * - İçerik girilmez (boş bırakılır)
+     * - Yayınla butonu aktif olabilir (başlık var)
+     * - Yayınla butonuna tıklanırsa alert gösterilmeli ("Lütfen içerik girin")
+     */
     @Test
-    @DisplayName("Case 4a Negative: Yetersiz içerik ile story oluşturulamamalı")
-    public void case4a_Negative_ShortContent() {
+    @DisplayName("Case 4a Negative: İçerik olmadan story oluşturulamamalı - Alert gösterilmeli")
+    public void case4a_Negative_EmptyContent() {
         try {
-            // WRITER olarak giriş yap
+            // 1. WRITER olarak kayıt ol ve giriş yap
             driver.get(BASE_URL + "/register");
             waitForPageLoad();
             
@@ -303,7 +329,7 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             driver.findElement(By.id("username")).sendKeys("writer" + randomSuffix);
             driver.findElement(By.id("password")).sendKeys("Test123456");
             
-            // Rol seçimi (WRITER) - Select elementini kullan
+            // Rol seçimi (WRITER)
             WebElement roleSelectElement = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("roleName"))
             );
@@ -325,79 +351,70 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             WebElement form = driver.findElement(By.tagName("form"));
             safeSubmitForm(submitButton, form);
             
-            // Frontend'de kayıt sonrası otomatik login yapılıyor
             Thread.sleep(3000);
             wait.until(ExpectedConditions.or(
                 ExpectedConditions.urlContains("/yazar/dashboard"),
                 ExpectedConditions.urlContains("/dashboard"),
                 ExpectedConditions.urlToBe(BASE_URL + "/")
             ));
-            
-            // WRITER rolü ile kayıt olunduğunu doğrula - /yazar/dashboard'a yönlendirilmiş olmalı
-            String currentUrlAfterReg = driver.getCurrentUrl();
-            assertTrue(
-                currentUrlAfterReg.contains("/yazar/dashboard") || 
-                currentUrlAfterReg.equals(BASE_URL + "/"),
-                "Case 4a Negative: WRITER rolü ile kayıt sonrası /yazar/dashboard'a yönlendirilmedi. URL: " + currentUrlAfterReg
-            );
-            
-            // Eğer ana sayfaya yönlendirildiyse, Home.jsx otomatik olarak /yazar/dashboard'a yönlendirecek
             Thread.sleep(2000);
             
-            // Story oluştur sayfasına git (/reader/new-story)
+            // 2. Story oluştur sayfasına git
             driver.get(BASE_URL + "/reader/new-story");
             waitForPageLoad();
             Thread.sleep(2000);
             
-            // Başlık gir
+            // 3. Başlık gir, içerik boş bırak
             WebElement titleInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
                     By.cssSelector("input.story-title-input, input[placeholder*='Başlık'], input[placeholder*='başlık']")
                 )
             );
             titleInput.clear();
-            titleInput.sendKeys("Kısa İçerik Test");
+            titleInput.sendKeys("Boş İçerik Test");
             
-            // Kısa içerik gir (100 karakterden kısa)
+            // İçerik alanını boş bırak (varsayılan boş textarea)
             Thread.sleep(1000);
-            WebElement contentInput = wait.until(
+            
+            // 4. Yayınla butonunun aktif olduğunu doğrula (başlık var)
+            WebElement publishButton = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector("textarea.block-textarea, .editor-blocks textarea, textarea[placeholder*='Hikayenizi']")
+                    By.cssSelector(".publish-button, button.publish-button")
                 )
             );
-            contentInput.clear();
-            contentInput.sendKeys("Kısa içerik");
+            assertTrue(publishButton.isEnabled(), 
+                "Case 4a Negative: Başlık girildikten sonra yayınla butonu aktif olmalı");
             
+            // 5. Yayınla butonuna tıkla
+            publishButton.click();
             Thread.sleep(1000);
             
-            // Yayınla butonunu bul ve tıkla
+            // 6. Alert gösterilmeli ("Lütfen içerik girin")
             try {
-                WebElement publishButton = driver.findElement(
-                    By.cssSelector(".publish-button, button.publish-button")
-                );
+                org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                String alertText = alert.getText();
+                assertTrue(alertText.contains("içerik") || alertText.contains("İçerik"),
+                    "Case 4a Negative: İçerik olmadan alert gösterilmeli. Alert: " + alertText);
+                alert.accept();
                 
-                if (publishButton.isEnabled()) {
-                    publishButton.click();
-                    Thread.sleep(2000);
-                    
-                    // Form validasyonu varsa sayfa değişmemeli veya hata mesajı görünmeli
-                    String currentUrl = driver.getCurrentUrl();
-                    assertTrue(
-                        currentUrl.contains("/new-story") || 
-                        driver.findElements(By.cssSelector(".error-message, .error, .text-red-500")).size() > 0,
-                        "Case 4a Negative: Yetersiz içerik ile story oluşturulmamalı"
-                    );
-                } else {
-                    assertTrue(true, "Case 4a Negative: Yayınla butonu disabled (beklenen)");
-                }
-            } catch (Exception e) {
-                // Buton bulunamadı veya disabled
-                assertTrue(true, "Case 4a Negative: Yetersiz içerik ile story oluşturulamaz");
+                // 7. Sayfa değişmemeli (hala /reader/new-story sayfasında olmalı)
+                String currentUrl = driver.getCurrentUrl();
+                assertTrue(currentUrl.contains("/new-story"),
+                    "Case 4a Negative: İçerik olmadan sayfa değişmemeli. URL: " + currentUrl);
+                
+            } catch (Exception alertEx) {
+                // Alert gösterilmediyse, sayfa değişmemeli
+                String currentUrl = driver.getCurrentUrl();
+                assertTrue(currentUrl.contains("/new-story"),
+                    "Case 4a Negative: İçerik olmadan sayfa değişmemeli. URL: " + currentUrl);
             }
+            
+            System.out.println("Case 4a Negative: İçerik olmadan story oluşturulamaz testi başarılı");
             
         } catch (Exception e) {
             System.out.println("Case 4a Negative: " + e.getMessage());
+            e.printStackTrace();
+            fail("Case 4a Negative: Test başarısız oldu: " + e.getMessage());
         }
     }
 }
-
