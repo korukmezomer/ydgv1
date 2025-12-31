@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.Select;
+
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -13,35 +16,44 @@ import static org.junit.jupiter.api.Assertions.*;
  * 
  * Use Case: Kullanıcı giriş yaptıktan sonra rolüne göre doğru dashboard'a yönlendirilmeli
  * Senaryo:
- * - Kullanıcı giriş yapar
- * - Rolüne göre doğru dashboard'a yönlendirildiğini doğrula
+ * - READER (USER) rolü ile kayıt ol ve /reader/dashboard'a yönlendirildiğini doğrula
+ * - WRITER rolü ile kayıt ol ve /yazar/dashboard'a yönlendirildiğini doğrula
  * - Dashboard sayfasının yüklendiğini doğrula
  */
 @DisplayName("Case 3: Dashboard Erişimi")
 public class Case3_DashboardAccessTest extends BaseSeleniumTest {
     
     @Test
-    @DisplayName("Case 3: Kullanıcı dashboard'a erişebilmeli")
-    public void case3_DashboardAccess() {
-        // Önce kayıt ol (test için)
-        driver.get(BASE_URL + "/register");
-        waitForPageLoad();
-        
-        // Test kullanıcısı kaydı
-        java.util.Random random = new java.util.Random();
-        String randomSuffix = String.valueOf(random.nextInt(10000));
-        String email = "dashboardtest" + randomSuffix + "@example.com";
-        
+    @DisplayName("Case 3.1: READER (USER) rolü ile dashboard'a erişebilmeli")
+    public void case3_1_ReaderDashboardAccess() {
         try {
+            // READER (USER) rolü ile kayıt ol
+            driver.get(BASE_URL + "/register");
+            waitForPageLoad();
+            
+            Random random = new Random();
+            String randomSuffix = String.valueOf(random.nextInt(10000));
+            String email = "readerdashboard" + randomSuffix + "@example.com";
+            
             WebElement firstNameInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
             );
-            firstNameInput.sendKeys("Dashboard");
-            
+            firstNameInput.sendKeys("Reader");
             driver.findElement(By.id("lastName")).sendKeys("Test");
             driver.findElement(By.id("email")).sendKeys(email);
-            driver.findElement(By.id("username")).sendKeys("dashboardtest" + randomSuffix);
+            driver.findElement(By.id("username")).sendKeys("readerdashboard" + randomSuffix);
             driver.findElement(By.id("password")).sendKeys("Test123456");
+            
+            // USER rolü seç (varsayılan, ama açıkça seçelim)
+            WebElement roleSelectElement = wait.until(
+                ExpectedConditions.presenceOfElementLocated(By.id("roleName"))
+            );
+            Select roleSelect = new Select(roleSelectElement);
+            try {
+                roleSelect.selectByValue("USER");
+            } catch (Exception e) {
+                // USER varsayılan rol, zaten seçili olabilir
+            }
             
             WebElement submitButton = wait.until(
                 ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
@@ -49,62 +61,110 @@ public class Case3_DashboardAccessTest extends BaseSeleniumTest {
             WebElement form = driver.findElement(By.tagName("form"));
             safeSubmitForm(submitButton, form);
             
-            // API çağrısının tamamlanmasını bekle
+            // Frontend'de kayıt sonrası otomatik login yapılıyor
             Thread.sleep(3000);
             
-            String currentUrl = driver.getCurrentUrl();
-            
-            // Eğer login sayfasına yönlendirildiyse, otomatik giriş yap
-            if (currentUrl.contains("/login")) {
-                // Login formunu doldur
-                WebElement loginEmailInput = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(By.id("email"))
-                );
-                loginEmailInput.clear();
-                loginEmailInput.sendKeys(email);
-                
-                WebElement loginPasswordInput = driver.findElement(By.id("password"));
-                loginPasswordInput.clear();
-                loginPasswordInput.sendKeys("Test123456");
-                
-                // Giriş butonuna tıkla
-                WebElement loginSubmitButton = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("button[type='submit']")
-                    )
-                );
-                WebElement loginForm = driver.findElement(By.tagName("form"));
-                safeSubmitForm(loginSubmitButton, loginForm);
-                
-                // Giriş işleminin tamamlanmasını bekle
-                Thread.sleep(3000);
-            }
-            
-            // Dashboard'a yönlendirilmeyi bekle
+            // /reader/dashboard'a yönlendirilmeyi bekle
             wait.until(ExpectedConditions.or(
                 ExpectedConditions.urlContains("/reader/dashboard"),
-                ExpectedConditions.urlContains("/yazar/dashboard"),
-                ExpectedConditions.urlContains("/admin/dashboard"),
                 ExpectedConditions.urlContains("/dashboard"),
                 ExpectedConditions.urlToBe(BASE_URL + "/")
             ));
             
-            currentUrl = driver.getCurrentUrl();
+            // Eğer ana sayfaya yönlendirildiyse, Home.jsx otomatik olarak /reader/dashboard'a yönlendirecek
+            Thread.sleep(2000);
+            
+            String currentUrl = driver.getCurrentUrl();
             assertTrue(
-                currentUrl.contains("/dashboard") || 
-                currentUrl.equals(BASE_URL + "/") ||
-                currentUrl.contains("/reader/dashboard") ||
-                currentUrl.contains("/yazar/dashboard"),
-                "Case 3: Dashboard'a yönlendirilmedi. Mevcut URL: " + currentUrl
+                currentUrl.contains("/reader/dashboard") || 
+                currentUrl.equals(BASE_URL + "/"),
+                "Case 3.1: READER rolü ile kayıt sonrası /reader/dashboard'a yönlendirilmedi. URL: " + currentUrl
             );
             
             // Dashboard içeriğinin yüklendiğini doğrula
             wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
             assertNotNull(driver.findElement(By.tagName("body")), 
-                "Case 3: Dashboard sayfası yüklenmedi");
+                "Case 3.1: Dashboard sayfası yüklenmedi");
+            
+            System.out.println("Case 3.1: READER dashboard erişimi başarılı");
             
         } catch (Exception e) {
-            fail("Case 3: Dashboard erişimi başarısız oldu: " + e.getMessage());
+            fail("Case 3.1: READER dashboard erişimi başarısız oldu: " + e.getMessage());
+        }
+    }
+    
+    @Test
+    @DisplayName("Case 3.2: WRITER rolü ile dashboard'a erişebilmeli")
+    public void case3_2_WriterDashboardAccess() {
+        try {
+            // WRITER rolü ile kayıt ol
+            driver.get(BASE_URL + "/register");
+            waitForPageLoad();
+            
+            Random random = new Random();
+            String randomSuffix = String.valueOf(random.nextInt(10000));
+            String email = "writerdashboard" + randomSuffix + "@example.com";
+            
+            WebElement firstNameInput = wait.until(
+                ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
+            );
+            firstNameInput.sendKeys("Writer");
+            driver.findElement(By.id("lastName")).sendKeys("Test");
+            driver.findElement(By.id("email")).sendKeys(email);
+            driver.findElement(By.id("username")).sendKeys("writerdashboard" + randomSuffix);
+            driver.findElement(By.id("password")).sendKeys("Test123456");
+            
+            // WRITER rolü seç
+            WebElement roleSelectElement = wait.until(
+                ExpectedConditions.presenceOfElementLocated(By.id("roleName"))
+            );
+            Select roleSelect = new Select(roleSelectElement);
+            try {
+                roleSelect.selectByValue("WRITER");
+            } catch (Exception e) {
+                try {
+                    roleSelect.selectByVisibleText("WRITER");
+                } catch (Exception e2) {
+                    ((org.openqa.selenium.JavascriptExecutor) driver)
+                        .executeScript("arguments[0].value = 'WRITER';", roleSelectElement);
+                }
+            }
+            
+            WebElement submitButton = wait.until(
+                ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
+            );
+            WebElement form = driver.findElement(By.tagName("form"));
+            safeSubmitForm(submitButton, form);
+            
+            // Frontend'de kayıt sonrası otomatik login yapılıyor
+            Thread.sleep(3000);
+            
+            // /yazar/dashboard'a yönlendirilmeyi bekle
+            wait.until(ExpectedConditions.or(
+                ExpectedConditions.urlContains("/yazar/dashboard"),
+                ExpectedConditions.urlContains("/dashboard"),
+                ExpectedConditions.urlToBe(BASE_URL + "/")
+            ));
+            
+            // Eğer ana sayfaya yönlendirildiyse, Home.jsx otomatik olarak /yazar/dashboard'a yönlendirecek
+            Thread.sleep(2000);
+            
+            String currentUrl = driver.getCurrentUrl();
+            assertTrue(
+                currentUrl.contains("/yazar/dashboard") || 
+                currentUrl.equals(BASE_URL + "/"),
+                "Case 3.2: WRITER rolü ile kayıt sonrası /yazar/dashboard'a yönlendirilmedi. URL: " + currentUrl
+            );
+            
+            // Dashboard içeriğinin yüklendiğini doğrula
+            wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
+            assertNotNull(driver.findElement(By.tagName("body")), 
+                "Case 3.2: Dashboard sayfası yüklenmedi");
+            
+            System.out.println("Case 3.2: WRITER dashboard erişimi başarılı");
+            
+        } catch (Exception e) {
+            fail("Case 3.2: WRITER dashboard erişimi başarısız oldu: " + e.getMessage());
         }
     }
 }
