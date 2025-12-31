@@ -74,7 +74,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             // 3. Düzenleme sayfasına git
             driver.get(BASE_URL + "/yazar/haber-duzenle/" + storyId);
             waitForPageLoad();
-            Thread.sleep(5000);
+            Thread.sleep(2000);
 
             // 4. Başlık düzenleme
             WebElement editTitleInput = wait.until(
@@ -387,7 +387,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             // 3. Düzenleme sayfasına git
             driver.get(BASE_URL + "/yazar/haber-duzenle/" + storyId);
             waitForPageLoad();
-            Thread.sleep(5000);
+            Thread.sleep(2000);
 
             // 4. Code bloğunu bul ve sil
             WebElement codeBlock = wait.until(
@@ -659,7 +659,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             // 3. Düzenleme sayfasına git
             driver.get(BASE_URL + "/yazar/haber-duzenle/" + storyId);
             waitForPageLoad();
-            Thread.sleep(5000);
+            Thread.sleep(2000);
 
             // 4. Image bloğunu bul ve sil
             WebElement imageBlock = wait.until(
@@ -837,11 +837,10 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
 
             // Writer'a geri giriş yap
             loginUser(writerEmail, writerPassword);
-            Thread.sleep(5000);
 
             driver.get(BASE_URL + "/yazar/haber-duzenle/" + storyId);
             waitForPageLoad();
-            Thread.sleep(3000);
+            Thread.sleep(2000);
 
             // Case4f'deki hazır kodu kullan: Text bloğunu bul (BOŞ BIRAK)
             WebElement firstTextBlock = wait.until(
@@ -982,11 +981,10 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
 
             // Writer'a geri giriş yap
             loginUser(writerEmail, writerPassword);
-            Thread.sleep(5000);
 
             driver.get(BASE_URL + "/yazar/haber-duzenle/" + storyId);
             waitForPageLoad();
-            Thread.sleep(3000);
+            Thread.sleep(2000);
 
             WebElement textBlock = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
@@ -1106,7 +1104,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             // 3. Düzenleme sayfasına git
             driver.get(BASE_URL + "/yazar/haber-duzenle/" + storyId);
             waitForPageLoad();
-            Thread.sleep(5000);
+            Thread.sleep(2000);
 
             // 4. Sil butonunu bul ve tıkla
             ((JavascriptExecutor) driver).executeScript(

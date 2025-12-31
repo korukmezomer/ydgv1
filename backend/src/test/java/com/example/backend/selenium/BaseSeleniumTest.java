@@ -554,7 +554,7 @@ public abstract class BaseSeleniumTest {
                 
                 // Scroll to element
                 ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", roleSelectElement);
-                Thread.sleep(2000);
+                Thread.sleep(500);
                 
                 org.openqa.selenium.support.ui.Select roleSelect = new org.openqa.selenium.support.ui.Select(roleSelectElement);
                 
@@ -565,7 +565,7 @@ public abstract class BaseSeleniumTest {
                 // WRITER seç
                 try {
                     roleSelect.selectByValue("WRITER");
-                    Thread.sleep(2000);
+                    Thread.sleep(500);
                     String newValue = roleSelectElement.getAttribute("value");
                     System.out.println("Yeni role değeri: " + newValue);
                     if (!"WRITER".equals(newValue)) {
@@ -574,7 +574,7 @@ public abstract class BaseSeleniumTest {
                             "arguments[0].value = 'WRITER'; arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", 
                             roleSelectElement
                         );
-                        Thread.sleep(2000);
+                        Thread.sleep(500);
                         // Tekrar kontrol et
                         newValue = roleSelectElement.getAttribute("value");
                         System.out.println("JavaScript sonrası role değeri: " + newValue);
@@ -585,7 +585,7 @@ public abstract class BaseSeleniumTest {
                         "arguments[0].value = 'WRITER'; arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", 
                         roleSelectElement
                     );
-                    Thread.sleep(2000);
+                    Thread.sleep(500);
                 }
             } catch (Exception e) {
                 System.out.println("Role select bulunamadı veya seçilemedi: " + e.getMessage());
@@ -601,7 +601,7 @@ public abstract class BaseSeleniumTest {
             // Butonun disabled olmadığından emin ol
             if (submitButton.getAttribute("disabled") != null) {
                 System.out.println("Submit butonu disabled, bekleme yapılıyor...");
-                Thread.sleep(5000);
+                Thread.sleep(2000);
                 submitButton = wait.until(
                     ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit'], .auth-submit-btn"))
                 );
@@ -609,7 +609,7 @@ public abstract class BaseSeleniumTest {
             
             // Scroll to button
             ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", submitButton);
-            Thread.sleep(2000);
+            Thread.sleep(500);
             
             // Önce normal click dene
             try {
@@ -620,12 +620,11 @@ public abstract class BaseSeleniumTest {
             }
             
             // Kayıt işleminin tamamlanmasını bekle
-            Thread.sleep(5000);
+            Thread.sleep(3000);
             
-            // URL değişikliğini bekle (maksimum 30 saniye)
+            // URL değişikliğini bekle (maksimum 10 saniye)
             try {
-                WebDriverWait urlWait = new WebDriverWait(driver, java.time.Duration.ofSeconds(30));
-                urlWait.until(ExpectedConditions.or(
+                wait.until(ExpectedConditions.or(
                     ExpectedConditions.urlContains("/dashboard"),
                     ExpectedConditions.urlContains("/yazar"),
                     ExpectedConditions.urlToBe(BASE_URL + "/"),
@@ -635,7 +634,7 @@ public abstract class BaseSeleniumTest {
                 System.out.println("URL değişikliği beklenirken timeout: " + e.getMessage());
             }
             
-            Thread.sleep(5000); // Ek bekleme
+            Thread.sleep(2000); // Ek bekleme
             
             // Kayıt başarılı kontrolü
             String currentUrl = driver.getCurrentUrl();
