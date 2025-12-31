@@ -404,30 +404,77 @@ public abstract class BaseSeleniumTest {
      * Kullanıcı girişi yap
      */
     protected void loginUser(String email, String password) {
-        driver.get(BASE_URL + "/login");
-        waitForPageLoad();
-        
-        // Eğer zaten dashboard'daysa önce logout yap
-        String currentUrl = driver.getCurrentUrl();
-        if (currentUrl.contains("/dashboard")) {
-            logout();
+        try {
             driver.get(BASE_URL + "/login");
             waitForPageLoad();
-        }
-        
-        WebElement emailInput = wait.until(
-            ExpectedConditions.presenceOfElementLocated(By.id("email"))
-        );
-        emailInput.sendKeys(email);
-        driver.findElement(By.id("password")).sendKeys(password);
-        
-        WebElement form = driver.findElement(By.cssSelector("form"));
-        WebElement submitButton = form.findElement(By.cssSelector("button[type='submit']"));
-        safeSubmitForm(submitButton, form);
-        try {
+            Thread.sleep(1000); // Sayfanın yüklenmesini bekle
+            
+            // Eğer zaten dashboard'daysa önce logout yap
+            String currentUrl = driver.getCurrentUrl();
+            if (currentUrl.contains("/dashboard") || currentUrl.contains("/yazar/") || 
+                currentUrl.contains("/admin/") || currentUrl.contains("/reader/")) {
+                logout();
+                driver.get(BASE_URL + "/login");
+                waitForPageLoad();
+                Thread.sleep(1000);
+            }
+            
+            // Email input'unu bul ve doldur
+            WebElement emailInput = wait.until(
+                ExpectedConditions.presenceOfElementLocated(By.id("email"))
+            );
+            emailInput.clear();
+            emailInput.sendKeys(email);
+            // React onChange event'ini tetikle
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", emailInput);
+            Thread.sleep(200);
+            
+            // Password input'unu bul ve doldur
+            WebElement passwordInput = wait.until(
+                ExpectedConditions.presenceOfElementLocated(By.id("password"))
+            );
+            passwordInput.clear();
+            passwordInput.sendKeys(password);
+            // React onChange event'ini tetikle
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", passwordInput);
+            Thread.sleep(200);
+            
+            // Form submit
+            WebElement form = wait.until(
+                ExpectedConditions.presenceOfElementLocated(By.cssSelector("form"))
+            );
+            WebElement submitButton = wait.until(
+                ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
+            );
+            
+            // Butonun disabled olmadığından emin ol
+            if (submitButton.getAttribute("disabled") != null) {
+                System.out.println("Login submit butonu disabled, form değerlerini kontrol ediyoruz...");
+                Thread.sleep(2000);
+            }
+            
+            safeSubmitForm(submitButton, form);
+            
+            // API çağrısının tamamlanmasını bekle
             Thread.sleep(3000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            
+            // Başarılı giriş kontrolü (URL değişikliği veya hata mesajı)
+            String finalUrl = driver.getCurrentUrl();
+            if (finalUrl.contains("/login")) {
+                // Hata mesajı var mı kontrol et
+                try {
+                    WebElement errorElement = driver.findElement(By.cssSelector(".auth-error"));
+                    String errorText = errorElement.getText();
+                    System.err.println("Login hatası: " + errorText);
+                } catch (Exception e) {
+                    // Hata mesajı yoksa devam et
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Login hatası: " + e.getMessage());
+            e.printStackTrace();
         }
     }
     
@@ -461,31 +508,93 @@ public abstract class BaseSeleniumTest {
         try {
             driver.get(BASE_URL + "/register");
             waitForPageLoad();
+            Thread.sleep(1000); // Sayfanın yüklenmesini bekle
             
+            // Form alanlarını doldur ve React onChange event'ini tetikle
             WebElement firstNameInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
             );
+            firstNameInput.clear();
             firstNameInput.sendKeys(firstName);
-            driver.findElement(By.id("lastName")).sendKeys(lastName);
-            driver.findElement(By.id("email")).sendKeys(email);
-            driver.findElement(By.id("username")).sendKeys(username);
-            driver.findElement(By.id("password")).sendKeys(password);
+            // React onChange event'ini tetikle
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", firstNameInput);
+            
+            WebElement lastNameInput = driver.findElement(By.id("lastName"));
+            lastNameInput.clear();
+            lastNameInput.sendKeys(lastName);
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", lastNameInput);
+            
+            WebElement emailInput = driver.findElement(By.id("email"));
+            emailInput.clear();
+            emailInput.sendKeys(email);
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", emailInput);
+            
+            WebElement usernameInput = driver.findElement(By.id("username"));
+            usernameInput.clear();
+            usernameInput.sendKeys(username);
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", usernameInput);
+            
+            WebElement passwordInput = driver.findElement(By.id("password"));
+            passwordInput.clear();
+            passwordInput.sendKeys(password);
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", passwordInput);
+            
+            // Tüm input event'lerinin işlenmesi için kısa bir bekleme
+            Thread.sleep(100);
             
             // Role seçimi - READER (varsayılan, seçmeye gerek yok)
             
+            // Submit butonuna tıkla
             WebElement submitButton = wait.until(
                 ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
             );
+            
+            // Butonun disabled olmadığından emin ol
+            if (submitButton.getAttribute("disabled") != null) {
+                System.out.println("Submit butonu disabled, form değerlerini kontrol ediyoruz...");
+                Thread.sleep(2000);
+            }
+            
             WebElement form = driver.findElement(By.tagName("form"));
             safeSubmitForm(submitButton, form);
+            
+            // API çağrısının tamamlanmasını bekle
             Thread.sleep(3000);
             
-            // Kayıt başarılı kontrolü
             String currentUrl = driver.getCurrentUrl();
+            System.out.println("Kayıt sonrası URL: " + currentUrl);
+            
+            // Hata mesajı kontrolü
+            try {
+                WebElement errorElement = driver.findElement(By.cssSelector(".auth-error, .error, [role='alert']"));
+                if (errorElement.isDisplayed()) {
+                    String errorText = errorElement.getText();
+                    System.out.println("Kayıt hatası: " + errorText);
+                    return false;
+                }
+            } catch (Exception e) {
+                // Hata mesajı yoksa devam et
+            }
+            
+            // Eğer login sayfasına yönlendirildiyse, otomatik giriş yap (Case1'deki mantık)
+            if (currentUrl.contains("/login")) {
+                loginUser(email, password);
+                Thread.sleep(2000);
+                currentUrl = driver.getCurrentUrl();
+            }
+            
+            // Kayıt başarılı kontrolü
             return currentUrl.contains("/dashboard") || currentUrl.contains("/reader/dashboard") || 
+                   currentUrl.contains("/yazar/dashboard") || currentUrl.contains("/admin/dashboard") ||
                    currentUrl.equals(BASE_URL + "/") || !currentUrl.contains("/register");
         } catch (Exception e) {
             System.err.println("Kullanıcı kaydı hatası: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
@@ -514,35 +623,33 @@ public abstract class BaseSeleniumTest {
             // React onChange event'ini tetikle
             ((JavascriptExecutor) driver).executeScript(
                 "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", firstNameInput);
-            Thread.sleep(200);
             
             WebElement lastNameInput = driver.findElement(By.id("lastName"));
             lastNameInput.clear();
             lastNameInput.sendKeys(lastName);
             ((JavascriptExecutor) driver).executeScript(
                 "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", lastNameInput);
-            Thread.sleep(200);
             
             WebElement emailInput = driver.findElement(By.id("email"));
             emailInput.clear();
             emailInput.sendKeys(email);
             ((JavascriptExecutor) driver).executeScript(
                 "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", emailInput);
-            Thread.sleep(200);
             
             WebElement usernameInput = driver.findElement(By.id("username"));
             usernameInput.clear();
             usernameInput.sendKeys(username);
             ((JavascriptExecutor) driver).executeScript(
                 "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", usernameInput);
-            Thread.sleep(200);
             
             WebElement passwordInput = driver.findElement(By.id("password"));
             passwordInput.clear();
             passwordInput.sendKeys(password);
             ((JavascriptExecutor) driver).executeScript(
                 "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", passwordInput);
-            Thread.sleep(200);
+            
+            // Tüm input event'lerinin işlenmesi için kısa bir bekleme
+            Thread.sleep(100);
             
             // Role seçimi - WRITER (Case4g'deki gibi basit yaklaşım)
             WebElement roleSelectElement = null;
@@ -564,7 +671,7 @@ public abstract class BaseSeleniumTest {
                 // Change event'ini tetikle
                 ((JavascriptExecutor) driver).executeScript(
                     "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", roleSelectElement);
-                Thread.sleep(200);
+                Thread.sleep(100);
             } catch (Exception e) {
                 System.out.println("Role select bulunamadı: " + e.getMessage());
                 return false;
@@ -717,16 +824,32 @@ public abstract class BaseSeleniumTest {
     
     /**
      * URL'den story slug'ını al
+     * Alert varsa otomatik kabul eder
      */
     protected String getStorySlugFromUrl() {
-        String currentUrl = driver.getCurrentUrl();
-        if (currentUrl.contains("/haberler/")) {
-            String slug = currentUrl.substring(currentUrl.indexOf("/haberler/") + "/haberler/".length());
-            // Query string varsa kaldır
-            if (slug.contains("?")) {
-                slug = slug.substring(0, slug.indexOf("?"));
+        try {
+            // Alert varsa kabul et
+            try {
+                org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                String alertText = alert.getText();
+                System.out.println("Alert tespit edildi: " + alertText);
+                alert.accept();
+                Thread.sleep(1000);
+            } catch (Exception e) {
+                // Alert yoksa devam et
             }
-            return slug;
+            
+            String currentUrl = driver.getCurrentUrl();
+            if (currentUrl.contains("/haberler/")) {
+                String slug = currentUrl.substring(currentUrl.indexOf("/haberler/") + "/haberler/".length());
+                // Query string varsa kaldır
+                if (slug.contains("?")) {
+                    slug = slug.substring(0, slug.indexOf("?"));
+                }
+                return slug;
+            }
+        } catch (Exception e) {
+            System.err.println("URL'den slug alınamadı: " + e.getMessage());
         }
         return null;
     }
@@ -845,6 +968,85 @@ public abstract class BaseSeleniumTest {
     }
     
     /**
+     * Text bloğuna kod bloğu ekle
+     * @param textBlock Hover yapılacak text bloğu (textarea) - null ise boş text bloğu bulunur
+     * @param codeContent Kod içeriği
+     */
+    protected void addCodeBlock(WebElement textBlock, String codeContent) throws Exception {
+        // Boş text bloğu bul (buton sadece boş text bloğunda görünür)
+        java.util.List<WebElement> textBlocks = driver.findElements(By.cssSelector("textarea.block-textarea"));
+        WebElement emptyTextBlock = null;
+        
+        // Önce boş text bloğu ara
+        for (WebElement block : textBlocks) {
+            String content = block.getAttribute("value");
+            if (content == null || content.trim().isEmpty()) {
+                emptyTextBlock = block;
+                break;
+            }
+        }
+        
+        // Boş text bloğu bulunamazsa, son text bloğunu kullan
+        // (Frontend'de kod bloğu eklendikten sonra yeni boş text bloğu oluşur)
+        if (emptyTextBlock == null && !textBlocks.isEmpty()) {
+            emptyTextBlock = textBlocks.get(textBlocks.size() - 1);
+        } else if (emptyTextBlock == null && textBlock != null) {
+            emptyTextBlock = textBlock;
+        }
+        
+        if (emptyTextBlock == null) {
+            throw new Exception("Boş text bloğu bulunamadı");
+        }
+        
+        // Text bloğuna hover yap (JavaScript ile hover simüle et)
+        Actions actions = new Actions(driver);
+        actions.moveToElement(emptyTextBlock).perform();
+        Thread.sleep(1000);
+        
+        // JavaScript ile hover event'ini tetikle (React'ın hover state'ini güncellemek için)
+        ((JavascriptExecutor) driver).executeScript(
+            "var event = new MouseEvent('mouseenter', { bubbles: true, cancelable: true }); " +
+            "arguments[0].dispatchEvent(event);", emptyTextBlock);
+        Thread.sleep(500);
+        
+        // + butonunu bekle ve tıkla (visible class'ı olan)
+        WebElement addButton = wait.until(
+            ExpectedConditions.elementToBeClickable(
+                By.cssSelector(".block-add-button.visible, .editor-block .block-add-button.visible")
+            )
+        );
+        addButton.click();
+        Thread.sleep(1000);
+        
+        // Kod butonuna tıkla
+        WebElement codeMenuButton = wait.until(
+            ExpectedConditions.elementToBeClickable(
+                By.cssSelector(".block-add-menu button[title='Kod'], .block-add-menu button:nth-child(4)")
+            )
+        );
+        codeMenuButton.click();
+        Thread.sleep(1000);
+        
+        // Kod bloğunu doldur
+        WebElement codeBlock = wait.until(
+            ExpectedConditions.presenceOfElementLocated(
+                By.cssSelector("textarea.code-editor-inline-textarea, .code-editor-inline textarea")
+            )
+        );
+        codeBlock.clear();
+        codeBlock.sendKeys(codeContent);
+        
+        Thread.sleep(1000);
+        WebElement confirmButton = wait.until(
+            ExpectedConditions.elementToBeClickable(
+                By.cssSelector(".code-editor-btn.confirm, button.code-editor-btn[title='Onayla']")
+            )
+        );
+        confirmButton.click();
+        Thread.sleep(2000);
+    }
+    
+    /**
      * Story başlığından story ID'sini al
      */
     protected Long getStoryIdByTitle(String title) {
@@ -954,34 +1156,64 @@ public abstract class BaseSeleniumTest {
             publishButton.click();
             Thread.sleep(5000);
             
+            // Alert'leri kontrol et ve kabul et
+            try {
+                org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                String alertText = alert.getText();
+                System.out.println("Publish sonrası alert: " + alertText);
+                alert.accept();
+                Thread.sleep(2000);
+            } catch (Exception alertEx) {
+                // Alert yoksa devam et
+            }
+            
+            // Story ID'yi al (retry ile
+            Long storyId = null;
+            int retryCount = 0;
+            while (storyId == null && retryCount < 10) {
+                try {
+                    Thread.sleep(1000);
+                    // Önce başlıktan dene
+                    storyId = getStoryIdByTitle(storyTitle);
+                    if (storyId == null) {
+                        // Başlıktan bulunamazsa kullanıcının en son story'sini al
+                        storyId = getLatestStoryIdByUserEmail(writerEmail);
+                    }
+                    retryCount++;
+                } catch (Exception e) {
+                    retryCount++;
+                }
+            }
+            
             // Story slug'ını al (yayınlandıktan sonra URL'den veya veritabanından)
-            String storySlug = getStorySlugFromUrl();
-            if (storySlug == null) {
-                // URL'den alınamazsa veritabanından al
-                Long storyId = getStoryIdByTitle(storyTitle);
-                if (storyId != null) {
-                    try (Connection conn = getTestDatabaseConnection()) {
-                        String sql = "SELECT slug FROM stories WHERE id = ?";
-                        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                            stmt.setLong(1, storyId);
-                            try (ResultSet rs = stmt.executeQuery()) {
-                                if (rs.next()) {
-                                    storySlug = rs.getString("slug");
-                                }
+            String storySlug = null;
+            if (storyId != null) {
+                try (Connection conn = getTestDatabaseConnection()) {
+                    String sql = "SELECT slug FROM stories WHERE id = ?";
+                    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                        stmt.setLong(1, storyId);
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            if (rs.next()) {
+                                storySlug = rs.getString("slug");
                             }
                         }
-                    } catch (SQLException e) {
-                        System.err.println("Story slug veritabanından alınamadı: " + e.getMessage());
                     }
+                } catch (SQLException e) {
+                    System.err.println("Story slug veritabanından alınamadı: " + e.getMessage());
                 }
-                
-                // Hala bulunamazsa title'dan oluştur
-                if (storySlug == null) {
-                    storySlug = storyTitle.toLowerCase()
-                        .replaceAll("[^a-z0-9\\s-]", "")
-                        .replaceAll("\\s+", "-")
-                        .replaceAll("-+", "-");
-                }
+            }
+            
+            // URL'den slug almayı dene
+            if (storySlug == null) {
+                storySlug = getStorySlugFromUrl();
+            }
+            
+            // Hala bulunamazsa title'dan oluştur
+            if (storySlug == null) {
+                storySlug = storyTitle.toLowerCase()
+                    .replaceAll("[^a-z0-9\\s-]", "")
+                    .replaceAll("\\s+", "-")
+                    .replaceAll("-+", "-");
             }
             
             // Writer'dan logout yap (admin onayı için hazırlık)

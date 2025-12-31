@@ -88,10 +88,13 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             String updatedTitle = "Güncellenmiş Başlık " + System.currentTimeMillis();
             editTitleInput.clear();
             editTitleInput.sendKeys(updatedTitle);
-            // React onChange event'ini tetikle
+            // React onChange ve input event'lerini tetikle (value property'sini de güncelle)
             ((JavascriptExecutor) driver).executeScript(
-                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", editTitleInput);
-            Thread.sleep(1000);
+                "arguments[0].value = arguments[1]; " +
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true })); " +
+                "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", 
+                editTitleInput, updatedTitle);
+            Thread.sleep(1500);
 
             // 5. İçerik düzenleme - text bloğunu güncelle
             WebElement editTextBlock = wait.until(
@@ -99,11 +102,18 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
                     By.cssSelector("textarea.block-textarea")
                 )
             );
+            String updatedContent = "Güncellenmiş içerik paragrafı.";
             editTextBlock.clear();
-            editTextBlock.sendKeys("Güncellenmiş içerik paragrafı.");
-            // React onChange event'ini tetikle
+            editTextBlock.sendKeys(updatedContent);
+            // React onChange ve input event'lerini tetikle (value property'sini de güncelle)
             ((JavascriptExecutor) driver).executeScript(
-                "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", editTextBlock);
+                "arguments[0].value = arguments[1]; " +
+                "arguments[0].dispatchEvent(new Event('input', { bubbles: true })); " +
+                "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", 
+                editTextBlock, updatedContent);
+            Thread.sleep(1500);
+            
+            // React state'inin güncellenmesi için ek bekleme
             Thread.sleep(1000);
 
             // 6. Yayınla butonunu bul ve bas (header içindeki publish-button)
@@ -261,19 +271,64 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             waitForPageLoad();
             Thread.sleep(2000);
 
-            // 4. Kod bloğu ekle (Case4g'deki mantığı kullan)
-            WebElement textBlock = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector("textarea.block-textarea")
-                )
+            // 4. Kod bloğu ekle (Case4b'deki mantığı kullan - boş text bloğu bul ve hover yap)
+            // Önce tüm textarea'ları bul
+            java.util.List<WebElement> allTextBlocks = driver.findElements(
+                By.cssSelector("textarea.block-textarea")
             );
-
-            // Text bloğuna hover yap
+            
+            // Boş text bloğu bul (içeriği boş olan)
+            WebElement emptyTextBlock = null;
+            for (WebElement block : allTextBlocks) {
+                String content = block.getAttribute("value");
+                if (content == null || content.trim().isEmpty()) {
+                    emptyTextBlock = block;
+                    break;
+                }
+            }
+            
+            // Eğer boş text bloğu yoksa, Enter tuşuna basarak yeni bir boş text bloğu oluştur
+            if (emptyTextBlock == null && !allTextBlocks.isEmpty()) {
+                WebElement firstTextBlock = allTextBlocks.get(0);
+                firstTextBlock.click();
+                Thread.sleep(500);
+                // Cursor'ı sona taşı
+                ((JavascriptExecutor) driver).executeScript(
+                    "arguments[0].setSelectionRange(arguments[0].value.length, arguments[0].value.length);", 
+                    firstTextBlock);
+                Thread.sleep(500);
+                // Enter tuşuna bas (yeni text bloğu oluştur)
+                firstTextBlock.sendKeys(Keys.ENTER);
+                Thread.sleep(2000); // Yeni bloğun oluşması için bekle
+                
+                // Yeni oluşan boş text bloğunu bul
+                allTextBlocks = driver.findElements(By.cssSelector("textarea.block-textarea"));
+                for (WebElement block : allTextBlocks) {
+                    String content = block.getAttribute("value");
+                    if (content == null || content.trim().isEmpty()) {
+                        emptyTextBlock = block;
+                        break;
+                    }
+                }
+            }
+            
+            if (emptyTextBlock == null) {
+                fail("Case 14a: Boş text bloğu bulunamadı");
+                return;
+            }
+            
+            // Boş text bloğuna hover yap (artı butonunu görünür yapmak için)
             Actions actions = new Actions(driver);
-            actions.moveToElement(textBlock).perform();
+            actions.moveToElement(emptyTextBlock).perform();
             Thread.sleep(1000);
-
-            // + butonuna tıkla
+            
+            // JavaScript ile hover event'ini tetikle (React'ın hover state'ini güncellemek için)
+            ((JavascriptExecutor) driver).executeScript(
+                "var event = new MouseEvent('mouseenter', { bubbles: true, cancelable: true }); " +
+                "arguments[0].dispatchEvent(event);", emptyTextBlock);
+            Thread.sleep(500);
+            
+            // '+' butonunu bul ve tıkla (block-add-button) - sadece boş text bloğunda görünür
             WebElement addButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
                     By.cssSelector(".block-add-button.visible, .editor-block .block-add-button.visible")
@@ -281,8 +336,9 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             );
             addButton.click();
             Thread.sleep(1000);
-
-            // Kod butonuna tıkla
+            
+            // Menü açıldıktan sonra kod butonunu bul ve tıkla
+            // Menü butonları: Resim (1.), Başlık (2.), Video (3.), Kod (4.), Gömülü İçerik (5.), Liste (6.)
             WebElement codeMenuButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
                     By.cssSelector(".block-add-menu button[title='Kod'], .block-add-menu button:nth-child(4)")
@@ -290,21 +346,23 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             );
             codeMenuButton.click();
             Thread.sleep(1000);
-
-            // Kod bloğunu doldur
+            
+            // Kod bloğu editörü açıldı - kod içeriğini gir
             WebElement codeBlock = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
                     By.cssSelector("textarea.code-editor-inline-textarea, .code-editor-inline textarea")
                 )
             );
+            String codeContent = "console.log('test');";
             codeBlock.clear();
-            codeBlock.sendKeys("console.log('test');");
+            codeBlock.sendKeys(codeContent);
+            
+            // Kod bloğunu onayla (onay butonu - checkmark icon)
             Thread.sleep(1000);
-
-            // Onayla butonuna tıkla
             WebElement confirmButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.cssSelector(".code-editor-btn.confirm, button.code-editor-btn[title='Onayla']")
+                    By.cssSelector(".code-editor-btn.confirm, button.code-editor-btn[title='Onayla'], " +
+                        ".code-editor-inline-actions button.confirm")
                 )
             );
             confirmButton.click();
@@ -317,26 +375,156 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
                 )
             );
             assertNotNull(codeBlockContainer, "Case 14a: Kod bloğu eklenmedi");
+            System.out.println("Case 14a: Kod bloğu başarıyla eklendi");
 
-            // 6. Kod bloğunu sil
-            WebElement deleteCodeButton = codeBlockContainer.findElement(
-                By.cssSelector("button.code-block-edit-btn[title='Kaldır'], button[title='Kaldır']")
+            // 6. Yayınla (kaydet ve yayınla)
+            // Alert ve confirm'i override et
+            ((JavascriptExecutor) driver).executeScript(
+                "window.alert = function(text) { console.log('Alert: ' + text); return true; };"
             );
+            ((JavascriptExecutor) driver).executeScript(
+                "window.confirm = function(text) { console.log('Confirm: ' + text); return true; };"
+            );
+            
+            Thread.sleep(1000);
+            
+            // Header içindeki Yayınla butonunu bul
+            WebElement publishButton = wait.until(
+                ExpectedConditions.elementToBeClickable(
+                    By.cssSelector(".story-header-actions .publish-button:not(.delete-button), " +
+                                  "header .publish-button:not(.delete-button), " +
+                                  "button.publish-button:not(.delete-button)")
+                )
+            );
+            
+            // Butonun disabled olmadığından emin ol
+            String disabledAttr = publishButton.getAttribute("disabled");
+            if (disabledAttr != null && !disabledAttr.equals("false")) {
+                System.out.println("Yayınla butonu disabled, başlık kontrolü yapılıyor...");
+                WebElement titleInput = driver.findElement(By.cssSelector("input.story-title-input"));
+                String titleValue = titleInput.getAttribute("value");
+                if (titleValue == null || titleValue.trim().isEmpty()) {
+                    titleInput.sendKeys("Test Başlık " + System.currentTimeMillis());
+                    ((JavascriptExecutor) driver).executeScript(
+                        "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", titleInput);
+                    Thread.sleep(1000);
+                }
+                publishButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.cssSelector(".story-header-actions .publish-button:not(.delete-button)")
+                    )
+                );
+            }
+            
+            // Butonun görünür olduğundan emin ol
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", publishButton);
+            Thread.sleep(500);
+            
+            // Butona tıkla
+            try {
+                publishButton.click();
+            } catch (Exception e) {
+                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", publishButton);
+            }
+            
+            Thread.sleep(5000); // Yayınlama işlemi için bekle
+            
+            // Alert'leri kontrol et ve kabul et
+            try {
+                org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                String alertText = alert.getText();
+                System.out.println("Yayınla sonrası alert: " + alertText);
+                alert.accept();
+                Thread.sleep(2000);
+            } catch (Exception alertEx) {
+                // Alert yoksa devam et
+            }
+            
+            waitForPageLoad();
+            Thread.sleep(3000);
+            
+            // Yayınlama sonrası story sayfasına yönlendirilmiş olabilir, tekrar düzenleme sayfasına git
+            String publishUrl = driver.getCurrentUrl();
+            System.out.println("Case 14a: Yayınlama sonrası URL: " + publishUrl);
+            
+            // Eğer story sayfasındaysak, tekrar düzenleme sayfasına git
+            if (publishUrl.contains("/haberler/") || publishUrl.contains("/story/")) {
+                // Writer'a tekrar giriş yap (gerekirse)
+                loginUser(writerEmail, writerPassword);
+                Thread.sleep(2000);
+            }
+            
+            // Tekrar düzenleme sayfasına git
+            driver.get(BASE_URL + "/yazar/haber-duzenle/" + storyId);
+            waitForPageLoad();
+            Thread.sleep(3000);
+
+            // 7. Kod bloğunu bul ve sil
+            WebElement codeBlockContainerToDelete = wait.until(
+                ExpectedConditions.presenceOfElementLocated(
+                    By.cssSelector("div.code-block-container")
+                )
+            );
+            assertNotNull(codeBlockContainerToDelete, "Case 14a: Kod bloğu düzenleme sayfasında bulunamadı");
+            
+            // Kaldır butonunu bul (code-block-actions içindeki ikinci buton - silme butonu)
+            WebElement deleteCodeButton = codeBlockContainerToDelete.findElement(
+                By.cssSelector(".code-block-actions button.code-block-edit-btn[title='Kaldır'], " +
+                              ".code-block-actions button[title='Kaldır'], " +
+                              ".code-block-actions button:last-child")
+            );
+            
+            // Butonun görünür olduğundan emin ol
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", deleteCodeButton);
+            Thread.sleep(500);
+            
             deleteCodeButton.click();
             Thread.sleep(2000);
 
-            // 7. Kod bloğunun silindiğini kontrol et
+            // 8. Kod bloğunun silindiğini kontrol et
             try {
                 driver.findElement(By.cssSelector("div.code-block-container"));
                 fail("Case 14a: Kod bloğu silinmedi");
             } catch (org.openqa.selenium.NoSuchElementException e) {
                 assertTrue(true, "Case 14a: Kod bloğu başarıyla silindi");
+                System.out.println("Case 14a: Kod bloğu başarıyla silindi");
             }
 
-            // 8. Kaydet ve yayınla
-            publishStory();
+            // 9. Tekrar yayınla (kod bloğu silindikten sonra)
+            Thread.sleep(1000);
+            
+            WebElement publishButtonAfterDelete = wait.until(
+                ExpectedConditions.elementToBeClickable(
+                    By.cssSelector(".story-header-actions .publish-button:not(.delete-button), " +
+                                  "header .publish-button:not(.delete-button), " +
+                                  "button.publish-button:not(.delete-button)")
+                )
+            );
+            
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", publishButtonAfterDelete);
+            Thread.sleep(500);
+            
+            try {
+                publishButtonAfterDelete.click();
+            } catch (Exception e) {
+                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", publishButtonAfterDelete);
+            }
+            
+            Thread.sleep(5000);
+            
+            // Alert'leri kontrol et ve kabul et
+            try {
+                org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                alert.accept();
+                Thread.sleep(2000);
+            } catch (Exception alertEx) {
+                // Alert yoksa devam et
+            }
+            
+            waitForPageLoad();
+            Thread.sleep(3000);
 
-            // 9. Veritabanından kontrol et
+            // 10. Veritabanından kontrol et - kod bloğu silinmiş olmalı
             try (java.sql.Connection conn = getTestDatabaseConnection()) {
                 String sql = "SELECT icerik FROM stories WHERE id = ?";
                 try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -346,8 +534,10 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
                             String dbContent = rs.getString("icerik");
                             assertTrue(
                                 dbContent == null || !dbContent.contains("[CODE:"),
-                                "Case 14a: Kod bloğu veritabanından silinmedi"
+                                "Case 14a: Kod bloğu veritabanından silinmedi. İçerik: " + 
+                                (dbContent != null ? dbContent.substring(0, Math.min(200, dbContent.length())) : "null")
                             );
+                            System.out.println("Case 14a: Veritabanı kontrolü başarılı - kod bloğu silinmiş");
                         }
                     }
                 }
@@ -413,17 +603,62 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             waitForPageLoad();
             Thread.sleep(2000);
 
-            // 4. Liste bloğu ekle (Case4f'deki mantığı kullan)
-            WebElement firstTextBlock = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector("textarea.block-textarea")
-                )
+            // 4. Liste bloğu ekle (Case4f'deki mantığı kullan - boş text bloğu bul ve hover yap)
+            // Önce tüm textarea'ları bul
+            java.util.List<WebElement> allTextBlocks = driver.findElements(
+                By.cssSelector("textarea.block-textarea")
             );
+            
+            // Boş text bloğu bul (içeriği boş olan)
+            WebElement emptyTextBlock = null;
+            for (WebElement block : allTextBlocks) {
+                String content = block.getAttribute("value");
+                if (content == null || content.trim().isEmpty()) {
+                    emptyTextBlock = block;
+                    break;
+                }
+            }
+            
+            // Eğer boş text bloğu yoksa, Enter tuşuna basarak yeni bir boş text bloğu oluştur
+            if (emptyTextBlock == null && !allTextBlocks.isEmpty()) {
+                WebElement firstTextBlock = allTextBlocks.get(0);
+                firstTextBlock.click();
+                Thread.sleep(500);
+                // Cursor'ı sona taşı
+                ((JavascriptExecutor) driver).executeScript(
+                    "arguments[0].setSelectionRange(arguments[0].value.length, arguments[0].value.length);", 
+                    firstTextBlock);
+                Thread.sleep(500);
+                // Enter tuşuna bas (yeni text bloğu oluştur)
+                firstTextBlock.sendKeys(Keys.ENTER);
+                Thread.sleep(2000); // Yeni bloğun oluşması için bekle
+                
+                // Yeni oluşan boş text bloğunu bul
+                allTextBlocks = driver.findElements(By.cssSelector("textarea.block-textarea"));
+                for (WebElement block : allTextBlocks) {
+                    String content = block.getAttribute("value");
+                    if (content == null || content.trim().isEmpty()) {
+                        emptyTextBlock = block;
+                        break;
+                    }
+                }
+            }
+            
+            if (emptyTextBlock == null) {
+                fail("Case 14b: Boş text bloğu bulunamadı");
+                return;
+            }
 
-            // Text bloğuna hover yap
+            // Boş text bloğuna hover yap (artı butonunu görünür yapmak için)
             Actions actions = new Actions(driver);
-            actions.moveToElement(firstTextBlock).perform();
+            actions.moveToElement(emptyTextBlock).perform();
             Thread.sleep(1000);
+            
+            // JavaScript ile hover event'ini tetikle (React'ın hover state'ini güncellemek için)
+            ((JavascriptExecutor) driver).executeScript(
+                "var event = new MouseEvent('mouseenter', { bubbles: true, cancelable: true }); " +
+                "arguments[0].dispatchEvent(event);", emptyTextBlock);
+            Thread.sleep(500);
 
             // + butonuna tıkla
             WebElement addButton = wait.until(

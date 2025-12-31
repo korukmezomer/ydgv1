@@ -13,13 +13,12 @@ import static org.junit.jupiter.api.Assertions.*;
  * 
  * Use Case: Kullanıcı bir story'yi beğenebilmeli
  * Senaryo:
- * - Onaylanmış bir story olmalı (Case7a ve Case7b çalıştırılmış olmalı)
+ * - Writer olarak story oluştur ve yayınla
+ * - Admin olarak story'yi onayla
  * - Kullanıcı giriş yapar
  * - Story sayfasına gider
  * - Beğeni butonuna tıklar
  * - Beğeninin eklendiğini doğrula
- * 
- * Not: Bu test Case7a ve Case7b'den sonra çalıştırılmalı
  */
 @DisplayName("Case 7: Story Beğenme")
 public class Case7_LikeStoryTest extends BaseSeleniumTest {
@@ -28,67 +27,48 @@ public class Case7_LikeStoryTest extends BaseSeleniumTest {
     @DisplayName("Case 7: Kullanıcı story'yi beğenebilmeli")
     public void case7_LikeStory() {
         try {
-            // Önce onaylanmış bir story bul (Case7a ve Case7b'den sonra)
-            String storySlug = null;
-            String storyTitle = null;
-            
-            try (java.sql.Connection conn = getTestDatabaseConnection()) {
-                String sql = "SELECT slug, baslik FROM stories WHERE durum = 'YAYINLANDI' ORDER BY yayinlanma_tarihi DESC LIMIT 1";
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    try (java.sql.ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            storySlug = rs.getString("slug");
-                            storyTitle = rs.getString("baslik");
-                            System.out.println("Case 7: Onaylanmış story bulundu: " + storyTitle);
-                        }
-                    }
-                }
-            } catch (java.sql.SQLException e) {
-                System.err.println("Case 7: Veritabanı hatası: " + e.getMessage());
-                fail("Case 7: Veritabanı hatası - " + e.getMessage());
-                return;
-            }
-            
-            if (storySlug == null) {
-                fail("Case 7: Onaylanmış story bulunamadı. Önce Case7a ve Case7b testlerini çalıştırın.");
-                return;
-            }
-            
-            // Kullanıcı (Liker) oluştur
+            // 1. Writer oluştur ve story yayınla (Case7a mantığı)
             java.util.Random random = new java.util.Random();
             String randomSuffix = String.valueOf(random.nextInt(10000));
+            String writerEmail = "writer_like_" + randomSuffix + "@example.com";
+            String writerPassword = "Test123456";
+            
+            if (!registerWriter("Writer", "Like", writerEmail, "writer_like_" + randomSuffix, writerPassword)) {
+                fail("Case 7: Writer kaydı başarısız");
+                return;
+            }
+            
+            // Story oluştur ve yayınla
+            String storyTitle = "Beğenme Test Story " + System.currentTimeMillis();
+            String storyContent = "Bu bir beğenme test story'sidir.";
+            String storySlug = createStory(writerEmail, writerPassword, storyTitle, storyContent);
+            
+            if (storySlug == null) {
+                fail("Case 7: Story oluşturulamadı");
+                return;
+            }
+            
+            // 2. Admin olarak story'yi onayla (Case7b mantığı)
+            String approvedSlug = approveStoryAsAdmin(storyTitle);
+            if (approvedSlug == null) {
+                fail("Case 7: Story onaylanamadı");
+                return;
+            }
+            
+            // 3. Kullanıcı (Liker) oluştur
             String likerEmail = "liker" + randomSuffix + "@example.com";
             String likerPassword = "Test123456";
             
-            try {
-                driver.get(BASE_URL + "/logout");
-                Thread.sleep(2000);
-            } catch (Exception e) {
-                // Logout sayfası yoksa devam et
+            logout();
+            
+            if (!registerUser("Liker", "Test", likerEmail, "liker" + randomSuffix, likerPassword)) {
+                fail("Case 7: Kullanıcı kaydı başarısız");
+                return;
             }
-            
-            driver.get(BASE_URL + "/register");
-            waitForPageLoad();
-            
-            WebElement firstNameInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
-            );
-            firstNameInput.sendKeys("Liker");
-            driver.findElement(By.id("lastName")).sendKeys("Test");
-            driver.findElement(By.id("email")).sendKeys(likerEmail);
-            driver.findElement(By.id("username")).sendKeys("liker" + randomSuffix);
-            driver.findElement(By.id("password")).sendKeys(likerPassword);
-            
-            WebElement submitButton = wait.until(
-                ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
-            );
-            submitButton.click();
-            
-            Thread.sleep(3000);
             
             // Kayıt sonrası zaten dashboard'a yönlendirilmiş, direkt story sayfasına gidebiliriz
             // Story ID'sini al
-            Long storyId = getStoryIdFromSlug(storySlug);
+            Long storyId = getStoryIdFromSlug(approvedSlug);
             if (storyId == null) {
                 fail("Case 7: Story ID alınamadı");
                 return;
@@ -102,7 +82,7 @@ public class Case7_LikeStoryTest extends BaseSeleniumTest {
             }
             
             // Story sayfasına git (kullanıcı zaten giriş yapmış durumda)
-            driver.get(BASE_URL + "/haberler/" + storySlug);
+            driver.get(BASE_URL + "/haberler/" + approvedSlug);
             waitForPageLoad();
             Thread.sleep(3000); // Sayfanın tam yüklenmesi için bekle
             
@@ -149,65 +129,47 @@ public class Case7_LikeStoryTest extends BaseSeleniumTest {
     @DisplayName("Case 7 Negative: Beğeni toggle işlevi - beğenilmiş story tekrar tıklanınca beğeni kaldırılmalı")
     public void case7_Negative_ToggleLike() {
         try {
-            // Önce onaylanmış bir story bul (Case7a ve Case7b'den sonra)
-            String storySlug = null;
-            String storyTitle = null;
-            
-            try (java.sql.Connection conn = getTestDatabaseConnection()) {
-                String sql = "SELECT slug, baslik FROM stories WHERE durum = 'YAYINLANDI' ORDER BY yayinlanma_tarihi DESC LIMIT 1";
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    try (java.sql.ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            storySlug = rs.getString("slug");
-                            storyTitle = rs.getString("baslik");
-                            System.out.println("Case 7 Negative: Onaylanmış story bulundu: " + storyTitle);
-                        }
-                    }
-                }
-            } catch (java.sql.SQLException e) {
-                System.err.println("Case 7 Negative: Veritabanı hatası: " + e.getMessage());
-                fail("Case 7 Negative: Veritabanı hatası - " + e.getMessage());
-                return;
-            }
-            
-            if (storySlug == null) {
-                fail("Case 7 Negative: Onaylanmış story bulunamadı. Önce Case7a ve Case7b testlerini çalıştırın.");
-                return;
-            }
-            
-            // Kullanıcı (Liker) oluştur
+            // 1. Writer oluştur ve story yayınla
             java.util.Random random = new java.util.Random();
             String randomSuffix = String.valueOf(random.nextInt(10000));
+            String writerEmail = "writer_toggle_" + randomSuffix + "@example.com";
+            String writerPassword = "Test123456";
+            
+            if (!registerWriter("Writer", "Toggle", writerEmail, "writer_toggle_" + randomSuffix, writerPassword)) {
+                fail("Case 7 Negative: Writer kaydı başarısız");
+                return;
+            }
+            
+            // Story oluştur ve yayınla
+            String storyTitle = "Toggle Test Story " + System.currentTimeMillis();
+            String storyContent = "Bu bir toggle test story'sidir.";
+            String storySlug = createStory(writerEmail, writerPassword, storyTitle, storyContent);
+            
+            if (storySlug == null) {
+                fail("Case 7 Negative: Story oluşturulamadı");
+                return;
+            }
+            
+            // 2. Admin olarak story'yi onayla
+            String approvedSlug = approveStoryAsAdmin(storyTitle);
+            if (approvedSlug == null) {
+                fail("Case 7 Negative: Story onaylanamadı");
+                return;
+            }
+            
+            // 3. Kullanıcı (Liker) oluştur
             String likerEmail = "liker_neg" + randomSuffix + "@example.com";
             String likerPassword = "Test123456";
             
-            try {
-                driver.get(BASE_URL + "/logout");
-                Thread.sleep(2000);
-            } catch (Exception e) {
-                // Logout sayfası yoksa devam et
+            logout();
+            
+            if (!registerUser("Liker", "Test", likerEmail, "liker_neg" + randomSuffix, likerPassword)) {
+                fail("Case 7 Negative: Kullanıcı kaydı başarısız");
+                return;
             }
             
-            driver.get(BASE_URL + "/register");
-            waitForPageLoad();
-            
-            WebElement firstNameInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
-            );
-            firstNameInput.sendKeys("Liker");
-            driver.findElement(By.id("lastName")).sendKeys("Test");
-            driver.findElement(By.id("email")).sendKeys(likerEmail);
-            driver.findElement(By.id("username")).sendKeys("liker_neg" + randomSuffix);
-            driver.findElement(By.id("password")).sendKeys(likerPassword);
-            
-            WebElement submitButton = wait.until(
-                ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
-            );
-            submitButton.click();
-            Thread.sleep(3000);
-            
             // Story ID'sini al
-            Long storyId = getStoryIdFromSlug(storySlug);
+            Long storyId = getStoryIdFromSlug(approvedSlug);
             if (storyId == null) {
                 fail("Case 7 Negative: Story ID alınamadı");
                 return;
@@ -221,7 +183,7 @@ public class Case7_LikeStoryTest extends BaseSeleniumTest {
             }
             
             // Story sayfasına git (kullanıcı zaten giriş yapmış durumda)
-            driver.get(BASE_URL + "/haberler/" + storySlug);
+            driver.get(BASE_URL + "/haberler/" + approvedSlug);
             waitForPageLoad();
             Thread.sleep(3000); // Sayfanın tam yüklenmesi için bekle
             

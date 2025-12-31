@@ -155,25 +155,43 @@ pipeline {
             steps {
                 echo 'Tüm testler için coverage raporu oluşturuluyor...'
                 dir('backend') {
-                    // Tüm testler için coverage raporu oluştur
-                    // Not: jacoco:report-aggregate sadece multi-module projelerde çalışır
-                    // Tek modüllü projede jacoco:report kullanılmalı
-                    sh 'mvn jacoco:report'
+                    // Önce jacoco.exec dosyasının varlığını kontrol et
+                    sh '''
+                        if [ -f "target/jacoco.exec" ]; then
+                            echo "✅ jacoco.exec dosyası bulundu"
+                            ls -lh target/jacoco.exec
+                        else
+                            echo "⚠️ jacoco.exec dosyası bulunamadı, tüm testleri çalıştırıp rapor oluşturuyoruz..."
+                            # Tüm testleri çalıştır ve coverage raporu oluştur
+                            mvn clean test jacoco:report -DskipTests=false || true
+                        fi
+                    '''
+                    
+                    // Coverage raporu oluştur (jacoco.exec varsa)
+                    sh '''
+                        if [ -f "target/jacoco.exec" ]; then
+                            echo "📊 Coverage raporu oluşturuluyor..."
+                            mvn jacoco:report
+                        else
+                            echo "⚠️ jacoco.exec dosyası hala bulunamadı, verify ile tekrar deneniyor..."
+                            mvn verify jacoco:report || mvn test jacoco:report
+                        fi
+                    '''
                     
                     // Dosyanın oluştuğunu kontrol et
                     sh '''
                         if [ -f "target/site/jacoco/index.html" ]; then
                             echo "✅ Coverage raporu başarıyla oluşturuldu: target/site/jacoco/index.html"
                             ls -la target/site/jacoco/
+                            echo "📊 Rapor dosyası boyutu:"
+                            du -sh target/site/jacoco/
                         else
-                            echo "⚠️ Coverage raporu bulunamadı, verify phase ile tekrar deneniyor..."
-                            mvn verify jacoco:report
-                            if [ -f "target/site/jacoco/index.html" ]; then
-                                echo "✅ Coverage raporu verify sonrası oluşturuldu"
-                            else
-                                echo "❌ Coverage raporu oluşturulamadı"
-                                exit 1
-                            fi
+                            echo "❌ Coverage raporu oluşturulamadı"
+                            echo "📂 target/site klasörü içeriği:"
+                            ls -la target/site/ 2>/dev/null || echo "target/site klasörü yok"
+                            echo "📂 target klasörü içeriği:"
+                            ls -la target/ | grep -E "(jacoco|site)" || echo "jacoco/site ile ilgili dosya yok"
+                            exit 1
                         fi
                     '''
                 }

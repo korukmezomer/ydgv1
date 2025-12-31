@@ -318,45 +318,6 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         return textBlocks.get(textBlocks.size() - 1);
     }
     
-    private void addCodeBlock(WebElement textBlock, String codeContent) throws Exception {
-        Actions actions = new Actions(driver);
-        actions.moveToElement(textBlock).perform();
-        Thread.sleep(1000);
-        
-        WebElement addButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".block-add-button.visible, .editor-block .block-add-button.visible")
-            )
-        );
-        addButton.click();
-        Thread.sleep(1000);
-        
-        WebElement codeMenuButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".block-add-menu button[title='Kod'], .block-add-menu button:nth-child(4)")
-            )
-        );
-        codeMenuButton.click();
-        Thread.sleep(1000);
-        
-        WebElement codeBlock = wait.until(
-            ExpectedConditions.presenceOfElementLocated(
-                By.cssSelector("textarea.code-editor-inline-textarea, .code-editor-inline textarea")
-            )
-        );
-        codeBlock.clear();
-        codeBlock.sendKeys(codeContent);
-        
-        Thread.sleep(1000);
-        WebElement confirmButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".code-editor-btn.confirm, button.code-editor-btn[title='Onayla']")
-            )
-        );
-        confirmButton.click();
-        Thread.sleep(2000);
-    }
-    
     private void addImageBlock(WebElement textBlock, java.nio.file.Path imagePath) throws Exception {
         Actions actions = new Actions(driver);
         actions.moveToElement(textBlock).perform();

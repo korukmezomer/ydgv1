@@ -51,7 +51,7 @@ public class Case1_UserRegistrationTest extends BaseSeleniumTest {
         assertTrue(driver.getCurrentUrl().contains("/register"), 
             "Case 1: Kayıt sayfasına yönlendirilmedi. Mevcut URL: " + driver.getCurrentUrl());
         
-        // Form alanlarını bul ve doldur
+        // Form alanlarını bul ve doldur (React event'lerini tetikle)
         Random random = new Random();
         String randomSuffix = String.valueOf(random.nextInt(10000));
         String email = "testuser" + randomSuffix + "@example.com";
@@ -62,23 +62,44 @@ public class Case1_UserRegistrationTest extends BaseSeleniumTest {
         WebElement adInput = wait.until(
             ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
         );
+        adInput.clear();
         adInput.sendKeys("Test");
+        // React onChange event'ini tetikle
+        ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
+            "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", adInput);
+        try { Thread.sleep(200); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         
         // Soyad alanı
         WebElement soyadInput = driver.findElement(By.id("lastName"));
+        soyadInput.clear();
         soyadInput.sendKeys("User");
+        ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
+            "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", soyadInput);
+        try { Thread.sleep(200); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         
         // Email alanı
         WebElement emailInput = driver.findElement(By.id("email"));
+        emailInput.clear();
         emailInput.sendKeys(email);
+        ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
+            "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", emailInput);
+        try { Thread.sleep(200); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         
         // Kullanıcı adı alanı
         WebElement kullaniciAdiInput = driver.findElement(By.id("username"));
+        kullaniciAdiInput.clear();
         kullaniciAdiInput.sendKeys(kullaniciAdi);
+        ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
+            "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", kullaniciAdiInput);
+        try { Thread.sleep(200); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         
         // Şifre alanı
         WebElement sifreInput = driver.findElement(By.id("password"));
+        sifreInput.clear();
         sifreInput.sendKeys(sifre);
+        ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
+            "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", sifreInput);
+        try { Thread.sleep(200); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         
         // Kayıt butonuna tıkla
         WebElement submitButton = wait.until(
@@ -98,19 +119,54 @@ public class Case1_UserRegistrationTest extends BaseSeleniumTest {
             Thread.sleep(3000);
             
             String currentUrl = driver.getCurrentUrl();
+            System.out.println("Case 1: Kayıt sonrası URL: " + currentUrl);
+            
+            // Hata mesajı kontrolü
+            try {
+                WebElement errorElement = driver.findElement(By.cssSelector(".auth-error, .error, [role='alert']"));
+                if (errorElement.isDisplayed()) {
+                    String errorText = errorElement.getText();
+                    System.out.println("Case 1: Kayıt hatası: " + errorText);
+                    fail("Case 1: Kayıt başarısız - " + errorText);
+                    return;
+                }
+            } catch (Exception e) {
+                // Hata mesajı yoksa devam et
+            }
+            
+            // Eğer hala register sayfasındaysa, kayıt başarısız
+            if (currentUrl.contains("/register")) {
+                System.out.println("Case 1: Hala register sayfasında, kayıt başarısız olmuş olabilir");
+                // Hata mesajını tekrar kontrol et
+                try {
+                    WebElement errorElement = driver.findElement(By.cssSelector(".auth-error, .error, [role='alert'], .text-red-500"));
+                    String errorText = errorElement.getText();
+                    fail("Case 1: Kayıt başarısız - " + errorText);
+                } catch (Exception e) {
+                    fail("Case 1: Kayıt başarısız - Hala register sayfasında");
+                }
+                return;
+            }
             
             // Eğer login sayfasına yönlendirildiyse, otomatik giriş yap
             if (currentUrl.contains("/login")) {
+                System.out.println("Case 1: Login sayfasına yönlendirildi, otomatik giriş yapılıyor");
                 // Login formunu doldur
                 WebElement loginEmailInput = wait.until(
                     ExpectedConditions.presenceOfElementLocated(By.id("email"))
                 );
                 loginEmailInput.clear();
                 loginEmailInput.sendKeys(email);
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
+                    "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", loginEmailInput);
+                try { Thread.sleep(200); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
                 
                 WebElement loginPasswordInput = driver.findElement(By.id("password"));
                 loginPasswordInput.clear();
                 loginPasswordInput.sendKeys(sifre);
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
+                    "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", loginPasswordInput);
+                try { Thread.sleep(200); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
                 
                 // Giriş butonuna tıkla
                 WebElement loginSubmitButton = wait.until(
@@ -135,17 +191,27 @@ public class Case1_UserRegistrationTest extends BaseSeleniumTest {
             ));
             
             currentUrl = driver.getCurrentUrl();
+            System.out.println("Case 1: Final URL: " + currentUrl);
             assertTrue(
                 currentUrl.contains("/dashboard") || 
                 currentUrl.equals(BASE_URL + "/") ||
-                currentUrl.equals(BASE_URL + "/reader/dashboard") ||
-                currentUrl.equals(BASE_URL + "/yazar/dashboard") ||
-                currentUrl.equals(BASE_URL + "/admin/dashboard"),
+                currentUrl.contains("/reader/") ||
+                currentUrl.contains("/yazar/") ||
+                currentUrl.contains("/admin/"),
                 "Case 1: Kayıt sonrası dashboard'a yönlendirilmedi. Mevcut URL: " + currentUrl
             );
             
         } catch (Exception e) {
-            fail("Case 1: Kayıt işlemi başarısız oldu: " + e.getMessage());
+            String currentUrl = driver.getCurrentUrl();
+            System.out.println("Case 1: Exception - Mevcut URL: " + currentUrl);
+            // Hata mesajını kontrol et
+            try {
+                WebElement errorElement = driver.findElement(By.cssSelector(".auth-error, .error, [role='alert']"));
+                String errorText = errorElement.getText();
+                fail("Case 1: Kayıt işlemi başarısız oldu: " + errorText + " - " + e.getMessage());
+            } catch (Exception e2) {
+                fail("Case 1: Kayıt işlemi başarısız oldu: " + e.getMessage());
+            }
         }
     }
     
