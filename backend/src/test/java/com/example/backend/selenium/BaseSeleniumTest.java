@@ -836,15 +836,20 @@ public abstract class BaseSeleniumTest {
             "};"
         );
         
-        Thread.sleep(1000);
+        Thread.sleep(2000);
         WebElement publishButton = wait.until(
             ExpectedConditions.elementToBeClickable(
                 By.cssSelector(".publish-button, button.publish-button")
             )
         );
+        
+        // Scroll to button
+        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", publishButton);
+        Thread.sleep(1000);
+        
         publishButton.click();
         
-        Thread.sleep(3000); // Yayınlama işlemi için bekle
+        Thread.sleep(5000); // Yayınlama işlemi için daha uzun bekle
         
         // Alert'leri kontrol et ve kabul et
         try {
@@ -852,13 +857,13 @@ public abstract class BaseSeleniumTest {
             String alertText = alert.getText();
             System.out.println("Publish sonrası alert: " + alertText);
             alert.accept();
-            Thread.sleep(2000);
+            Thread.sleep(3000);
         } catch (Exception alertEx) {
             // Alert yoksa devam et
         }
         
         waitForPageLoad();
-        Thread.sleep(2000);
+        Thread.sleep(5000); // Sayfa yönlendirmesi için daha uzun bekle
     }
     
     /**

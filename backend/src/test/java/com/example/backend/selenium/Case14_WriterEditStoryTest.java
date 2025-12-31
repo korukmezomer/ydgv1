@@ -156,7 +156,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
         
         // Bekleme süresi - story'nin veritabanına kaydedilmesi için
         try {
-            Thread.sleep(3000);
+            Thread.sleep(5000); // Daha uzun bekleme
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -171,7 +171,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
                 // Dashboard'dan story'yi bulmak için sayfayı yenile ve story linkini bul
                 driver.navigate().refresh();
                 try {
-                    Thread.sleep(3000);
+                    Thread.sleep(5000); // Daha uzun bekleme
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -212,11 +212,11 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             System.out.println("Case 14: URL'den story ID alınamadı: " + e.getMessage());
         }
         
-        // 2. Veritabanından almayı dene (retry ile)
+        // 2. Veritabanından almayı dene (retry ile - daha fazla deneme)
         if (storyId == null && storyTitle != null) {
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 5; i++) {
                 try {
-                    Thread.sleep(2000); // Veritabanına kaydedilmesi için bekle
+                    Thread.sleep(3000); // Veritabanına kaydedilmesi için daha uzun bekle
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -225,13 +225,14 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
                     System.out.println("Case 14: Story ID veritabanından alındı (deneme " + (i+1) + "): " + storyId);
                     break;
                 }
+                System.out.println("Case 14: Story ID bulunamadı, deneme " + (i+1) + "/5");
             }
         }
         
         // 3. Son çare: Kullanıcının en son story'sini al
         if (storyId == null && writerEmail != null) {
             try {
-                Thread.sleep(2000);
+                Thread.sleep(3000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
