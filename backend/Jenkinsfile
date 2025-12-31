@@ -200,7 +200,10 @@ pipeline {
                 always {
                     script {
                         // Dosyanın varlığını kontrol et ve artifact olarak kaydet
-                        // dir('backend') içinde çalıştığımız için path'i kontrol et
+                        // dir('backend') içinde dosya kontrolü yap, ama archiveArtifacts workspace root'undan
+                        def fileExists = false
+                        def aggregateExists = false
+                        
                         dir('backend') {
                             def coverageFile = 'target/site/jacoco/index.html'
                             def fileExistsCheck = sh(
@@ -209,22 +212,19 @@ pipeline {
                             ).trim()
                             
                             if (fileExistsCheck == 'EXISTS') {
+                                fileExists = true
                                 echo "✅ Coverage raporu dosyası bulundu: ${coverageFile}"
                                 sh "ls -lah target/site/jacoco/ | head -20"
-                                // Workspace root'undan archive et
-                                archiveArtifacts artifacts: 'backend/target/site/jacoco/**/*', allowEmptyArchive: false
-                                echo "📊 Coverage raporu artifact olarak kaydedildi!"
                             } else {
                                 // Alternatif: Aggregate raporunu kontrol et
                                 def aggregateFile = 'target/site/jacoco-aggregate/index.html'
-                                def aggregateExists = sh(
+                                def aggregateExistsCheck = sh(
                                     script: "test -f ${aggregateFile} && echo 'EXISTS' || echo 'NOT_EXISTS'",
                                     returnStdout: true
                                 ).trim()
                                 
-                                if (aggregateExists == 'EXISTS') {
-                                    archiveArtifacts artifacts: 'backend/target/site/jacoco-aggregate/**/*', allowEmptyArchive: false
-                                    echo "✅ Coverage raporu (aggregate) artifact olarak kaydedildi!"
+                                if (aggregateExistsCheck == 'EXISTS') {
+                                    aggregateExists = true
                                 } else {
                                     echo "⚠️ Coverage raporu bulunamadı, artifact kaydedilemedi"
                                     echo "📂 target/site klasörü içeriği:"
@@ -233,6 +233,15 @@ pipeline {
                                     sh 'ls -la target/ | head -20'
                                 }
                             }
+                        }
+                        
+                        // Workspace root'undan archive et
+                        if (fileExists) {
+                            archiveArtifacts artifacts: 'backend/target/site/jacoco/**/*', allowEmptyArchive: false
+                            echo "📊 Coverage raporu artifact olarak kaydedildi!"
+                        } else if (aggregateExists) {
+                            archiveArtifacts artifacts: 'backend/target/site/jacoco-aggregate/**/*', allowEmptyArchive: false
+                            echo "✅ Coverage raporu (aggregate) artifact olarak kaydedildi!"
                         }
                     }
                     echo "📁 Coverage raporuna erişmek için: Build sayfasında 'Artifacts' bölümünden 'backend/target/site/jacoco/index.html' dosyasını indirin."
@@ -271,6 +280,9 @@ pipeline {
                 // Coverage raporu bilgisi ve artifact kaydetme
                 script {
                     try {
+                        def fileExists = false
+                        def aggregateExists = false
+                        
                         dir('backend') {
                             // Dosyanın gerçekten var olup olmadığını kontrol et
                             def coverageFile = 'target/site/jacoco/index.html'
@@ -280,29 +292,35 @@ pipeline {
                             ).trim()
                             
                             if (fileExistsCheck == 'EXISTS') {
+                                fileExists = true
                                 echo "✅ Coverage raporu oluşturuldu: ${coverageFile}"
                                 sh "ls -lah target/site/jacoco/ | head -20"
-                                // Workspace root'undan archive et
-                                archiveArtifacts artifacts: 'backend/target/site/jacoco/**/*', allowEmptyArchive: false, fingerprint: true
-                                echo "📊 Coverage raporu artifact olarak kaydedildi!"
-                                echo "📁 Coverage raporunu görmek için: Build sayfasında 'Artifacts' bölümünden 'backend/target/site/jacoco/index.html' dosyasını indirin."
                             } else {
                                 // Alternatif: Aggregate raporunu kontrol et
                                 def aggregateCoverageFile = 'target/site/jacoco-aggregate/index.html'
-                                def aggregateExists = sh(
+                                def aggregateExistsCheck = sh(
                                     script: "test -f ${aggregateCoverageFile} && echo 'EXISTS' || echo 'NOT_EXISTS'",
                                     returnStdout: true
                                 ).trim()
                                 
-                                if (aggregateExists == 'EXISTS') {
-                                    archiveArtifacts artifacts: 'backend/target/site/jacoco-aggregate/**/*', allowEmptyArchive: false, fingerprint: true
-                                    echo "📊 Coverage raporu (aggregate) artifact olarak kaydedildi!"
+                                if (aggregateExistsCheck == 'EXISTS') {
+                                    aggregateExists = true
                                 } else {
                                     echo "⚠️ Coverage raporu bulunamadı. target/site/jacoco/ klasörü kontrol ediliyor..."
                                     sh 'ls -la target/site/ 2>/dev/null || echo "target/site klasörü yok"'
                                     sh 'find target -name "jacoco" -type d 2>/dev/null | head -5 || echo "jacoco klasörü bulunamadı"'
                                 }
                             }
+                        }
+                        
+                        // Workspace root'undan archive et (dir dışında)
+                        if (fileExists) {
+                            archiveArtifacts artifacts: 'backend/target/site/jacoco/**/*', allowEmptyArchive: false, fingerprint: true
+                            echo "📊 Coverage raporu artifact olarak kaydedildi!"
+                            echo "📁 Coverage raporunu görmek için: Build sayfasında 'Artifacts' bölümünden 'backend/target/site/jacoco/index.html' dosyasını indirin."
+                        } else if (aggregateExists) {
+                            archiveArtifacts artifacts: 'backend/target/site/jacoco-aggregate/**/*', allowEmptyArchive: false, fingerprint: true
+                            echo "📊 Coverage raporu (aggregate) artifact olarak kaydedildi!"
                         }
                     } catch (Exception e) {
                         echo "⚠️ Coverage raporu kontrolü atlandı: ${e.getMessage()}"
