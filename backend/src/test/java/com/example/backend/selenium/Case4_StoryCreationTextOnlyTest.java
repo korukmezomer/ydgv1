@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.Select;
 
 import java.util.Random;
 
@@ -51,17 +52,46 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             driver.findElement(By.id("username")).sendKeys(username);
             driver.findElement(By.id("password")).sendKeys("Test123456");
             
-            // Rol seçimi (WRITER)
-            WebElement roleSelect = driver.findElement(By.id("roleName"));
-            roleSelect.sendKeys("WRITER");
+            // Rol seçimi (WRITER) - Select elementini kullan
+            WebElement roleSelectElement = wait.until(
+                ExpectedConditions.presenceOfElementLocated(By.id("roleName"))
+            );
+            Select roleSelect = new Select(roleSelectElement);
+            try {
+                roleSelect.selectByValue("WRITER");
+            } catch (Exception e) {
+                // Eğer selectByValue çalışmazsa, selectByVisibleText dene
+                try {
+                    roleSelect.selectByVisibleText("WRITER");
+                } catch (Exception e2) {
+                    // Son çare: JavaScript ile değer set et
+                    ((org.openqa.selenium.JavascriptExecutor) driver)
+                        .executeScript("arguments[0].value = 'WRITER';", roleSelectElement);
+                }
+            }
             
             WebElement submitButton = wait.until(
                 ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
             );
-            submitButton.click();
+            WebElement form = driver.findElement(By.tagName("form"));
+            safeSubmitForm(submitButton, form);
             
-            // Dashboard'a yönlendirilmeyi bekle
+            // API çağrısının tamamlanmasını bekle (Frontend otomatik login yapıyor)
             Thread.sleep(3000);
+            
+            // Frontend'de kayıt sonrası otomatik login yapılıyor ve ana sayfaya yönlendiriliyor
+            // Dashboard'a veya ana sayfaya yönlendirilmeyi bekle
+            wait.until(ExpectedConditions.or(
+                ExpectedConditions.urlContains("/dashboard"),
+                ExpectedConditions.urlContains("/reader/dashboard"),
+                ExpectedConditions.urlContains("/yazar/dashboard"),
+                ExpectedConditions.urlContains("/admin/dashboard"),
+                ExpectedConditions.urlToBe(BASE_URL + "/"),
+                ExpectedConditions.urlToBe(BASE_URL + "/reader")
+            ));
+            
+            // Kullanıcının WRITER rolünde olduğunu doğrula (opsiyonel - frontend'de kontrol edilebilir)
+            // Şimdilik story oluştur sayfasına gitmeyi deneyelim
             
             // Yeni story oluştur sayfasına git
             driver.get(BASE_URL + "/reader/new-story");
@@ -163,8 +193,20 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             WebElement submitButton = wait.until(
                 ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
             );
-            submitButton.click();
+            WebElement form = driver.findElement(By.tagName("form"));
+            safeSubmitForm(submitButton, form);
             Thread.sleep(3000);
+            
+            // Frontend'de kayıt sonrası otomatik login yapılıyor
+            // Dashboard'a veya ana sayfaya yönlendirilmeyi bekle
+            wait.until(ExpectedConditions.or(
+                ExpectedConditions.urlContains("/dashboard"),
+                ExpectedConditions.urlContains("/reader/dashboard"),
+                ExpectedConditions.urlContains("/yazar/dashboard"),
+                ExpectedConditions.urlContains("/admin/dashboard"),
+                ExpectedConditions.urlToBe(BASE_URL + "/"),
+                ExpectedConditions.urlToBe(BASE_URL + "/reader")
+            ));
             
             // Story oluştur sayfasına git
             driver.get(BASE_URL + "/reader/new-story");
@@ -239,8 +281,20 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             WebElement submitButton = wait.until(
                 ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
             );
-            submitButton.click();
+            WebElement form = driver.findElement(By.tagName("form"));
+            safeSubmitForm(submitButton, form);
             Thread.sleep(3000);
+            
+            // Frontend'de kayıt sonrası otomatik login yapılıyor
+            // Dashboard'a veya ana sayfaya yönlendirilmeyi bekle
+            wait.until(ExpectedConditions.or(
+                ExpectedConditions.urlContains("/dashboard"),
+                ExpectedConditions.urlContains("/reader/dashboard"),
+                ExpectedConditions.urlContains("/yazar/dashboard"),
+                ExpectedConditions.urlContains("/admin/dashboard"),
+                ExpectedConditions.urlToBe(BASE_URL + "/"),
+                ExpectedConditions.urlToBe(BASE_URL + "/reader")
+            ));
             
             // Story oluştur sayfasına git
             driver.get(BASE_URL + "/reader/new-story");
