@@ -99,77 +99,94 @@ public class Case4b_StoryCreationWithCodeTest extends BaseSeleniumTest {
             String storyTitle = "Test Story - Kod Bloğu " + randomSuffix;
             titleInput.sendKeys(storyTitle);
             
-            // İlk text bloğuna yazı ekle
+            // İlk text bloğunu bul
             Thread.sleep(1000);
             WebElement firstTextBlock = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector("textarea, div[contenteditable='true'], .editor-blocks textarea")
+                    By.cssSelector("textarea.block-textarea, .editor-blocks textarea, textarea[placeholder*='Hikayenizi']")
                 )
             );
-            firstTextBlock.sendKeys("Bu story kod bloğu içermektedir. ");
             
-            // Kod bloğu eklemek için '+' butonunu veya add menu'yu bul
-            Thread.sleep(1000);
-            // Text bloğuna focus yap ve '/' tuşuna bas veya '+' butonunu tıkla
-            Actions actions = new Actions(driver);
-            actions.moveToElement(firstTextBlock).click().perform();
+            // Text bloğuna yazı ekle (opsiyonel - kod bloğu eklemek için gerekli değil)
+            firstTextBlock.sendKeys("Bu story kod bloğu içermektedir. ");
             Thread.sleep(500);
             
-            // '/' tuşuna basarak add menu'yu aç
-            firstTextBlock.sendKeys("/");
+            // Text bloğuna hover yap (menüyü görünür yapmak için)
+            Actions actions = new Actions(driver);
+            actions.moveToElement(firstTextBlock).perform();
+            Thread.sleep(500);
+            
+            // '+' butonunu bul ve tıkla (block-add-button)
+            WebElement addButton = wait.until(
+                ExpectedConditions.elementToBeClickable(
+                    By.cssSelector(".block-add-button, .editor-block .block-add-button")
+                )
+            );
+            // JavaScript ile tıkla (görünür olmayabilir)
+            ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", addButton);
             Thread.sleep(1000);
             
-            // Kod bloğu seçeneğini bul ve tıkla
-            try {
-                WebElement codeOption = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        By.xpath("//*[contains(text(), 'Kod') or contains(text(), 'Code') or contains(text(), 'code')]")
-                    )
-                );
-                codeOption.click();
-                Thread.sleep(1000);
-            } catch (Exception e) {
-                // Alternatif: '+' butonunu bul ve tıkla, sonra kod seçeneğini seç
-                WebElement addButton = driver.findElement(
-                    By.cssSelector(".add-block-button, .add-button, button[aria-label*='add'], button[aria-label*='Add']")
-                );
-                if (addButton != null) {
-                    addButton.click();
-                    Thread.sleep(1000);
-                    WebElement codeOption = wait.until(
-                        ExpectedConditions.elementToBeClickable(
-                            By.xpath("//*[contains(text(), 'Kod') or contains(text(), 'Code')]")
-                        )
-                    );
-                    codeOption.click();
-                    Thread.sleep(1000);
+            // Menü açıldıktan sonra kod butonunu bul ve tıkla
+            // Kod butonu: block-add-menu içindeki kod butonu (title="Kod")
+            WebElement codeButton = wait.until(
+                ExpectedConditions.elementToBeClickable(
+                    By.cssSelector(".block-add-menu button[title='Kod'], .block-add-menu button[title='Code'], " +
+                        ".block-add-menu button:has(svg), .block-add-menu button")
+                )
+            );
+            // Kod butonunu bulmak için tüm menü butonlarını kontrol et
+            java.util.List<WebElement> menuButtons = driver.findElements(
+                By.cssSelector(".block-add-menu button")
+            );
+            
+            // Kod butonunu bul (4. buton - resim, başlık, video, kod sırasıyla)
+            WebElement codeMenuButton = null;
+            if (menuButtons.size() >= 4) {
+                // Kod butonu genellikle 4. sırada (0-indexed: 3)
+                codeMenuButton = menuButtons.get(3);
+            } else {
+                // Alternatif: title attribute'u ile bul
+                for (WebElement btn : menuButtons) {
+                    String title = btn.getAttribute("title");
+                    if (title != null && (title.contains("Kod") || title.contains("Code") || title.contains("code"))) {
+                        codeMenuButton = btn;
+                        break;
+                    }
                 }
             }
             
-            // Kod bloğu içeriğini gir
+            if (codeMenuButton != null) {
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", codeMenuButton);
+            } else {
+                // Son çare: 4. butona tıkla
+                if (menuButtons.size() >= 4) {
+                    ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", menuButtons.get(3));
+                } else {
+                    throw new Exception("Kod butonu bulunamadı. Menü buton sayısı: " + menuButtons.size());
+                }
+            }
+            Thread.sleep(1000);
+            
+            // Kod bloğu editörü açıldı - kod içeriğini gir
             WebElement codeBlock = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector("textarea.code-block, .code-editor textarea, pre code")
+                    By.cssSelector("textarea.code-editor-inline-textarea, .code-editor-inline textarea")
                 )
             );
             String codeContent = "function hello() {\n    console.log('Hello World');\n    return true;\n}";
+            codeBlock.clear();
             codeBlock.sendKeys(codeContent);
             
-            // Kod bloğunu onayla (varsa onay butonu)
+            // Kod bloğunu onayla (onay butonu - checkmark icon)
             Thread.sleep(1000);
-            try {
-                WebElement confirmButton = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        By.xpath("//button[contains(text(), 'Onayla') or contains(text(), 'Confirm')]")
-                    )
-                );
-                confirmButton.click();
-                Thread.sleep(500);
-            } catch (Exception e) {
-                // Onay butonu yoksa, Enter tuşuna bas
-                codeBlock.sendKeys(Keys.ENTER);
-                Thread.sleep(500);
-            }
+            WebElement confirmButton = wait.until(
+                ExpectedConditions.elementToBeClickable(
+                    By.cssSelector(".code-editor-btn.confirm, button.code-editor-btn[title='Onayla'], " +
+                        ".code-editor-inline-actions button.confirm")
+                )
+            );
+            confirmButton.click();
+            Thread.sleep(1000);
             
             // Story'yi yayınla (Frontend'de "Kaydet" yok, sadece "Yayınla" var)
             Thread.sleep(1000);
