@@ -1,6 +1,8 @@
 package com.example.backend.application.service.impl;
 
 import com.example.backend.application.dto.response.MediaFileResponse;
+import com.example.backend.application.exception.ForbiddenException;
+import com.example.backend.application.exception.ResourceNotFoundException;
 import com.example.backend.domain.entity.MediaFile;
 import com.example.backend.domain.repository.MediaFileRepository;
 import org.junit.jupiter.api.Test;
@@ -12,10 +14,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -88,7 +88,26 @@ class MediaFileServiceImplTest {
 
         when(mediaFileRepository.findById(fileId)).thenReturn(Optional.of(mediaFile));
 
-        assertThrows(RuntimeException.class, () -> mediaFileService.deleteFile(fileId, userId));
+        assertThrows(ForbiddenException.class, () -> mediaFileService.deleteFile(fileId, userId));
+        verify(mediaFileRepository, never()).delete(any(MediaFile.class));
+    }
+
+    @Test
+    void findById_shouldThrowExceptionWhenNotFound() {
+        Long fileId = 999L;
+        when(mediaFileRepository.findById(fileId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> mediaFileService.findById(fileId));
+    }
+
+    @Test
+    void deleteFile_shouldThrowExceptionWhenFileNotFound() {
+        Long fileId = 999L;
+        Long userId = 1L;
+
+        when(mediaFileRepository.findById(fileId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> mediaFileService.deleteFile(fileId, userId));
         verify(mediaFileRepository, never()).delete(any(MediaFile.class));
     }
 }

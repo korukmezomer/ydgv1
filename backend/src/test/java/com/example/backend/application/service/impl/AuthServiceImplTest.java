@@ -2,6 +2,7 @@ package com.example.backend.application.service.impl;
 
 import com.example.backend.application.dto.request.UserLoginRequest;
 import com.example.backend.application.dto.response.JwtResponse;
+import com.example.backend.application.exception.UnauthorizedException;
 import com.example.backend.domain.entity.User;
 import com.example.backend.domain.entity.Role;
 import com.example.backend.domain.repository.UserRepository;
@@ -71,7 +72,7 @@ class AuthServiceImplTest {
 
         when(userRepository.findActiveByEmail("nonexistent@example.com")).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> authService.login(request));
+        assertThrows(UnauthorizedException.class, () -> authService.login(request));
     }
 
     @Test
@@ -87,7 +88,88 @@ class AuthServiceImplTest {
         when(userRepository.findActiveByEmail("test@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrong_password", "encoded_password")).thenReturn(false);
 
+        assertThrows(UnauthorizedException.class, () -> authService.login(request));
+    }
+
+    @Test
+    void login_shouldReturnResponseWithUsername() {
+        UserLoginRequest request = new UserLoginRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("password123");
+
+        User user = new User();
+        user.setId(1L);
+        user.setEmail("test@example.com");
+        user.setUsername("testuser");
+        user.setPassword("encoded_password");
+        Role role = new Role();
+        role.setName("USER");
+        user.setRoles(Set.of(role));
+
+        when(userRepository.findActiveByEmail("test@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password123", "encoded_password")).thenReturn(true);
+        when(jwtUtil.generateToken(anyString(), anyLong(), anySet())).thenReturn("jwt_token");
+
+        JwtResponse response = authService.login(request);
+
+        assertNotNull(response);
+        assertEquals("testuser", response.getUsername());
+        assertTrue(response.getRoles().contains("USER"));
+    }
+
+    @Test
+    void login_shouldHandleMultipleRoles() {
+        UserLoginRequest request = new UserLoginRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("password123");
+
+        User user = new User();
+        user.setId(1L);
+        user.setEmail("test@example.com");
+        user.setPassword("encoded_password");
+        Role role1 = new Role();
+        role1.setName("USER");
+        Role role2 = new Role();
+        role2.setName("WRITER");
+        user.setRoles(Set.of(role1, role2));
+
+        when(userRepository.findActiveByEmail("test@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password123", "encoded_password")).thenReturn(true);
+        when(jwtUtil.generateToken(anyString(), anyLong(), anySet())).thenReturn("jwt_token");
+
+        JwtResponse response = authService.login(request);
+
+        assertNotNull(response);
+        assertEquals(2, response.getRoles().size());
+        assertTrue(response.getRoles().contains("USER"));
+        assertTrue(response.getRoles().contains("WRITER"));
+    }
+
+    @Test
+    void login_shouldHandleTokenGenerationException() {
+        UserLoginRequest request = new UserLoginRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("password123");
+
+        User user = new User();
+        user.setId(1L);
+        user.setEmail("test@example.com");
+        user.setPassword("encoded_password");
+        Role role = new Role();
+        role.setName("USER");
+        user.setRoles(Set.of(role));
+
+        when(userRepository.findActiveByEmail("test@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password123", "encoded_password")).thenReturn(true);
+        when(jwtUtil.generateToken(anyString(), anyLong(), anySet())).thenThrow(new RuntimeException("Token generation failed"));
+
         assertThrows(RuntimeException.class, () -> authService.login(request));
+    }
+
+    @Test
+    void logout_shouldCompleteWithoutException() {
+        // logout is a no-op, just verify it doesn't throw
+        assertDoesNotThrow(() -> authService.logout());
     }
 }
 
