@@ -234,25 +234,30 @@ class ListServiceImplTest {
         ListEntity list = new ListEntity();
         list.setId(listId);
         list.setName("Old Name");
+        list.setSlug("old-name");
         list.setUser(owner);
 
         ListCreateRequest request = new ListCreateRequest();
         request.setName("New Name");
         request.setDescription("New Description");
+        request.setIsPrivate(false);
 
         when(listRepository.findById(listId)).thenReturn(Optional.of(list));
         when(listRepository.existsBySlug(anyString())).thenReturn(false);
-
-        ListEntity saved = new ListEntity();
-        saved.setId(listId);
-        saved.setName("New Name");
-        saved.setUser(owner);
-        when(listRepository.save(any(ListEntity.class))).thenReturn(saved);
+        when(listRepository.save(any(ListEntity.class))).thenAnswer(invocation -> {
+            ListEntity saved = invocation.getArgument(0);
+            saved.setName("New Name");
+            saved.setDescription("New Description");
+            saved.setSlug("new-name");
+            return saved;
+        });
 
         ListResponse response = listService.guncelle(listId, userId, request);
 
         assertNotNull(response);
-        verify(listRepository, times(1)).save(any(ListEntity.class));
+        assertEquals("New Name", list.getName());
+        assertEquals("New Description", list.getDescription());
+        verify(listRepository, times(1)).save(list);
     }
 
     @Test

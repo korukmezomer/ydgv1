@@ -470,7 +470,7 @@ class UserServiceImplTest {
         request.setRoleName("USER");
 
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
-        when(userRepository.existsByUsername(null)).thenReturn(false);
+        // null username için existsByUsername kontrolü yapılmaz (UserServiceImpl line 41)
 
         Role userRole = new Role();
         userRole.setName("USER");
@@ -485,6 +485,7 @@ class UserServiceImplTest {
         UserResponse response = userService.register(request);
 
         assertNotNull(response);
+        verify(userRepository, never()).existsByUsername(anyString());
         verify(userRepository, times(1)).save(any(User.class));
     }
 

@@ -270,6 +270,8 @@ class CommentServiceImplTest {
         comment.setId(1L);
         comment.setContent("Test comment");
         comment.setStatus(durum);
+        comment.setUser(user);
+        comment.setStory(story);
 
         Page<Comment> commentPage = new PageImpl<>(List.of(comment));
         when(commentRepository.findByStatus(durum, pageable)).thenReturn(commentPage);
@@ -335,16 +337,17 @@ class CommentServiceImplTest {
         comment.setStatus(Comment.CommentStatus.ONAYLANDI);
 
         when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
-
-        Comment saved = new Comment();
-        saved.setId(commentId);
-        saved.setContent(newContent);
-        saved.setStatus(Comment.CommentStatus.BEKLIYOR);
-        when(commentRepository.save(any(Comment.class))).thenReturn(saved);
+        when(commentRepository.save(any(Comment.class))).thenAnswer(invocation -> {
+            Comment saved = invocation.getArgument(0);
+            saved.setContent(newContent);
+            saved.setStatus(Comment.CommentStatus.BEKLIYOR);
+            return saved;
+        });
 
         CommentResponse response = commentService.guncelle(commentId, userId, newContent);
 
         assertNotNull(response);
+        assertEquals(newContent, comment.getContent());
         assertEquals(Comment.CommentStatus.BEKLIYOR, comment.getStatus());
         verify(commentRepository, times(1)).save(comment);
     }

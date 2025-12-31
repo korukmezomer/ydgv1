@@ -96,8 +96,9 @@ public class ListServiceImpl implements ListService {
             throw new BadRequestException("Bu listeyi düzenleme yetkiniz yok");
         }
 
+        String oldName = list.getName();
         list.setName(request.getName());
-        if (!list.getName().equals(request.getName())) {
+        if (!oldName.equals(request.getName())) {
             list.setSlug(generateUniqueSlug(request.getName()));
         }
         list.setDescription(request.getDescription());
