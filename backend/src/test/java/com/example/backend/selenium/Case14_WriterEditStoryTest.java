@@ -154,52 +154,91 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
     private Long getStoryIdAfterPublishHelper(String storyTitle, String writerEmail) {
         Long storyId = null;
         
+        // Bekleme süresi - story'nin veritabanına kaydedilmesi için
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        
         // 1. URL'den ID'yi almayı dene
         try {
             String currentUrl = driver.getCurrentUrl();
-            Thread.sleep(2000); // Yönlendirme için bekle
-            currentUrl = driver.getCurrentUrl();
+            System.out.println("Case 14: Story ID alınmaya çalışılıyor. Mevcut URL: " + currentUrl);
             
             // URL formatı: /haberler/{slug} veya /yazar/dashboard veya başka bir sayfa
             if (currentUrl.contains("/yazar/dashboard") || currentUrl.contains("/dashboard")) {
                 // Dashboard'dan story'yi bulmak için sayfayı yenile ve story linkini bul
                 driver.navigate().refresh();
-                Thread.sleep(2000);
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
                 
                 // Story linkini bul (en son oluşturulan)
                 try {
-                    WebElement storyLink = wait.until(
-                        ExpectedConditions.presenceOfElementLocated(
-                            By.xpath("//a[contains(@href, '/yazar/haber-duzenle/')]")
-                        )
+                    java.util.List<WebElement> storyLinks = driver.findElements(
+                        By.xpath("//a[contains(@href, '/yazar/haber-duzenle/')]")
                     );
-                    String href = storyLink.getAttribute("href");
-                    java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("/yazar/haber-duzenle/(\\d+)");
-                    java.util.regex.Matcher matcher = pattern.matcher(href);
-                    if (matcher.find()) {
-                        storyId = Long.parseLong(matcher.group(1));
-                        System.out.println("Story ID dashboard'dan alındı: " + storyId);
+                    
+                    if (!storyLinks.isEmpty()) {
+                        // İlk linki al (en son oluşturulan genelde ilk sırada)
+                        WebElement storyLink = storyLinks.get(0);
+                        String href = storyLink.getAttribute("href");
+                        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("/yazar/haber-duzenle/(\\d+)");
+                        java.util.regex.Matcher matcher = pattern.matcher(href);
+                        if (matcher.find()) {
+                            storyId = Long.parseLong(matcher.group(1));
+                            System.out.println("Case 14: Story ID dashboard'dan alındı: " + storyId);
+                        }
                     }
                 } catch (Exception e) {
-                    System.out.println("Dashboard'dan story ID alınamadı: " + e.getMessage());
+                    System.out.println("Case 14: Dashboard'dan story ID alınamadı: " + e.getMessage());
                 }
             } else if (currentUrl.contains("/haberler/")) {
                 // Story detay sayfasındaysa, slug'dan ID'yi al
                 String slug = currentUrl.substring(currentUrl.lastIndexOf("/") + 1);
+                // Query string varsa temizle
+                if (slug.contains("?")) {
+                    slug = slug.substring(0, slug.indexOf("?"));
+                }
                 storyId = getStoryIdFromSlug(slug);
+                if (storyId != null) {
+                    System.out.println("Case 14: Story ID slug'dan alındı: " + storyId);
+                }
             }
         } catch (Exception e) {
-            System.out.println("URL'den story ID alınamadı: " + e.getMessage());
+            System.out.println("Case 14: URL'den story ID alınamadı: " + e.getMessage());
         }
         
-        // 2. Veritabanından almayı dene
+        // 2. Veritabanından almayı dene (retry ile)
         if (storyId == null && storyTitle != null) {
-            storyId = getStoryIdByTitle(storyTitle);
+            for (int i = 0; i < 3; i++) {
+                try {
+                    Thread.sleep(2000); // Veritabanına kaydedilmesi için bekle
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                storyId = getStoryIdByTitle(storyTitle);
+                if (storyId != null) {
+                    System.out.println("Case 14: Story ID veritabanından alındı (deneme " + (i+1) + "): " + storyId);
+                    break;
+                }
+            }
         }
         
         // 3. Son çare: Kullanıcının en son story'sini al
         if (storyId == null && writerEmail != null) {
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             storyId = getLatestStoryIdByUserEmail(writerEmail);
+            if (storyId != null) {
+                System.out.println("Case 14: Story ID kullanıcının en son story'sinden alındı: " + storyId);
+            }
         }
         
         return storyId;

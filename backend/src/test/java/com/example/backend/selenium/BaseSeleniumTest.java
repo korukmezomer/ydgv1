@@ -762,8 +762,23 @@ public abstract class BaseSeleniumTest {
     
     /**
      * Story'yi yayınla (publish button'a tıkla)
+     * Alert'leri otomatik kabul eder
      */
     protected void publishStory() throws Exception {
+        // Alert ve confirm'i override et
+        ((JavascriptExecutor) driver).executeScript(
+            "window.alert = function(text) { " +
+            "  console.log('Alert: ' + text); " +
+            "  return true; " +
+            "};"
+        );
+        ((JavascriptExecutor) driver).executeScript(
+            "window.confirm = function(text) { " +
+            "  console.log('Confirm: ' + text); " +
+            "  return true; " +
+            "};"
+        );
+        
         Thread.sleep(1000);
         WebElement publishButton = wait.until(
             ExpectedConditions.elementToBeClickable(
@@ -772,7 +787,19 @@ public abstract class BaseSeleniumTest {
         );
         publishButton.click();
         
-        Thread.sleep(5000); // Yayınlama işlemi için bekle
+        Thread.sleep(3000); // Yayınlama işlemi için bekle
+        
+        // Alert'leri kontrol et ve kabul et
+        try {
+            org.openqa.selenium.Alert alert = driver.switchTo().alert();
+            String alertText = alert.getText();
+            System.out.println("Publish sonrası alert: " + alertText);
+            alert.accept();
+            Thread.sleep(2000);
+        } catch (Exception alertEx) {
+            // Alert yoksa devam et
+        }
+        
         waitForPageLoad();
         Thread.sleep(2000);
     }
