@@ -26,40 +26,79 @@ public class Case2_UserLoginTest extends BaseSeleniumTest {
     @Test
     @DisplayName("Case 2: Kullanıcı girişi başarılı olmalı")
     public void case2_UserLogin() {
-        // Ana sayfadan giriş sayfasına git
-        WebElement loginLink = wait.until(
-            ExpectedConditions.elementToBeClickable(By.linkText("Giriş yap"))
-        );
-        loginLink.click();
-        
+        // Önce bir kullanıcı kaydet (test için)
+        driver.get(BASE_URL + "/register");
         waitForPageLoad();
+        
+        Random random = new Random();
+        String randomSuffix = String.valueOf(random.nextInt(10000));
+        String email = "logintest" + randomSuffix + "@example.com";
+        String password = "Test123456";
+        
+        WebElement firstNameInput = wait.until(
+            ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
+        );
+        firstNameInput.sendKeys("Login");
+        driver.findElement(By.id("lastName")).sendKeys("Test");
+        driver.findElement(By.id("email")).sendKeys(email);
+        driver.findElement(By.id("username")).sendKeys("logintest" + randomSuffix);
+        driver.findElement(By.id("password")).sendKeys(password);
+        
+        WebElement registerSubmitButton = wait.until(
+            ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
+        );
+        WebElement registerForm = driver.findElement(By.tagName("form"));
+        safeSubmitForm(registerSubmitButton, registerForm);
+        
+        // Kayıt sonrası otomatik login yapılıyor, çıkış yap
+        Thread.sleep(3000);
+        String registerCurrentUrl = driver.getCurrentUrl();
+        if (!registerCurrentUrl.contains("/login")) {
+            // Çıkış yapmak için logout butonunu bul ve tıkla
+            try {
+                WebElement logoutButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.xpath("//button[contains(text(), 'Çıkış') or contains(text(), 'Logout')]")
+                    )
+                );
+                logoutButton.click();
+                Thread.sleep(2000);
+            } catch (Exception e) {
+                // Logout butonu bulunamazsa direkt login sayfasına git
+                driver.get(BASE_URL + "/login");
+                waitForPageLoad();
+            }
+        }
+        
+        // Giriş sayfasına git
+        driver.get(BASE_URL + "/login");
+        waitForPageLoad();
+        Thread.sleep(1000);
         
         // URL'in /login olduğunu doğrula
         assertTrue(driver.getCurrentUrl().contains("/login"), 
             "Case 2: Giriş sayfasına yönlendirilmedi");
         
-        // Test kullanıcısı oluştur (önceden kayıtlı olmalı)
-        // Not: Bu test için önceden kayıtlı bir kullanıcı gerekiyor
-        // Gerçek test ortamında test verisi hazırlanmalı
-        
         // Email alanı
         WebElement emailInput = wait.until(
             ExpectedConditions.presenceOfElementLocated(By.id("email"))
         );
-        emailInput.sendKeys("test@example.com");
+        emailInput.clear();
+        emailInput.sendKeys(email);
         
         // Şifre alanı
         WebElement passwordInput = driver.findElement(By.id("password"));
-        passwordInput.sendKeys("Test123456");
+        passwordInput.clear();
+        passwordInput.sendKeys(password);
         
         // Giriş butonuna tıkla
-        WebElement submitButton = wait.until(
+        WebElement loginSubmitButton = wait.until(
             ExpectedConditions.elementToBeClickable(
                 By.cssSelector("button[type='submit']")
             )
         );
-        WebElement form = driver.findElement(By.tagName("form"));
-        safeSubmitForm(submitButton, form);
+        WebElement loginForm = driver.findElement(By.tagName("form"));
+        safeSubmitForm(loginSubmitButton, loginForm);
         
         // API çağrısının tamamlanmasını bekle
         try {
@@ -74,9 +113,9 @@ public class Case2_UserLoginTest extends BaseSeleniumTest {
                     ExpectedConditions.urlContains("/admin/dashboard")
                 ));
                 
-                String currentUrl = driver.getCurrentUrl();
-                assertTrue(currentUrl.contains("/dashboard") || currentUrl.equals(BASE_URL + "/"),
-                    "Case 2: Giriş sonrası dashboard'a yönlendirilmedi. Mevcut URL: " + currentUrl);
+                String loginCurrentUrl = driver.getCurrentUrl();
+                assertTrue(loginCurrentUrl.contains("/dashboard") || loginCurrentUrl.equals(BASE_URL + "/"),
+                    "Case 2: Giriş sonrası dashboard'a yönlendirilmedi. Mevcut URL: " + loginCurrentUrl);
             } catch (Exception e) {
                 // Hata mesajı kontrolü
                 try {
