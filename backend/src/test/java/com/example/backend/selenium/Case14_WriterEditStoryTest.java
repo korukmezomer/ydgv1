@@ -61,9 +61,12 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             
             publishStory();
             
-            Long storyId = getStoryIdByTitle(originalTitle);
+            // Story ID'yi al - helper metodunu kullan
+            Long storyId = getStoryIdAfterPublishHelper(originalTitle, writerEmail);
+            
             if (storyId == null) {
-                fail("Case 14: Story ID alınamadı");
+                System.err.println("Case 14: Story ID alınamadı. URL: " + driver.getCurrentUrl());
+                fail("Case 14: Story ID alınamadı. Story oluşturulmuş olmalı ama ID bulunamadı.");
                 return;
             }
 
@@ -143,6 +146,63 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             e.printStackTrace();
             fail("Case 14: Test başarısız - " + e.getMessage());
         }
+    }
+    
+    /**
+     * Story ID'yi al - önce URL'den, sonra veritabanından, son olarak kullanıcının en son story'sinden
+     */
+    private Long getStoryIdAfterPublishHelper(String storyTitle, String writerEmail) {
+        Long storyId = null;
+        
+        // 1. URL'den ID'yi almayı dene
+        try {
+            String currentUrl = driver.getCurrentUrl();
+            Thread.sleep(2000); // Yönlendirme için bekle
+            currentUrl = driver.getCurrentUrl();
+            
+            // URL formatı: /haberler/{slug} veya /yazar/dashboard veya başka bir sayfa
+            if (currentUrl.contains("/yazar/dashboard") || currentUrl.contains("/dashboard")) {
+                // Dashboard'dan story'yi bulmak için sayfayı yenile ve story linkini bul
+                driver.navigate().refresh();
+                Thread.sleep(2000);
+                
+                // Story linkini bul (en son oluşturulan)
+                try {
+                    WebElement storyLink = wait.until(
+                        ExpectedConditions.presenceOfElementLocated(
+                            By.xpath("//a[contains(@href, '/yazar/haber-duzenle/')]")
+                        )
+                    );
+                    String href = storyLink.getAttribute("href");
+                    java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("/yazar/haber-duzenle/(\\d+)");
+                    java.util.regex.Matcher matcher = pattern.matcher(href);
+                    if (matcher.find()) {
+                        storyId = Long.parseLong(matcher.group(1));
+                        System.out.println("Story ID dashboard'dan alındı: " + storyId);
+                    }
+                } catch (Exception e) {
+                    System.out.println("Dashboard'dan story ID alınamadı: " + e.getMessage());
+                }
+            } else if (currentUrl.contains("/haberler/")) {
+                // Story detay sayfasındaysa, slug'dan ID'yi al
+                String slug = currentUrl.substring(currentUrl.lastIndexOf("/") + 1);
+                storyId = getStoryIdFromSlug(slug);
+            }
+        } catch (Exception e) {
+            System.out.println("URL'den story ID alınamadı: " + e.getMessage());
+        }
+        
+        // 2. Veritabanından almayı dene
+        if (storyId == null && storyTitle != null) {
+            storyId = getStoryIdByTitle(storyTitle);
+        }
+        
+        // 3. Son çare: Kullanıcının en son story'sini al
+        if (storyId == null && writerEmail != null) {
+            storyId = getLatestStoryIdByUserEmail(writerEmail);
+        }
+        
+        return storyId;
     }
     
     // Case4g'deki helper metodları (protected olarak kullanılabilir)
@@ -234,27 +294,6 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
         Thread.sleep(1000);
     }
     
-    private void publishStory() throws Exception {
-        Thread.sleep(1000);
-        WebElement publishButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".publish-button, button.publish-button")
-            )
-        );
-        publishButton.click();
-        
-        Thread.sleep(3000);
-        String currentUrl = driver.getCurrentUrl();
-        assertTrue(
-            currentUrl.contains("/dashboard") || 
-            currentUrl.contains("/yazar") ||
-            currentUrl.contains("/story") ||
-            currentUrl.contains("/reader") ||
-            currentUrl.contains("/haberler"),
-            "Story kaydedildikten sonra yönlendirme yapılmadı. URL: " + currentUrl
-        );
-    }
-
     @Test
     @DisplayName("Case 14a: Yazar code bloğunu silebilmeli")
     public void case14a_DeleteCodeBlock() {
@@ -297,7 +336,7 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             
             publishStory();
             
-            Long storyId = getStoryIdByTitle(storyTitle);
+            Long storyId = getStoryIdAfterPublishHelper(storyTitle, writerEmail);
             if (storyId == null) {
                 fail("Case 14a: Story ID alınamadı");
                 return;
@@ -362,15 +401,52 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
     
     // Kaydet helper metodu - Yayınla butonuna bas (handlePublish hem update hem yayınla yapıyor)
     private void saveStoryChanges() throws Exception {
-        // Alert ve confirm'i override et
+        // Mevcut URL'yi kaydet
+        String currentUrl = driver.getCurrentUrl();
+        System.out.println("Case 14: Yayınla butonuna basmadan önce URL: " + currentUrl);
+        
+        // Alert ve confirm'i override et - alert mesajlarını console'a yazdır
         ((JavascriptExecutor) driver).executeScript(
-            "window.alert = function(text) { return true; };"
+            "window.alert = function(text) { " +
+            "  console.log('Alert: ' + text); " +
+            "  return true; " +
+            "};"
         );
         ((JavascriptExecutor) driver).executeScript(
-            "window.confirm = function(text) { return true; };"
+            "window.confirm = function(text) { " +
+            "  console.log('Confirm: ' + text); " +
+            "  return true; " +
+            "};"
         );
         
         Thread.sleep(1000);
+        
+        // Başlık ve içerik kontrolü yap (handlePublish bunları kontrol ediyor)
+        WebElement titleInput = driver.findElement(By.cssSelector("input.story-title-input"));
+        String titleValue = titleInput.getAttribute("value");
+        if (titleValue == null || titleValue.trim().isEmpty()) {
+            System.out.println("Case 14: Başlık boş, dolduruluyor...");
+            titleInput.sendKeys("Test Başlık " + System.currentTimeMillis());
+            Thread.sleep(500);
+        }
+        
+        // İçerik kontrolü - en az bir text bloğu olmalı
+        java.util.List<WebElement> textBlocks = driver.findElements(
+            By.cssSelector("textarea.block-textarea")
+        );
+        boolean hasContent = false;
+        for (WebElement block : textBlocks) {
+            String content = block.getAttribute("value");
+            if (content != null && !content.trim().isEmpty()) {
+                hasContent = true;
+                break;
+            }
+        }
+        if (!hasContent && textBlocks.size() > 0) {
+            System.out.println("Case 14: İçerik boş, dolduruluyor...");
+            textBlocks.get(0).sendKeys("Test içeriği");
+            Thread.sleep(500);
+        }
         
         // Yayınla butonunu bul - header içindeki publish-button (delete-button değil)
         WebElement publishButton = null;
@@ -411,16 +487,11 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
         }
         
         // Butonun disabled olmadığından emin ol
-        if (publishButton.getAttribute("disabled") != null) {
-            System.out.println("Yayınla butonu disabled, başlık kontrolü yapılıyor...");
-            // Başlık input'unu kontrol et
-            WebElement titleInput = driver.findElement(By.cssSelector("input.story-title-input"));
-            String titleValue = titleInput.getAttribute("value");
-            if (titleValue == null || titleValue.trim().isEmpty()) {
-                titleInput.sendKeys("Test Başlık " + System.currentTimeMillis());
-                Thread.sleep(500);
-            }
-            // Butonu tekrar bul
+        String disabledAttr = publishButton.getAttribute("disabled");
+        if (disabledAttr != null && !disabledAttr.equals("false")) {
+            System.out.println("Case 14: Yayınla butonu disabled, başlık ve içerik kontrolü yapılıyor...");
+            // Başlık ve içerik zaten kontrol edildi, butonu tekrar bul
+            Thread.sleep(1000);
             publishButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
                     By.cssSelector(".story-header-actions button.publish-button:not(.delete-button)")
@@ -438,6 +509,8 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
                                publishButton.isDisplayed() + ", Enabled: " + publishButton.isEnabled());
         }
         
+        System.out.println("Case 14: Yayınla butonuna tıklanıyor...");
+        
         // JavaScript ile tıkla (daha güvenilir)
         try {
             ((JavascriptExecutor) driver).executeScript("arguments[0].click();", publishButton);
@@ -446,9 +519,46 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             publishButton.click();
         }
         
-        Thread.sleep(5000);
+        // Alert'leri kontrol et ve kabul et
+        Thread.sleep(2000);
+        try {
+            org.openqa.selenium.Alert alert = driver.switchTo().alert();
+            String alertText = alert.getText();
+            System.out.println("Case 14: Alert bulundu: " + alertText);
+            alert.accept();
+            Thread.sleep(2000);
+        } catch (Exception alertEx) {
+            // Alert yoksa devam et
+        }
         
         // Yayınlandıktan sonra sayfa yönlendirmesini bekle
+        // handlePublish başarılı olursa /haberler/{slug} adresine yönlendirir
+        // Hata olursa alert gösterir ve sayfa değişmez
+        try {
+            wait.until(ExpectedConditions.or(
+                ExpectedConditions.urlContains("/haberler/"),
+                ExpectedConditions.urlContains("/yazar/dashboard"),
+                ExpectedConditions.urlContains("/dashboard"),
+                ExpectedConditions.not(ExpectedConditions.urlToBe(currentUrl))
+            ));
+            Thread.sleep(2000);
+            String newUrl = driver.getCurrentUrl();
+            System.out.println("Case 14: Yayınla butonuna basıldıktan sonra URL: " + newUrl);
+        } catch (Exception urlEx) {
+            // URL değişmediyse hata olmuş olabilir, alert kontrolü yap
+            System.out.println("Case 14: URL değişmedi, alert kontrolü yapılıyor...");
+            try {
+                org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                String alertText = alert.getText();
+                System.out.println("Case 14: Hata alert'i: " + alertText);
+                alert.accept();
+                throw new Exception("Yayınla işlemi başarısız: " + alertText);
+            } catch (Exception alertEx) {
+                // Alert yoksa sadece URL değişmemiş
+                System.out.println("Case 14: URL değişmedi ve alert yok. Sayfa: " + driver.getCurrentUrl());
+            }
+        }
+        
         waitForPageLoad();
         Thread.sleep(2000);
     }

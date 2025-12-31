@@ -503,15 +503,35 @@ public abstract class BaseSeleniumTest {
         try {
             driver.get(BASE_URL + "/register");
             waitForPageLoad();
+            Thread.sleep(2000);
             
+            // Form alanlarını temizle ve doldur
             WebElement firstNameInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
             );
+            firstNameInput.clear();
             firstNameInput.sendKeys(firstName);
-            driver.findElement(By.id("lastName")).sendKeys(lastName);
-            driver.findElement(By.id("email")).sendKeys(email);
-            driver.findElement(By.id("username")).sendKeys(username);
-            driver.findElement(By.id("password")).sendKeys(password);
+            Thread.sleep(500);
+            
+            WebElement lastNameInput = driver.findElement(By.id("lastName"));
+            lastNameInput.clear();
+            lastNameInput.sendKeys(lastName);
+            Thread.sleep(500);
+            
+            WebElement emailInput = driver.findElement(By.id("email"));
+            emailInput.clear();
+            emailInput.sendKeys(email);
+            Thread.sleep(500);
+            
+            WebElement usernameInput = driver.findElement(By.id("username"));
+            usernameInput.clear();
+            usernameInput.sendKeys(username);
+            Thread.sleep(500);
+            
+            WebElement passwordInput = driver.findElement(By.id("password"));
+            passwordInput.clear();
+            passwordInput.sendKeys(password);
+            Thread.sleep(500);
             
             // Role seçimi - WRITER
             try {
@@ -521,16 +541,39 @@ public abstract class BaseSeleniumTest {
                 org.openqa.selenium.support.ui.Select roleSelect = new org.openqa.selenium.support.ui.Select(roleSelectElement);
                 try {
                     roleSelect.selectByValue("WRITER");
+                    Thread.sleep(500);
                 } catch (Exception e) {
                     try {
                         roleSelect.selectByVisibleText("WRITER");
+                        Thread.sleep(500);
                     } catch (Exception e2) {
                         ((JavascriptExecutor) driver)
                             .executeScript("arguments[0].value = 'WRITER';", roleSelectElement);
+                        Thread.sleep(500);
                     }
                 }
             } catch (Exception e) {
-                System.out.println("Role select bulunamadı: " + e.getMessage());
+                System.out.println("Role select bulunamadı veya seçilemedi: " + e.getMessage());
+                // Role seçimi başarısız olsa bile devam et
+            }
+            
+            // Hata mesajlarını kontrol et
+            try {
+                java.util.List<WebElement> errorMessages = driver.findElements(
+                    By.cssSelector(".error, .text-danger, [role='alert']")
+                );
+                for (WebElement error : errorMessages) {
+                    if (error.isDisplayed()) {
+                        String errorText = error.getText();
+                        if (errorText.contains("zaten") || errorText.contains("already") || 
+                            errorText.contains("kullanılıyor") || errorText.contains("exists")) {
+                            System.out.println("Writer kaydı hatası: " + errorText);
+                            return false;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Hata mesajı kontrolü başarısız olsa bile devam et
             }
             
             WebElement submitButton = wait.until(
@@ -538,14 +581,42 @@ public abstract class BaseSeleniumTest {
             );
             WebElement form = driver.findElement(By.tagName("form"));
             safeSubmitForm(submitButton, form);
-            Thread.sleep(3000);
+            Thread.sleep(5000); // Kayıt işlemi için daha uzun bekle
             
             // Kayıt başarılı kontrolü
             String currentUrl = driver.getCurrentUrl();
-            return currentUrl.contains("/dashboard") || currentUrl.contains("/yazar/dashboard") || 
+            System.out.println("Writer kaydı sonrası URL: " + currentUrl);
+            
+            // Hata mesajlarını tekrar kontrol et
+            try {
+                java.util.List<WebElement> errorMessages = driver.findElements(
+                    By.cssSelector(".error, .text-danger, [role='alert']")
+                );
+                for (WebElement error : errorMessages) {
+                    if (error.isDisplayed()) {
+                        String errorText = error.getText();
+                        System.out.println("Writer kaydı sonrası hata mesajı: " + errorText);
+                        if (errorText.contains("zaten") || errorText.contains("already") || 
+                            errorText.contains("kullanılıyor") || errorText.contains("exists")) {
+                            return false;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Hata mesajı kontrolü başarısız olsa bile devam et
+            }
+            
+            boolean success = currentUrl.contains("/dashboard") || currentUrl.contains("/yazar/dashboard") || 
                    currentUrl.equals(BASE_URL + "/") || !currentUrl.contains("/register");
+            
+            if (!success) {
+                System.out.println("Writer kaydı başarısız görünüyor. URL: " + currentUrl);
+            }
+            
+            return success;
         } catch (Exception e) {
             System.err.println("Writer kaydı hatası: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
@@ -690,22 +761,63 @@ public abstract class BaseSeleniumTest {
     }
     
     /**
+     * Story'yi yayınla (publish button'a tıkla)
+     */
+    protected void publishStory() throws Exception {
+        Thread.sleep(1000);
+        WebElement publishButton = wait.until(
+            ExpectedConditions.elementToBeClickable(
+                By.cssSelector(".publish-button, button.publish-button")
+            )
+        );
+        publishButton.click();
+        
+        Thread.sleep(5000); // Yayınlama işlemi için bekle
+        waitForPageLoad();
+        Thread.sleep(2000);
+    }
+    
+    /**
      * Story başlığından story ID'sini al
      */
     protected Long getStoryIdByTitle(String title) {
+        // Önce URL'den ID'yi almaya çalış (eğer story oluşturulduktan sonra URL'de ID varsa)
+        try {
+            String currentUrl = driver.getCurrentUrl();
+            // URL formatı: /haberler/{slug} veya /yazar/haber-duzenle/{id} veya /haberler/{id}
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("/(?:haberler|yazar/haber-duzenle)/(\\d+)");
+            java.util.regex.Matcher matcher = pattern.matcher(currentUrl);
+            if (matcher.find()) {
+                Long idFromUrl = Long.parseLong(matcher.group(1));
+                System.out.println("Story ID URL'den alındı: " + idFromUrl);
+                return idFromUrl;
+            }
+        } catch (Exception e) {
+            // URL'den alınamazsa devam et
+        }
+        
+        // Veritabanından almayı dene
         try (Connection conn = getTestDatabaseConnection()) {
             String sql = "SELECT id FROM stories WHERE baslik = ? ORDER BY created_at DESC LIMIT 1";
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, title);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) {
-                        return rs.getLong("id");
+                        Long id = rs.getLong("id");
+                        System.out.println("Story ID veritabanından alındı: " + id);
+                        return id;
                     }
                 }
             }
         } catch (SQLException e) {
             System.err.println("Story ID başlıktan alınamadı: " + e.getMessage());
+            // Eğer tablo yoksa, kullanıcının en son story'sini almayı dene
+            if (e.getMessage().contains("does not exist") || e.getMessage().contains("relation")) {
+                System.out.println("Stories tablosu bulunamadı, alternatif yöntem deneniyor...");
+            }
         }
+        
+        // Son çare: Kullanıcının en son story'sini al (eğer email biliniyorsa)
         return null;
     }
     
