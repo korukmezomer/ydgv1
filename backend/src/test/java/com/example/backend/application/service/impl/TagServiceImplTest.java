@@ -129,8 +129,10 @@ class TagServiceImplTest {
         tag2.setId(2L);
         tag2.setName("Tag 2");
         tag2.setSlug("tag-2");
+        tag1.setIsActive(true);
+        tag2.setIsActive(true);
 
-        when(tagRepository.findAll()).thenReturn(List.of(tag1, tag2));
+        when(tagRepository.findByIsActiveTrue()).thenReturn(List.of(tag1, tag2));
 
         List<TagResponse> responses = tagService.findAll();
 
@@ -145,11 +147,12 @@ class TagServiceImplTest {
         tag.setId(1L);
         tag.setName("Test Tag");
         tag.setSlug("test-tag");
+        tag.setIsActive(true);
 
         Pageable pageable = PageRequest.of(0, 10);
         Page<Tag> tagPage = new PageImpl<>(List.of(tag), pageable, 1);
 
-        when(tagRepository.findAll(pageable)).thenReturn(tagPage);
+        when(tagRepository.findByIsActiveTrue(pageable)).thenReturn(tagPage);
 
         Page<TagResponse> responsePage = tagService.findAll(pageable);
 

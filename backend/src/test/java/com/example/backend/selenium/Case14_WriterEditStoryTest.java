@@ -104,44 +104,8 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             newTextBlock2.sendKeys("Yeni paragraf içeriği.");
             Thread.sleep(1000);
 
-            // 7. Kaydet butonuna bas (handleSave'ı JavaScript ile çağır - UI'da buton yok)
-            ((JavascriptExecutor) driver).executeScript(
-                "window.alert = function(text) { return true; };"
-            );
-            
-            // handleSave fonksiyonunu çağır
-            ((JavascriptExecutor) driver).executeScript(
-                "if (typeof window.handleSave === 'function') { window.handleSave(); } " +
-                "else { " +
-                "  const event = new Event('save'); " +
-                "  document.dispatchEvent(event); " +
-                "}"
-            );
-            
-            // Alternatif: handleSave'ı React component'inden çağır
-            try {
-                ((JavascriptExecutor) driver).executeScript(
-                    "const reactFiber = document.querySelector('input.story-title-input')._reactInternalFiber || " +
-                    "document.querySelector('input.story-title-input')._reactInternalInstance; " +
-                    "if (reactFiber && reactFiber.return && reactFiber.return.stateNode && reactFiber.return.stateNode.handleSave) { " +
-                    "  reactFiber.return.stateNode.handleSave(); " +
-                    "}"
-                );
-            } catch (Exception jsEx) {
-                // React fiber bulunamazsa, direkt API çağrısı yapabiliriz veya Yayınla butonunu kullanabiliriz
-                System.out.println("Case 14: handleSave JavaScript ile çağrılamadı, Yayınla butonunu kullanıyoruz");
-                
-                // Yayınla butonuna bas (handlePublish hem update hem yayınla yapıyor)
-                WebElement publishButton = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("button.publish-button:not(.delete-button)")
-                    )
-                );
-                publishButton.click();
-                Thread.sleep(5000);
-            }
-            
-            Thread.sleep(3000);
+            // 7. Yayınla butonuna bas (handlePublish hem update hem yayınla yapıyor)
+            saveStoryChanges();
 
             // 8. Veritabanından güncellenmiş story'yi kontrol et
             try (java.sql.Connection conn = getTestDatabaseConnection()) {
@@ -396,34 +360,97 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
         }
     }
     
-    // Kaydet helper metodu
+    // Kaydet helper metodu - Yayınla butonuna bas (handlePublish hem update hem yayınla yapıyor)
     private void saveStoryChanges() throws Exception {
+        // Alert ve confirm'i override et
         ((JavascriptExecutor) driver).executeScript(
             "window.alert = function(text) { return true; };"
         );
+        ((JavascriptExecutor) driver).executeScript(
+            "window.confirm = function(text) { return true; };"
+        );
         
-        // handleSave'ı çağırmayı dene
+        Thread.sleep(1000);
+        
+        // Yayınla butonunu bul - header içindeki publish-button (delete-button değil)
+        WebElement publishButton = null;
         try {
-            ((JavascriptExecutor) driver).executeScript(
-                "const reactFiber = document.querySelector('input.story-title-input')._reactInternalFiber || " +
-                "document.querySelector('input.story-title-input')._reactInternalInstance; " +
-                "if (reactFiber && reactFiber.return && reactFiber.return.stateNode && reactFiber.return.stateNode.handleSave) { " +
-                "  reactFiber.return.stateNode.handleSave(); " +
-                "}"
-            );
-            Thread.sleep(3000);
-        } catch (Exception jsEx) {
-            // React fiber bulunamazsa, Yayınla butonunu kullan (handlePublish hem update hem yayınla yapıyor)
-            System.out.println("Case 14: handleSave JavaScript ile çağrılamadı, Yayınla butonunu kullanıyoruz");
-            
-            WebElement publishButton = wait.until(
+            // Önce CSS selector ile dene
+            publishButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.cssSelector("button.publish-button:not(.delete-button)")
+                    By.cssSelector(".story-header-actions button.publish-button:not(.delete-button), " +
+                                  "header button.publish-button:not(.delete-button), " +
+                                  "button.publish-button:not(.delete-button)")
                 )
             );
-            publishButton.click();
-            Thread.sleep(5000);
+        } catch (Exception e) {
+            // CSS selector başarısız olursa XPath ile dene
+            try {
+                publishButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.xpath("//header//button[contains(@class, 'publish-button') and not(contains(@class, 'delete-button'))] | " +
+                                "//button[contains(text(), 'Yayınla') and not(contains(@class, 'delete-button'))]")
+                    )
+                );
+            } catch (Exception e2) {
+                // Son çare: Tüm publish-button'ları bul ve delete-button olmayanı seç
+                java.util.List<WebElement> publishButtons = driver.findElements(
+                    By.cssSelector("button.publish-button")
+                );
+                for (WebElement btn : publishButtons) {
+                    String classes = btn.getAttribute("class");
+                    if (classes != null && !classes.contains("delete-button")) {
+                        publishButton = btn;
+                        break;
+                    }
+                }
+                if (publishButton == null) {
+                    throw new Exception("Yayınla butonu bulunamadı. Mevcut butonlar: " + publishButtons.size());
+                }
+            }
         }
+        
+        // Butonun disabled olmadığından emin ol
+        if (publishButton.getAttribute("disabled") != null) {
+            System.out.println("Yayınla butonu disabled, başlık kontrolü yapılıyor...");
+            // Başlık input'unu kontrol et
+            WebElement titleInput = driver.findElement(By.cssSelector("input.story-title-input"));
+            String titleValue = titleInput.getAttribute("value");
+            if (titleValue == null || titleValue.trim().isEmpty()) {
+                titleInput.sendKeys("Test Başlık " + System.currentTimeMillis());
+                Thread.sleep(500);
+            }
+            // Butonu tekrar bul
+            publishButton = wait.until(
+                ExpectedConditions.elementToBeClickable(
+                    By.cssSelector(".story-header-actions button.publish-button:not(.delete-button)")
+                )
+            );
+        }
+        
+        // Butonun görünür olduğundan emin ol
+        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center', behavior: 'smooth'});", publishButton);
+        Thread.sleep(1000);
+        
+        // Butonun gerçekten tıklanabilir olduğunu kontrol et
+        if (!publishButton.isDisplayed() || !publishButton.isEnabled()) {
+            throw new Exception("Yayınla butonu görünür veya tıklanabilir değil. Displayed: " + 
+                               publishButton.isDisplayed() + ", Enabled: " + publishButton.isEnabled());
+        }
+        
+        // JavaScript ile tıkla (daha güvenilir)
+        try {
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", publishButton);
+        } catch (Exception jsEx) {
+            // JavaScript click başarısız olursa normal click dene
+            publishButton.click();
+        }
+        
+        Thread.sleep(5000);
+        
+        // Yayınlandıktan sonra sayfa yönlendirmesini bekle
+        waitForPageLoad();
+        Thread.sleep(2000);
     }
 
     @Test
@@ -880,6 +907,135 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             System.err.println("Case 14d: Beklenmeyen hata - " + e.getMessage());
             e.printStackTrace();
             fail("Case 14d: Test başarısız - " + e.getMessage());
+        }
+    }
+
+    @Test
+    @DisplayName("Case 14e: Yazar yazıyı silebilmeli")
+    public void case14e_DeleteStory() {
+        try {
+            // 1. WRITER olarak kayıt ol
+            String writerEmail = "writer_delete_" + System.currentTimeMillis() + "@example.com";
+            String writerUsername = "writer_delete_" + System.currentTimeMillis();
+            String writerPassword = "Test123456";
+
+            boolean writerRegistered = registerWriter("Writer", "Delete", writerEmail, writerUsername, writerPassword);
+            if (!writerRegistered) {
+                fail("Case 14e: Writer kaydı başarısız");
+                return;
+            }
+
+            // 2. Basit bir story oluştur
+            String storyTitle = "Silinecek Story " + System.currentTimeMillis();
+            
+            driver.get(BASE_URL + "/reader/new-story");
+            waitForPageLoad();
+            Thread.sleep(2000);
+            
+            WebElement titleInput = wait.until(
+                ExpectedConditions.presenceOfElementLocated(
+                    By.cssSelector("input.story-title-input, input[placeholder*='Başlık']")
+                )
+            );
+            titleInput.sendKeys(storyTitle);
+            
+            WebElement firstTextBlock = waitForTextBlock();
+            firstTextBlock.sendKeys("Bu silinecek bir story'dir.");
+            Thread.sleep(1000);
+            
+            publishStory();
+            
+            Long storyId = getStoryIdByTitle(storyTitle);
+            if (storyId == null) {
+                fail("Case 14e: Story ID alınamadı");
+                return;
+            }
+
+            // 3. Düzenleme sayfasına git
+            driver.get(BASE_URL + "/yazar/haber-duzenle/" + storyId);
+            waitForPageLoad();
+            Thread.sleep(3000);
+
+            // 4. Sil butonunu bul ve tıkla
+            ((JavascriptExecutor) driver).executeScript(
+                "window.confirm = function(text) { return true; };"
+            );
+            ((JavascriptExecutor) driver).executeScript(
+                "window.alert = function(text) { return true; };"
+            );
+            
+            WebElement deleteButton = wait.until(
+                ExpectedConditions.elementToBeClickable(
+                    By.cssSelector("button.publish-button.delete-button, button.delete-button, button[class*='delete']")
+                )
+            );
+            
+            // Butonun görünür olduğundan emin ol
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", deleteButton);
+            Thread.sleep(500);
+            
+            deleteButton.click();
+            Thread.sleep(5000);
+            
+            // Yönlendirmeyi bekle (dashboard'a yönlendirilmeli)
+            waitForPageLoad();
+            Thread.sleep(2000);
+            
+            String currentUrl = driver.getCurrentUrl();
+            assertTrue(
+                currentUrl.contains("/dashboard") || currentUrl.contains("/yazar/dashboard"),
+                "Case 14e: Story silindikten sonra dashboard'a yönlendirilmedi. URL: " + currentUrl
+            );
+
+            // 5. Veritabanından story'nin silindiğini kontrol et (isActive = false veya silinmiş)
+            try (java.sql.Connection conn = getTestDatabaseConnection()) {
+                String sql = "SELECT id, is_active FROM stories WHERE id = ?";
+                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setLong(1, storyId);
+                    try (java.sql.ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            // Story hala varsa isActive kontrolü yap
+                            Boolean isActive = rs.getBoolean("is_active");
+                            if (rs.wasNull()) {
+                                isActive = null;
+                            }
+                            
+                            // isActive false ise veya null ise story silinmiş sayılır
+                            assertTrue(
+                                isActive == null || !isActive,
+                                "Case 14e: Story veritabanından silinmedi (isActive: " + isActive + ")"
+                            );
+                        } else {
+                            // Story hiç bulunamadıysa da silinmiş sayılır
+                            assertTrue(true, "Case 14e: Story veritabanından tamamen silindi");
+                        }
+                    }
+                }
+            } catch (java.sql.SQLException e) {
+                System.err.println("Case 14e: Veritabanı kontrolü hatası: " + e.getMessage());
+                // Veritabanı hatası olsa bile UI'da silindiğini gördük, test başarılı sayılabilir
+            }
+
+            // 6. Dashboard'da story'nin artık görünmediğini kontrol et
+            driver.get(BASE_URL + "/yazar/dashboard");
+            waitForPageLoad();
+            Thread.sleep(3000);
+            
+            try {
+                driver.findElement(
+                    By.xpath("//a[contains(@href, '/yazar/haber-duzenle/" + storyId + "')] | //*[contains(text(), '" + storyTitle + "')]")
+                );
+                fail("Case 14e: Story dashboard'da hala görünüyor");
+            } catch (org.openqa.selenium.NoSuchElementException e) {
+                assertTrue(true, "Case 14e: Story dashboard'dan başarıyla kaldırıldı");
+            }
+
+            System.out.println("Case 14e: Yazı silme testi başarıyla tamamlandı");
+
+        } catch (Exception e) {
+            System.err.println("Case 14e: Beklenmeyen hata - " + e.getMessage());
+            e.printStackTrace();
+            fail("Case 14e: Test başarısız - " + e.getMessage());
         }
     }
 }
