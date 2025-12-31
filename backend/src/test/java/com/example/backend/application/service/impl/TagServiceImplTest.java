@@ -191,6 +191,33 @@ class TagServiceImplTest {
     }
 
     @Test
+    void update_shouldNotUpdateSlugWhenNameUnchanged() {
+        Long tagId = 1L;
+        Tag tag = new Tag();
+        tag.setId(tagId);
+        tag.setName("Test Tag");
+        tag.setSlug("test-tag");
+
+        TagCreateRequest request = new TagCreateRequest();
+        request.setName("Test Tag"); // Same name
+
+        when(tagRepository.findById(tagId)).thenReturn(Optional.of(tag));
+
+        Tag saved = new Tag();
+        saved.setId(tagId);
+        saved.setName("Test Tag");
+        saved.setSlug("test-tag"); // Slug should remain same
+        when(tagRepository.save(any(Tag.class))).thenReturn(saved);
+
+        TagResponse response = tagService.update(tagId, request);
+
+        assertNotNull(response);
+        assertEquals("test-tag", response.getSlug());
+        verify(tagRepository, never()).existsBySlug(anyString());
+        verify(tagRepository, times(1)).save(any(Tag.class));
+    }
+
+    @Test
     void update_shouldThrowExceptionWhenNameExists() {
         Long tagId = 1L;
         Tag tag = new Tag();
