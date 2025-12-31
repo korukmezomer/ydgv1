@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.Select;
 
 import java.util.Random;
 
@@ -57,19 +58,39 @@ public class Case6_StoryPublishDecisionTableTest extends BaseSeleniumTest {
             driver.findElement(By.id("username")).sendKeys("writer" + randomSuffix);
             driver.findElement(By.id("password")).sendKeys("Test123456");
             
-            // WRITER rolü seç
-            WebElement roleSelect = driver.findElement(By.id("roleName"));
-            roleSelect.sendKeys("WRITER");
+            // WRITER rolü seç - Select elementini kullan
+            WebElement roleSelectElement = wait.until(
+                ExpectedConditions.presenceOfElementLocated(By.id("roleName"))
+            );
+            Select roleSelect = new Select(roleSelectElement);
+            try {
+                roleSelect.selectByValue("WRITER");
+            } catch (Exception e) {
+                try {
+                    roleSelect.selectByVisibleText("WRITER");
+                } catch (Exception e2) {
+                    ((org.openqa.selenium.JavascriptExecutor) driver)
+                        .executeScript("arguments[0].value = 'WRITER';", roleSelectElement);
+                }
+            }
             
             WebElement submitButton = wait.until(
                 ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
             );
-            submitButton.click();
+            WebElement form = driver.findElement(By.tagName("form"));
+            safeSubmitForm(submitButton, form);
             
+            // Frontend'de kayıt sonrası otomatik login yapılıyor
             Thread.sleep(3000);
+            wait.until(ExpectedConditions.or(
+                ExpectedConditions.urlContains("/yazar/dashboard"),
+                ExpectedConditions.urlContains("/dashboard"),
+                ExpectedConditions.urlToBe(BASE_URL + "/")
+            ));
+            Thread.sleep(2000);
             
-            // Story oluştur sayfasına git
-            driver.get(BASE_URL + "/reader/new-story");
+            // WRITER rolü için story oluştur sayfasına git
+            driver.get(BASE_URL + "/yazar/haber-olustur");
             waitForPageLoad();
             
             // Başlık gir
@@ -151,7 +172,7 @@ public class Case6_StoryPublishDecisionTableTest extends BaseSeleniumTest {
             Thread.sleep(3000);
             
             // Story oluştur sayfasına git
-            driver.get(BASE_URL + "/reader/new-story");
+            driver.get(BASE_URL + "/yazar/haber-olustur");
             waitForPageLoad();
             
             // Başlık gir
@@ -216,7 +237,7 @@ public class Case6_StoryPublishDecisionTableTest extends BaseSeleniumTest {
             Thread.sleep(3000);
             
             // Story oluştur sayfasına git (USER rolü erişemeyebilir)
-            driver.get(BASE_URL + "/reader/new-story");
+            driver.get(BASE_URL + "/yazar/haber-olustur");
             waitForPageLoad();
             
             // Karar: USER rolü story yayınlayamaz
@@ -226,7 +247,7 @@ public class Case6_StoryPublishDecisionTableTest extends BaseSeleniumTest {
             assertTrue(
                 currentUrl.contains("/dashboard") || 
                 currentUrl.contains("/reader") ||
-                !currentUrl.contains("/new-story"),
+                !currentUrl.contains("/haber-olustur"),
                 "Case 6.3: USER rolü story yayınlayamaz (beklenen davranış). URL: " + currentUrl
             );
             

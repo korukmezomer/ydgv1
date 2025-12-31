@@ -6,6 +6,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.Select;
 
 import java.util.Random;
 
@@ -52,20 +53,39 @@ public class Case4f_StoryCreationWithListTest extends BaseSeleniumTest {
             driver.findElement(By.id("username")).sendKeys(username);
             driver.findElement(By.id("password")).sendKeys("Test123456");
             
-            // Rol seçimi (WRITER)
-            WebElement roleSelect = driver.findElement(By.id("roleName"));
-            roleSelect.sendKeys("WRITER");
+            // Rol seçimi (WRITER) - Select elementini kullan
+            WebElement roleSelectElement = wait.until(
+                ExpectedConditions.presenceOfElementLocated(By.id("roleName"))
+            );
+            Select roleSelect = new Select(roleSelectElement);
+            try {
+                roleSelect.selectByValue("WRITER");
+            } catch (Exception e) {
+                try {
+                    roleSelect.selectByVisibleText("WRITER");
+                } catch (Exception e2) {
+                    ((org.openqa.selenium.JavascriptExecutor) driver)
+                        .executeScript("arguments[0].value = 'WRITER';", roleSelectElement);
+                }
+            }
             
             WebElement submitButton = wait.until(
                 ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
             );
-            submitButton.click();
+            WebElement form = driver.findElement(By.tagName("form"));
+            safeSubmitForm(submitButton, form);
             
-            // Dashboard'a yönlendirilmeyi bekle
+            // Frontend'de kayıt sonrası otomatik login yapılıyor
             Thread.sleep(3000);
+            wait.until(ExpectedConditions.or(
+                ExpectedConditions.urlContains("/yazar/dashboard"),
+                ExpectedConditions.urlContains("/dashboard"),
+                ExpectedConditions.urlToBe(BASE_URL + "/")
+            ));
+            Thread.sleep(2000);
             
-            // Yeni story oluştur sayfasına git
-            driver.get(BASE_URL + "/reader/new-story");
+            // WRITER rolü için story oluştur sayfasına git
+            driver.get(BASE_URL + "/yazar/haber-olustur");
             waitForPageLoad();
             Thread.sleep(2000);
             

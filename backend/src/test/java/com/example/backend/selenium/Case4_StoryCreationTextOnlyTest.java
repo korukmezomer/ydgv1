@@ -79,22 +79,27 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
             // API çağrısının tamamlanmasını bekle (Frontend otomatik login yapıyor)
             Thread.sleep(3000);
             
-            // Frontend'de kayıt sonrası otomatik login yapılıyor ve ana sayfaya yönlendiriliyor
-            // Dashboard'a veya ana sayfaya yönlendirilmeyi bekle
+            // Frontend'de kayıt sonrası otomatik login yapılıyor
+            // WRITER rolü için /yazar/dashboard'a yönlendirilmeyi bekle
             wait.until(ExpectedConditions.or(
-                ExpectedConditions.urlContains("/dashboard"),
-                ExpectedConditions.urlContains("/reader/dashboard"),
                 ExpectedConditions.urlContains("/yazar/dashboard"),
-                ExpectedConditions.urlContains("/admin/dashboard"),
-                ExpectedConditions.urlToBe(BASE_URL + "/"),
-                ExpectedConditions.urlToBe(BASE_URL + "/reader")
+                ExpectedConditions.urlContains("/dashboard"),
+                ExpectedConditions.urlToBe(BASE_URL + "/")
             ));
             
-            // Kullanıcının WRITER rolünde olduğunu doğrula (opsiyonel - frontend'de kontrol edilebilir)
-            // Şimdilik story oluştur sayfasına gitmeyi deneyelim
+            // WRITER rolü ile kayıt olunduğunu doğrula - /yazar/dashboard'a yönlendirilmiş olmalı
+            String currentUrlAfterReg = driver.getCurrentUrl();
+            assertTrue(
+                currentUrlAfterReg.contains("/yazar/dashboard") || 
+                currentUrlAfterReg.equals(BASE_URL + "/"),
+                "Case 4a: WRITER rolü ile kayıt sonrası /yazar/dashboard'a yönlendirilmedi. URL: " + currentUrlAfterReg
+            );
             
-            // Yeni story oluştur sayfasına git
-            driver.get(BASE_URL + "/reader/new-story");
+            // Eğer ana sayfaya yönlendirildiyse, Home.jsx otomatik olarak /yazar/dashboard'a yönlendirecek
+            Thread.sleep(2000);
+            
+            // WRITER rolü için yeni story oluştur sayfasına git
+            driver.get(BASE_URL + "/yazar/haber-olustur");
             waitForPageLoad();
             Thread.sleep(2000);
             
@@ -208,8 +213,8 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
                 ExpectedConditions.urlToBe(BASE_URL + "/reader")
             ));
             
-            // Story oluştur sayfasına git
-            driver.get(BASE_URL + "/reader/new-story");
+            // WRITER rolü için story oluştur sayfasına git
+            driver.get(BASE_URL + "/yazar/haber-olustur");
             waitForPageLoad();
             Thread.sleep(2000);
             
@@ -237,7 +242,7 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
                     // Form validasyonu varsa sayfa değişmemeli veya hata mesajı görünmeli
                     String currentUrl = driver.getCurrentUrl();
                     assertTrue(
-                        currentUrl.contains("/new-story") || 
+                        currentUrl.contains("/haber-olustur") || 
                         driver.findElements(By.cssSelector(".error, .text-red-500")).size() > 0,
                         "Case 4a Negative: Boş başlık ile story oluşturulmamalı"
                     );
@@ -296,8 +301,8 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
                 ExpectedConditions.urlToBe(BASE_URL + "/reader")
             ));
             
-            // Story oluştur sayfasına git
-            driver.get(BASE_URL + "/reader/new-story");
+            // WRITER rolü için story oluştur sayfasına git
+            driver.get(BASE_URL + "/yazar/haber-olustur");
             waitForPageLoad();
             Thread.sleep(2000);
             
@@ -331,7 +336,7 @@ public class Case4_StoryCreationTextOnlyTest extends BaseSeleniumTest {
                     // Form validasyonu varsa sayfa değişmemeli veya hata mesajı görünmeli
                     String currentUrl = driver.getCurrentUrl();
                     assertTrue(
-                        currentUrl.contains("/new-story") || 
+                        currentUrl.contains("/haber-olustur") || 
                         driver.findElements(By.cssSelector(".error, .text-red-500")).size() > 0,
                         "Case 4a Negative: Yetersiz içerik ile story oluşturulmamalı"
                     );
