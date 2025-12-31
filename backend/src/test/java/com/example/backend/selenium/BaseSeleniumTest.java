@@ -503,48 +503,48 @@ public abstract class BaseSeleniumTest {
         try {
             driver.get(BASE_URL + "/register");
             waitForPageLoad();
-            Thread.sleep(5000); // Sayfanın tam yüklenmesi için bekle
+            Thread.sleep(2000); // Sayfanın tam yüklenmesi için bekle
             
             // Form alanlarını temizle ve doldur
             WebElement firstNameInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
             );
             firstNameInput.clear();
-            Thread.sleep(1000);
+            Thread.sleep(200);
             firstNameInput.sendKeys(firstName);
-            Thread.sleep(1000);
+            Thread.sleep(500);
             
             WebElement lastNameInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("lastName"))
             );
             lastNameInput.clear();
-            Thread.sleep(1000);
+            Thread.sleep(200);
             lastNameInput.sendKeys(lastName);
-            Thread.sleep(1000);
+            Thread.sleep(500);
             
             WebElement emailInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("email"))
             );
             emailInput.clear();
-            Thread.sleep(1000);
+            Thread.sleep(200);
             emailInput.sendKeys(email);
-            Thread.sleep(1000);
+            Thread.sleep(500);
             
             WebElement usernameInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("username"))
             );
             usernameInput.clear();
-            Thread.sleep(1000);
+            Thread.sleep(200);
             usernameInput.sendKeys(username);
-            Thread.sleep(1000);
+            Thread.sleep(500);
             
             WebElement passwordInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("password"))
             );
             passwordInput.clear();
-            Thread.sleep(1000);
+            Thread.sleep(200);
             passwordInput.sendKeys(password);
-            Thread.sleep(1000);
+            Thread.sleep(500);
             
             // Role seçimi - WRITER (önemli!)
             try {
