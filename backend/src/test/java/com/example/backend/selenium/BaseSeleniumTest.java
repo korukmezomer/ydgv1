@@ -52,7 +52,22 @@ public abstract class BaseSeleniumTest {
     @BeforeEach
     public void setUp() {
         // Setup ChromeDriver using WebDriverManager
-        WebDriverManager.chromedriver().setup();
+        // ARM64 için doğru driver'ı indirmesini sağla
+        String osArch = System.getProperty("os.arch", "");
+        if (osArch.contains("aarch64") || osArch.contains("arm64")) {
+            // ARM64 için WebDriverManager'ı yapılandır
+            System.setProperty("wdm.architecture", "ARM64");
+            System.setProperty("wdm.os", "LINUX");
+            // Cache'i temizle ve ARM64 driver'ı indir
+            WebDriverManager.chromedriver()
+                .clearDriverCache()
+                .clearResolutionCache()
+                .driverVersion("latest")
+                .setup();
+            System.out.println("📥 ARM64 ChromeDriver yapılandırması tamamlandı");
+        } else {
+            WebDriverManager.chromedriver().setup();
+        }
         
         ChromeOptions options = new ChromeOptions();
         
@@ -151,7 +166,7 @@ public abstract class BaseSeleniumTest {
         options.addArguments("--log-level=3"); // Sadece fatal hataları göster
         
         // ARM64 için özel ayarlar ve Chrome binary path'i
-        String osArch = System.getProperty("os.arch", "");
+        // osArch zaten yukarıda tanımlı
         if (osArch.contains("aarch64") || osArch.contains("arm64")) {
             options.addArguments("--disable-software-rasterizer");
             options.addArguments("--disable-gpu-sandbox");
