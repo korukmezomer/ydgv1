@@ -88,16 +88,19 @@ public abstract class BaseSeleniumTest {
                             databaseInitialized = true;
                         } else {
                             // Spring Boot'u başlat (tabloları oluşturmak için)
+                            // Backend'in kullandığı veritabanına tabloları oluşturmak için
+                            // application.properties'teki ayarları override et
                             System.setProperty("spring.datasource.url", TEST_DB_URL);
                             System.setProperty("spring.datasource.username", TEST_DB_USER);
                             System.setProperty("spring.datasource.password", TEST_DB_PASSWORD);
-                            // Tablolar yoksa create kullan
+                            // Tablolar yoksa create kullan (backend'in kullandığı veritabanına tabloları oluştur)
                             System.setProperty("spring.jpa.hibernate.ddl-auto", "create");
                             System.setProperty("spring.jpa.show-sql", "false");
                             System.setProperty("server.port", "0"); // Random port
                             System.setProperty("spring.main.web-application-type", "none"); // Web server başlatma
                             
-                            System.out.println("📥 Test veritabanı tabloları oluşturuluyor...");
+                            System.out.println("📥 Test veritabanı tabloları oluşturuluyor (backend'in kullandığı veritabanına)...");
+                            System.out.println("⚠️ NOT: Backend local'de çalışıyorsa, backend'i yeniden başlatmanız gerekebilir");
                             
                             // Spring Boot'u başlat
                             springContext = SpringApplication.run(
@@ -107,6 +110,7 @@ public abstract class BaseSeleniumTest {
                             
                             // Context başlatıldıktan sonra tablolar oluşturulmuş olacak
                             System.out.println("✅ Test veritabanı tabloları oluşturuldu");
+                            System.out.println("⚠️ Backend local'de çalışıyorsa, backend'i yeniden başlatın veya backend'in kullandığı veritabanına tabloları oluşturun");
                             databaseInitialized = true;
                         }
                     } catch (Exception e) {
