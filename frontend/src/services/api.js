@@ -42,12 +42,17 @@ const api = axios.create({
   },
 });
 
-// Request interceptor - token ekle
+// Request interceptor - token ekle ve FormData için Content-Type'ı düzelt
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // FormData gönderiliyorsa Content-Type header'ını kaldır
+    // Axios otomatik olarak multipart/form-data ve boundary ekler
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
     }
     return config;
   },
@@ -179,11 +184,9 @@ export const dosyaAPI = {
   yukle: (file) => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post('/dosyalar/yukle', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    // Content-Type header'ını manuel set etme - axios FormData için otomatik olarak
+    // multipart/form-data ve boundary ekler. Manuel set edilirse boundary eksik kalır.
+    return api.post('/dosyalar/yukle', formData);
   },
   getById: (id) => api.get(`/dosyalar/${id}`),
   sil: (id) => api.delete(`/dosyalar/${id}`),
