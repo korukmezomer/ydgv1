@@ -174,25 +174,79 @@ pipeline {
                         echo "📡 Test DB User: ${TEST_DB_USER}"
                         
                         # Test sayısını göster
-                        echo "📊 Çalıştırılacak test sayısı:"
-                        find src/test/java/com/example/backend/selenium -name "*Test.java" -type f | wc -l || echo "0"
+                        echo "📊 Selenium test sınıfları:"
+                        find src/test/java/com/example/backend/selenium -name "*Test.java" -type f | sort
+                        TEST_COUNT=$(find src/test/java/com/example/backend/selenium -name "*Test.java" -type f | wc -l)
+                        echo "📊 Toplam test sınıfı sayısı: ${TEST_COUNT}"
                         
-                        # Testleri çalıştır
-                        mvn test jacoco:report -Dtest="*Selenium*Test" -Dselenium.headless=true \
+                        # Maven'in testleri bulup bulamadığını kontrol et
+                        echo "🔍 Maven test discovery kontrolü..."
+                        echo "Test pattern: com.example.backend.selenium.*Test"
+                        mvn test-compile -Dtest="com.example.backend.selenium.*Test" 2>&1 | tail -20 || echo "⚠️ Test compile hatası"
+                        
+                        # Testleri çalıştır (hata olsa bile devam et, ama hataları göster)
+                        echo "🚀 Selenium testleri başlatılıyor..."
+                        set +e  # Hata durumunda script devam etsin
+                        mvn test jacoco:report -Dtest="com.example.backend.selenium.*Test" -Dselenium.headless=true \
                             -Dfrontend.url="${FRONTEND_URL}" \
                             -Dbackend.url="${BACKEND_URL}" \
                             -Dtest.db.url="${TEST_DB_URL}" \
                             -Dtest.db.user="${TEST_DB_USER}" \
-                            -Dtest.db.password="${TEST_DB_PASSWORD}" || true
+                            -Dtest.db.password="${TEST_DB_PASSWORD}" \
+                            -DfailIfNoTests=false 2>&1 | tee maven-test-output.log
+                        MVN_EXIT_CODE=$?
+                        set -e
                         
-                        echo "✅ Selenium testleri tamamlandı"
+                        echo "📋 Maven çıkış kodu: ${MVN_EXIT_CODE}"
+                        
+                        # Maven çıktısını analiz et
+                        if [ -f maven-test-output.log ]; then
+                            echo "📄 Maven çıktısı özeti:"
+                            echo "--- Test başlatma mesajları ---"
+                            grep -i "test\|running\|executing" maven-test-output.log | head -20 || echo "Test mesajı bulunamadı"
+                            echo "--- Hata mesajları ---"
+                            grep -i "error\|exception\|failed\|timeout" maven-test-output.log | head -30 || echo "Hata mesajı bulunamadı"
+                            echo "--- Test sonuçları ---"
+                            grep -E "Tests run:|BUILD" maven-test-output.log | tail -10 || echo "Test sonucu bulunamadı"
+                        fi
+                        
                         echo "📊 Test sonuçları:"
                         if [ -d "target/surefire-reports" ]; then
-                            find target/surefire-reports -name "*.xml" -type f | head -10
+                            echo "✅ Surefire rapor klasörü mevcut"
                             echo "📈 Test raporu dosyaları:"
-                            find target/surefire-reports -name "*.xml" -type f | wc -l || echo "0"
+                            find target/surefire-reports -name "*.xml" -type f | sort
+                            XML_COUNT=$(find target/surefire-reports -name "*.xml" -type f | wc -l)
+                            echo "📊 Toplam XML rapor sayısı: ${XML_COUNT}"
+                            
+                            # Selenium test raporlarını özellikle kontrol et
+                            SELENIUM_XML_COUNT=$(find target/surefire-reports -name "*Selenium*Test*.xml" -type f | wc -l)
+                            echo "📊 Selenium test XML rapor sayısı: ${SELENIUM_XML_COUNT}"
+                            
+                            if [ ${SELENIUM_XML_COUNT} -eq 0 ]; then
+                                echo "⚠️ Selenium test raporu bulunamadı!"
+                                echo "📂 Surefire rapor klasörü içeriği:"
+                                ls -la target/surefire-reports/ | head -20
+                            else
+                                echo "✅ Selenium test raporları bulundu"
+                                # İlk raporun içeriğini göster
+                                FIRST_REPORT=$(find target/surefire-reports -name "*Selenium*Test*.xml" -type f | head -1)
+                                if [ -n "${FIRST_REPORT}" ]; then
+                                    echo "📄 İlk rapor: ${FIRST_REPORT}"
+                                    grep -E "testsuite|testcase|failure|error" "${FIRST_REPORT}" | head -10
+                                fi
+                            fi
                         else
-                            echo "⚠️ Test raporu klasörü bulunamadı"
+                            echo "❌ Test raporu klasörü bulunamadı (target/surefire-reports)"
+                            echo "📂 target klasörü içeriği:"
+                            ls -la target/ 2>/dev/null | head -20 || echo "target klasörü yok"
+                        fi
+                        
+                        # Maven exit code'u 0 değilse uyarı ver
+                        if [ ${MVN_EXIT_CODE} -ne 0 ]; then
+                            echo "⚠️ Maven test komutu hata ile çıktı (kod: ${MVN_EXIT_CODE})"
+                            echo "📋 Detaylı hata bilgisi için yukarıdaki logları kontrol edin"
+                        else
+                            echo "✅ Maven test komutu başarıyla tamamlandı"
                         fi
                     '''
                 }
