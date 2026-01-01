@@ -144,14 +144,33 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
             // Browser console loglarını kontrol et (resim yükleme hataları için)
             try {
                 org.openqa.selenium.logging.LogEntries logEntries = driver.manage().logs().get(org.openqa.selenium.logging.LogType.BROWSER);
+                System.out.println("Case 4d: Browser console logları kontrol ediliyor...");
                 for (org.openqa.selenium.logging.LogEntry entry : logEntries) {
                     String message = entry.getMessage();
-                    if (message.contains("Resim yüklenirken hata") || message.contains("error") || message.contains("Error")) {
+                    if (message.contains("Resim yüklenirken hata") || message.contains("error") || message.contains("Error") || 
+                        message.contains("AxiosError") || message.contains("CORS") || message.contains("Network")) {
                         System.out.println("🔴 Browser Console (Resim Yükleme): " + message);
                     }
                 }
             } catch (Exception e) {
-                // Ignore
+                System.out.println("Case 4d: Browser console logları alınamadı: " + e.getMessage());
+            }
+            
+            // Alert kontrolü (resim yükleme hatası için)
+            try {
+                org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                String alertText = alert.getText();
+                System.out.println("🔴 Alert mesajı: " + alertText);
+                alert.accept();
+                if (alertText.contains("hata") || alertText.contains("error")) {
+                    System.out.println("Case 4d: Resim yükleme hatası - Alert: " + alertText);
+                    // Hata varsa testi başarısız yap
+                    fail("Case 4d: Resim yükleme başarısız - " + alertText);
+                }
+            } catch (org.openqa.selenium.NoAlertPresentException e) {
+                // Alert yoksa devam et
+            } catch (Exception e) {
+                System.out.println("Case 4d: Alert kontrolü hatası: " + e.getMessage());
             }
             
             // 10. Resim bloğunun oluşmasını bekle (image-block-container) - daha uzun timeout
