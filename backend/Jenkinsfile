@@ -21,12 +21,13 @@ pipeline {
         TEST_DB_PASSWORD = 'postgres'
         
         // Frontend URL (Selenium testleri için - host'tan erişim)
-        // Docker Desktop için: host.docker.internal
-        // Linux için: 172.17.0.1 veya host IP
-        FRONTEND_URL = "${env.FRONTEND_URL ?: 'http://host.docker.internal:5173'}"
+        // Frontend host'ta çalışıyor, Jenkins container'ından host.docker.internal ile erişiliyor
+        FRONTEND_URL = 'http://host.docker.internal:5173'
         
-        // Backend URL (Docker Compose network içinden)
-        BACKEND_URL = 'http://backend:8080'
+        // Backend URL (Selenium testleri için - browser'dan backend'e erişim)
+        // Browser Jenkins container'ında çalışıyor, backend host'ta expose edilmiş
+        // Browser'dan backend'e istek giderken host.docker.internal:8080 kullanılmalı
+        BACKEND_URL = 'http://host.docker.internal:8080'
         
         // CI ortamı flag'i (Selenium headless mod için)
         CI = 'true'
@@ -139,149 +140,41 @@ pipeline {
                     sh '''
                         echo "🔍 Servis erişilebilirlik kontrolü yapılıyor..."
                         
-                        # Backend kontrolü (network içinden - Docker Compose service ismi)
-                        echo "📡 Backend kontrolü başlatılıyor..."
-                        BACKEND_OK=0
-                        BACKEND_URL_FOUND=""
-                        
-                        # 1. backend:8080 (Docker Compose network service ismi)
-                        echo "  Deneniyor: http://backend:8080/api/auth/kayit"
+                        # Backend kontrolü (Jenkins container'ından backend container'ına)
+                        echo "📡 Backend kontrolü: http://backend:8080"
                         BACKEND_RESPONSE=$(curl -s -w "%{http_code}" --max-time 10 http://backend:8080/api/auth/kayit -o /dev/null 2>&1)
                         if [ "$BACKEND_RESPONSE" = "200" ] || [ "$BACKEND_RESPONSE" = "405" ] || [ "$BACKEND_RESPONSE" = "500" ]; then
-                            echo "✅ Backend http://backend:8080 üzerinden erişilebilir (HTTP $BACKEND_RESPONSE)"
+                            echo "✅ Backend http://backend:8080 erişilebilir (HTTP $BACKEND_RESPONSE)"
                             BACKEND_OK=1
-                            BACKEND_URL_FOUND="http://backend:8080"
                         else
-                            echo "  ❌ http://backend:8080 erişilemiyor (HTTP $BACKEND_RESPONSE)"
+                            echo "❌ Backend http://backend:8080 erişilemiyor (HTTP $BACKEND_RESPONSE)"
+                            BACKEND_OK=0
                         fi
                         
-                        # 2. yazilimdogrulama-backend:8080 (container ismi)
-                        if [ ${BACKEND_OK} -eq 0 ]; then
-                            echo "  Deneniyor: http://yazilimdogrulama-backend:8080/api/auth/kayit"
-                            BACKEND_RESPONSE=$(curl -s -w "%{http_code}" --max-time 10 http://yazilimdogrulama-backend:8080/api/auth/kayit -o /dev/null 2>&1)
-                            if [ "$BACKEND_RESPONSE" = "200" ] || [ "$BACKEND_RESPONSE" = "405" ] || [ "$BACKEND_RESPONSE" = "500" ]; then
-                                echo "✅ Backend http://yazilimdogrulama-backend:8080 üzerinden erişilebilir (HTTP $BACKEND_RESPONSE)"
-                                BACKEND_OK=1
-                                BACKEND_URL_FOUND="http://yazilimdogrulama-backend:8080"
-                            else
-                                echo "  ❌ http://yazilimdogrulama-backend:8080 erişilemiyor (HTTP $BACKEND_RESPONSE)"
-                            fi
-                        fi
-                        
-                        # 3. host.docker.internal:8080 (host machine üzerinden)
-                        if [ ${BACKEND_OK} -eq 0 ]; then
-                            echo "  Deneniyor: http://host.docker.internal:8080/api/auth/kayit"
-                            BACKEND_RESPONSE=$(curl -s -w "%{http_code}" --max-time 10 http://host.docker.internal:8080/api/auth/kayit -o /dev/null 2>&1)
-                            if [ "$BACKEND_RESPONSE" = "200" ] || [ "$BACKEND_RESPONSE" = "405" ] || [ "$BACKEND_RESPONSE" = "500" ]; then
-                                echo "✅ Backend http://host.docker.internal:8080 üzerinden erişilebilir (HTTP $BACKEND_RESPONSE)"
-                                BACKEND_OK=1
-                                BACKEND_URL_FOUND="http://host.docker.internal:8080"
-                            else
-                                echo "  ❌ http://host.docker.internal:8080 erişilemiyor (HTTP $BACKEND_RESPONSE)"
-                            fi
-                        fi
-                        
-                        if [ ${BACKEND_OK} -eq 0 ]; then
-                            echo "❌ Backend hiçbir URL üzerinden erişilemiyor!"
-                            echo "⚠️ Backend container'ının çalıştığından ve backend-network'te olduğundan emin olun"
-                        fi
-                        
-                        echo "BACKEND_OK=${BACKEND_OK}" > /tmp/service_status.txt
-                        echo "BACKEND_URL_FOUND=${BACKEND_URL_FOUND}" >> /tmp/service_status.txt
-                        
-                        # Frontend kontrolü - birden fazla URL dene
-                        echo "📡 Frontend kontrolü başlatılıyor..."
-                        FRONTEND_OK=0
-                        FRONTEND_URL_FOUND=""
-                        
-                        # 1. host.docker.internal:5173 (Docker Desktop)
-                        echo "  Deneniyor: http://host.docker.internal:5173"
+                        # Frontend kontrolü (Jenkins container'ından host'taki frontend'e)
+                        echo "📡 Frontend kontrolü: http://host.docker.internal:5173"
                         if curl -f -s --max-time 10 http://host.docker.internal:5173 > /dev/null 2>&1; then
-                            echo "✅ Frontend http://host.docker.internal:5173 üzerinden erişilebilir"
+                            echo "✅ Frontend http://host.docker.internal:5173 erişilebilir"
                             FRONTEND_OK=1
-                            FRONTEND_URL_FOUND="http://host.docker.internal:5173"
                         else
-                            echo "  ❌ http://host.docker.internal:5173 erişilemiyor"
+                            echo "❌ Frontend http://host.docker.internal:5173 erişilemiyor"
+                            FRONTEND_OK=0
                         fi
                         
-                        # 2. 172.17.0.1:5173 (Linux Docker bridge)
-                        if [ ${FRONTEND_OK} -eq 0 ]; then
-                            echo "  Deneniyor: http://172.17.0.1:5173"
-                            if curl -f -s --max-time 10 http://172.17.0.1:5173 > /dev/null 2>&1; then
-                                echo "✅ Frontend http://172.17.0.1:5173 üzerinden erişilebilir"
-                                FRONTEND_OK=1
-                                FRONTEND_URL_FOUND="http://172.17.0.1:5173"
-                            else
-                                echo "  ❌ http://172.17.0.1:5173 erişilemiyor"
-                            fi
-                        fi
-                        
-                        # 3. Environment variable'dan gelen URL
-                        if [ ${FRONTEND_OK} -eq 0 ] && [ -n "${FRONTEND_URL}" ]; then
-                            echo "  Deneniyor: ${FRONTEND_URL}"
-                            if curl -f -s --max-time 10 "${FRONTEND_URL}" > /dev/null 2>&1; then
-                                echo "✅ Frontend ${FRONTEND_URL} üzerinden erişilebilir"
-                                FRONTEND_OK=1
-                                FRONTEND_URL_FOUND="${FRONTEND_URL}"
-                            else
-                                echo "  ❌ ${FRONTEND_URL} erişilemiyor"
-                            fi
-                        fi
+                        echo "📊 Servis durumu:"
+                        echo "  Frontend: ${FRONTEND_OK ? '✅ Erişilebilir' : '❌ Erişilemez'} (http://host.docker.internal:5173)"
+                        echo "  Backend: ${BACKEND_OK ? '✅ Erişilebilir' : '❌ Erişilemez'} (http://backend:8080)"
                         
                         if [ ${FRONTEND_OK} -eq 0 ]; then
-                            echo "❌ Frontend hiçbir URL üzerinden erişilemiyor!"
-                            echo "⚠️ Frontend'in çalıştığından ve port 5173'ün açık olduğundan emin olun"
+                            echo "⚠️ UYARI: Frontend erişilemiyor"
+                            echo "⚠️ Frontend'in localhost:5173'te çalıştığından emin olun."
                         fi
                         
-                        echo "FRONTEND_OK=${FRONTEND_OK}" >> /tmp/service_status.txt
-                        echo "FRONTEND_URL_FOUND=${FRONTEND_URL_FOUND}" >> /tmp/service_status.txt
-                        
-                        echo "🔍 Servis kontrolleri tamamlandı"
-                        cat /tmp/service_status.txt
+                        if [ ${BACKEND_OK} -eq 0 ]; then
+                            echo "⚠️ UYARI: Backend erişilemiyor"
+                            echo "⚠️ Backend container'ının çalıştığından emin olun."
+                        fi
                     '''
-                    
-                    // Service status dosyasını oku
-                    def statusFile = sh(script: 'cat /tmp/service_status.txt', returnStdout: true).trim()
-                    def frontendOk = statusFile.contains('FRONTEND_OK=1')
-                    def backendOk = statusFile.contains('BACKEND_OK=1')
-                    
-                    // Frontend URL'ini bul
-                    def frontendUrlMatch = statusFile =~ /FRONTEND_URL_FOUND=(.+)/
-                    if (frontendUrlMatch) {
-                        actualFrontendUrl = frontendUrlMatch[0][1]
-                    }
-                    
-                    // Backend URL'ini bul
-                    def backendUrlMatch = statusFile =~ /BACKEND_URL_FOUND=(.+)/
-                    if (backendUrlMatch) {
-                        actualBackendUrl = backendUrlMatch[0][1]
-                    }
-                    
-                    echo "📊 Servis durumu:"
-                    echo "  Frontend: ${frontendOk ? '✅ Erişilebilir' : '❌ Erişilemez'} (${actualFrontendUrl})"
-                    echo "  Backend: ${backendOk ? '✅ Erişilebilir' : '❌ Erişilemez'} (${actualBackendUrl})"
-                    
-                    // Frontend erişilemezse uyarı ver ama testleri çalıştırmaya devam et
-                    if (!frontendOk) {
-                        echo "⚠️ UYARI: Frontend erişilemiyor (${actualFrontendUrl})"
-                        echo "⚠️ Frontend'in localhost:5173'te çalıştığından emin olun."
-                        echo "⚠️ Docker Desktop kullanıyorsanız 'host.docker.internal' çalışmalı."
-                        echo "⚠️ Testler çalıştırılacak ama frontend'e erişemezlerse başarısız olacaklar."
-                    }
-                    
-                    if (!backendOk) {
-                        echo "⚠️ UYARI: Backend erişilemiyor (${actualBackendUrl})"
-                        echo "⚠️ Backend container'ının çalıştığından emin olun."
-                        echo "⚠️ Testler çalıştırılacak ama backend'e erişemezlerse başarısız olacaklar."
-                    }
-                    
-                    // Environment variable'ları güncelle (bulunan URL'leri kullan)
-                    if (actualFrontendUrl) {
-                        env.FRONTEND_URL = actualFrontendUrl
-                    }
-                    if (actualBackendUrl) {
-                        env.BACKEND_URL = actualBackendUrl
-                    }
                 }
                 dir('backend') {
                     sh '''

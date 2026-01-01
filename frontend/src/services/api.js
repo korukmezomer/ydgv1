@@ -14,15 +14,15 @@ const getApiBaseUrl = () => {
   const port = window.location.port;
   
   // Eğer host.docker.internal veya Docker network IP'si ise
-  // Browser Jenkins container'ında çalışıyor, backend container'ına erişebilir
+  // Browser Jenkins container'ında çalışıyor, frontend host'ta çalışıyor
+  // Browser'dan backend'e istek giderken, browser'ın network stack'i kullanılır
+  // backend:8080 hostname'i browser'dan çözümlenemez (sadece container içinden çalışır)
+  // Backend localhost:8080'de expose edilmiş, bu yüzden host.docker.internal:8080 kullanılmalı
   if (hostname === 'host.docker.internal' || hostname.startsWith('172.17.') || hostname.startsWith('172.20.')) {
-    // Jenkins container'ından backend container'ına erişim
-    // Browser Jenkins container'ında çalışıyor, Docker network'üne erişebilir
-    // backend:8080 hostname'i Docker network'ünde çözümlenir
-    // Browser'dan backend'e istek giderken, browser'ın network stack'i kullanılır
-    // Browser Jenkins container'ında çalıştığı için Docker network'üne erişebilir
-    // backend:8080 kullanılabilir
-    return 'http://backend:8080/api';
+    // Browser Jenkins container'ından backend'e erişim
+    // Backend host'ta localhost:8080'de expose edilmiş
+    // host.docker.internal:8080 ile host'taki backend'e erişilir
+    return 'http://host.docker.internal:8080/api';
   }
   
   // Varsayılan: localhost (normal development)
