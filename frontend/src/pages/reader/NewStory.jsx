@@ -418,21 +418,37 @@ const NewStory = ({ sidebarOpen, setSidebarOpen }) => {
       event.target.value = '';
     } catch (error) {
       console.error('❌ Resim yüklenirken hata:', error);
-      console.error('❌ Hata detayları:', {
+      
+      // Detaylı hata bilgileri
+      const errorDetails = {
         message: error.message,
-        response: error.response?.data,
         status: error.response?.status,
         statusText: error.response?.statusText,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          headers: error.config?.headers
-        }
-      });
+        responseData: error.response?.data,
+        requestUrl: error.config?.url,
+        requestMethod: error.config?.method,
+        requestHeaders: error.config?.headers
+      };
       
-      const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          'Resim yüklenirken bir hata oluştu';
+      console.error('❌ Hata detayları:', errorDetails);
+      console.error('❌ Response Data (JSON):', JSON.stringify(error.response?.data, null, 2));
+      console.error('❌ Request Headers:', error.config?.headers);
+      
+      // Backend'den gelen hata mesajını göster
+      let errorMessage = 'Resim yüklenirken bir hata oluştu';
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      console.error('❌ Kullanıcıya gösterilecek hata mesajı:', errorMessage);
       alert(`Resim yüklenirken hata: ${errorMessage}`);
     } finally {
       setLoading(false);

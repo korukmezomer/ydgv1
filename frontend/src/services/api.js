@@ -53,6 +53,13 @@ api.interceptors.request.use(
     // Axios otomatik olarak multipart/form-data ve boundary ekler
     if (config.data instanceof FormData) {
       delete config.headers['Content-Type'];
+      // Debug için log
+      console.log('📤 FormData gönderiliyor:', {
+        url: config.url,
+        method: config.method,
+        hasToken: !!token,
+        formDataKeys: Array.from(config.data.keys())
+      });
     }
     return config;
   },

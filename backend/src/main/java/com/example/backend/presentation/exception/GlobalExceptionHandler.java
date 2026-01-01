@@ -11,6 +11,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -83,6 +84,14 @@ public class GlobalExceptionHandler {
         error.put("message", "Missing required header: " + e.getHeaderName());
         error.put("status", HttpStatus.UNAUTHORIZED.toString());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Map<String, String>> handleMissingServletRequestParameterException(MissingServletRequestParameterException e) {
+        Map<String, String> error = new HashMap<>();
+        error.put("message", "Missing required parameter: " + e.getParameterName());
+        error.put("status", HttpStatus.BAD_REQUEST.toString());
+        return ResponseEntity.badRequest().body(error);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
