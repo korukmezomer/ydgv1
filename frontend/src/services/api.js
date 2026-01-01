@@ -19,6 +19,9 @@ const getApiBaseUrl = () => {
     // Jenkins container'ından backend container'ına erişim
     // Browser Jenkins container'ında çalışıyor, Docker network'üne erişebilir
     // backend:8080 hostname'i Docker network'ünde çözümlenir
+    // Browser'dan backend'e istek giderken, browser'ın network stack'i kullanılır
+    // Browser Jenkins container'ında çalıştığı için Docker network'üne erişebilir
+    // backend:8080 kullanılabilir
     return 'http://backend:8080/api';
   }
   
