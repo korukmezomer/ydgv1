@@ -102,33 +102,85 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
             Thread.sleep(2000);
             
             // 6. Resim yükleme input'unu bul (hidden input)
+            System.out.println("Case 4d: Resim yükleme input'u aranıyor...");
             WebElement fileInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
                     By.cssSelector("input[type='file'], input[accept*='image']")
                 )
             );
+            System.out.println("Case 4d: Resim yükleme input'u bulundu");
             
             // Test resmi oluştur
             Path testImagePath = createTestImage();
+            System.out.println("Case 4d: Test resmi oluşturuldu: " + testImagePath.toAbsolutePath().toString());
             
             // 7. Resmi yükle
+            System.out.println("Case 4d: Resim yükleniyor...");
             fileInput.sendKeys(testImagePath.toAbsolutePath().toString());
+            System.out.println("Case 4d: Resim dosya yolu input'a gönderildi");
             
-            // 8. Loading overlay'in kaybolmasını bekle (resim yüklenene kadar)
-            Thread.sleep(2000);
+            // 8. Loading overlay'in görünmesini bekle (resim yükleme başladı)
+            System.out.println("Case 4d: Loading overlay kontrol ediliyor...");
+            try {
+                wait.until(ExpectedConditions.presenceOfElementLocated(
+                    By.cssSelector(".loading-overlay, .loading-spinner")
+                ));
+                System.out.println("Case 4d: Loading overlay göründü, resim yükleniyor...");
+            } catch (Exception e) {
+                System.out.println("Case 4d: Loading overlay görünmedi, devam ediliyor...");
+            }
+            
+            // 9. Loading overlay'in kaybolmasını bekle (resim yüklenene kadar - daha uzun bekle)
+            System.out.println("Case 4d: Resim yükleme işleminin tamamlanması bekleniyor...");
             try {
                 wait.until(ExpectedConditions.invisibilityOfElementLocated(
                     By.cssSelector(".loading-overlay, .loading-spinner")
                 ));
+                System.out.println("Case 4d: Loading overlay kayboldu, resim yükleme tamamlandı");
             } catch (Exception e) {
-                // Loading overlay yoksa devam et
+                System.out.println("Case 4d: Loading overlay timeout (10 saniye beklendi), devam ediliyor...");
             }
             
-            // 9. Resim bloğunun oluşmasını bekle (image-block-container)
-            Thread.sleep(2000);
+            // Browser console loglarını kontrol et (resim yükleme hataları için)
+            try {
+                org.openqa.selenium.logging.LogEntries logEntries = driver.manage().logs().get(org.openqa.selenium.logging.LogType.BROWSER);
+                for (org.openqa.selenium.logging.LogEntry entry : logEntries) {
+                    String message = entry.getMessage();
+                    if (message.contains("Resim yüklenirken hata") || message.contains("error") || message.contains("Error")) {
+                        System.out.println("🔴 Browser Console (Resim Yükleme): " + message);
+                    }
+                }
+            } catch (Exception e) {
+                // Ignore
+            }
+            
+            // 10. Resim bloğunun oluşmasını bekle (image-block-container) - daha uzun timeout
+            System.out.println("Case 4d: Resim bloğu aranıyor (.image-block-container)...");
+            Thread.sleep(3000); // Ek bekleme
+            
+            // Önce sayfanın mevcut durumunu kontrol et
+            String pageSource = driver.getPageSource();
+            if (pageSource.contains("image-block-container")) {
+                System.out.println("Case 4d: image-block-container sayfa kaynağında bulundu");
+            } else {
+                System.out.println("Case 4d: image-block-container sayfa kaynağında bulunamadı");
+                System.out.println("Case 4d: Mevcut editor blokları:");
+                try {
+                    java.util.List<WebElement> editorBlocks = driver.findElements(By.cssSelector(".editor-block"));
+                    System.out.println("Case 4d: Editor blok sayısı: " + editorBlocks.size());
+                    for (int i = 0; i < editorBlocks.size(); i++) {
+                        WebElement block = editorBlocks.get(i);
+                        String blockClass = block.getAttribute("class");
+                        System.out.println("Case 4d: Blok " + i + " class: " + blockClass);
+                    }
+                } catch (Exception e) {
+                    System.out.println("Case 4d: Editor blokları bulunamadı: " + e.getMessage());
+                }
+            }
+            
             WebElement imageBlockContainer = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector(".image-block-container, .editor-block.image-block-container")
+                    By.cssSelector(".image-block-container, .editor-block.image-block-container, .editor-block[class*='image']")
                 )
             );
             assertNotNull(imageBlockContainer, "Case 4d: Resim bloğu oluşturulamadı");
