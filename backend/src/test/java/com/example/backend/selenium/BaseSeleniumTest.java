@@ -62,15 +62,40 @@ public abstract class BaseSeleniumTest {
                 if (!databaseInitialized) {
                     ConfigurableApplicationContext springContext = null;
                     try {
-                        System.out.println("🔧 Test veritabanı tabloları oluşturuluyor...");
-                        // Spring Boot'u başlat (sadece tabloları oluşturmak için)
+                        System.out.println("🔧 Test veritabanı kontrol ediliyor: " + TEST_DB_URL);
+                        
+                        // Önce tabloların var olup olmadığını kontrol et
+                        boolean tablesExist = false;
+                        try (Connection conn = DriverManager.getConnection(TEST_DB_URL, TEST_DB_USER, TEST_DB_PASSWORD)) {
+                            try (PreparedStatement stmt = conn.prepareStatement(
+                                "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'kullanicilar')"
+                            )) {
+                                try (ResultSet rs = stmt.executeQuery()) {
+                                    if (rs.next() && rs.getBoolean(1)) {
+                                        tablesExist = true;
+                                        System.out.println("✅ Test veritabanında tablolar zaten mevcut");
+                                    }
+                                }
+                            }
+                        } catch (SQLException e) {
+                            System.out.println("⚠️ Tablo kontrolü hatası: " + e.getMessage());
+                        }
+                        
+                        // Spring Boot'u başlat (tabloları oluşturmak veya güncellemek için)
                         System.setProperty("spring.datasource.url", TEST_DB_URL);
                         System.setProperty("spring.datasource.username", TEST_DB_USER);
                         System.setProperty("spring.datasource.password", TEST_DB_PASSWORD);
-                        System.setProperty("spring.jpa.hibernate.ddl-auto", "create");
+                        // Tablolar varsa update, yoksa create kullan
+                        System.setProperty("spring.jpa.hibernate.ddl-auto", tablesExist ? "update" : "create");
                         System.setProperty("spring.jpa.show-sql", "false");
                         System.setProperty("server.port", "0"); // Random port
                         System.setProperty("spring.main.web-application-type", "none"); // Web server başlatma
+                        
+                        if (!tablesExist) {
+                            System.out.println("📥 Test veritabanı tabloları oluşturuluyor...");
+                        } else {
+                            System.out.println("🔄 Test veritabanı tabloları güncelleniyor...");
+                        }
                         
                         // Spring Boot'u başlat
                         springContext = SpringApplication.run(
