@@ -139,23 +139,52 @@ pipeline {
                     sh '''
                         echo "🔍 Servis erişilebilirlik kontrolü yapılıyor..."
                         
-                        # Backend kontrolü (network içinden)
-                        echo "📡 Backend kontrolü: http://backend:8080/api/auth/kayit"
+                        # Backend kontrolü (network içinden - Docker Compose service ismi)
+                        echo "📡 Backend kontrolü başlatılıyor..."
                         BACKEND_OK=0
+                        BACKEND_URL_FOUND=""
+                        
+                        # 1. backend:8080 (Docker Compose network service ismi)
+                        echo "  Deneniyor: http://backend:8080/api/auth/kayit"
                         if curl -f -s --max-time 10 http://backend:8080/api/auth/kayit > /dev/null 2>&1; then
-                            echo "✅ Backend erişilebilir (http://backend:8080)"
+                            echo "✅ Backend http://backend:8080 üzerinden erişilebilir"
                             BACKEND_OK=1
+                            BACKEND_URL_FOUND="http://backend:8080"
                         else
-                            echo "⚠️ Backend http://backend:8080 üzerinden erişilemiyor"
-                            # Alternatif: localhost üzerinden dene
-                            if curl -f -s --max-time 10 http://localhost:8080/api/auth/kayit > /dev/null 2>&1; then
-                                echo "✅ Backend localhost:8080 üzerinden erişilebilir"
+                            echo "  ❌ http://backend:8080 erişilemiyor"
+                        fi
+                        
+                        # 2. yazilimdogrulama-backend:8080 (container ismi)
+                        if [ ${BACKEND_OK} -eq 0 ]; then
+                            echo "  Deneniyor: http://yazilimdogrulama-backend:8080/api/auth/kayit"
+                            if curl -f -s --max-time 10 http://yazilimdogrulama-backend:8080/api/auth/kayit > /dev/null 2>&1; then
+                                echo "✅ Backend http://yazilimdogrulama-backend:8080 üzerinden erişilebilir"
                                 BACKEND_OK=1
+                                BACKEND_URL_FOUND="http://yazilimdogrulama-backend:8080"
                             else
-                                echo "❌ Backend hiçbir URL üzerinden erişilemiyor"
+                                echo "  ❌ http://yazilimdogrulama-backend:8080 erişilemiyor"
                             fi
                         fi
+                        
+                        # 3. host.docker.internal:8080 (host machine üzerinden)
+                        if [ ${BACKEND_OK} -eq 0 ]; then
+                            echo "  Deneniyor: http://host.docker.internal:8080/api/auth/kayit"
+                            if curl -f -s --max-time 10 http://host.docker.internal:8080/api/auth/kayit > /dev/null 2>&1; then
+                                echo "✅ Backend http://host.docker.internal:8080 üzerinden erişilebilir"
+                                BACKEND_OK=1
+                                BACKEND_URL_FOUND="http://host.docker.internal:8080"
+                            else
+                                echo "  ❌ http://host.docker.internal:8080 erişilemiyor"
+                            fi
+                        fi
+                        
+                        if [ ${BACKEND_OK} -eq 0 ]; then
+                            echo "❌ Backend hiçbir URL üzerinden erişilemiyor!"
+                            echo "⚠️ Backend container'ının çalıştığından ve backend-network'te olduğundan emin olun"
+                        fi
+                        
                         echo "BACKEND_OK=${BACKEND_OK}" > /tmp/service_status.txt
+                        echo "BACKEND_URL_FOUND=${BACKEND_URL_FOUND}" >> /tmp/service_status.txt
                         
                         # Frontend kontrolü - birden fazla URL dene
                         echo "📡 Frontend kontrolü başlatılıyor..."
@@ -231,18 +260,37 @@ pipeline {
                         actualFrontendUrl = frontendUrlMatch[0][1]
                     }
                     
+                    // Backend URL'ini bul
+                    def backendUrlMatch = statusFile =~ /BACKEND_URL_FOUND=(.+)/
+                    if (backendUrlMatch) {
+                        actualBackendUrl = backendUrlMatch[0][1]
+                    }
+                    
                     echo "📊 Servis durumu:"
                     echo "  Frontend: ${frontendOk ? '✅ Erişilebilir' : '❌ Erişilemez'} (${actualFrontendUrl})"
                     echo "  Backend: ${backendOk ? '✅ Erişilebilir' : '❌ Erişilemez'} (${actualBackendUrl})"
                     
-                    // Frontend erişilemezse testleri atla
+                    // Frontend erişilemezse uyarı ver ama testleri çalıştırmaya devam et
                     if (!frontendOk) {
-                        error("❌ Frontend erişilemediği için Selenium testleri çalıştırılamıyor. Frontend'in localhost:5173'te çalıştığından emin olun.")
+                        echo "⚠️ UYARI: Frontend erişilemiyor (${actualFrontendUrl})"
+                        echo "⚠️ Frontend'in localhost:5173'te çalıştığından emin olun."
+                        echo "⚠️ Docker Desktop kullanıyorsanız 'host.docker.internal' çalışmalı."
+                        echo "⚠️ Testler çalıştırılacak ama frontend'e erişemezlerse başarısız olacaklar."
                     }
                     
-                    // Environment variable'ları güncelle
-                    env.FRONTEND_URL = actualFrontendUrl
-                    env.BACKEND_URL = actualBackendUrl
+                    if (!backendOk) {
+                        echo "⚠️ UYARI: Backend erişilemiyor (${actualBackendUrl})"
+                        echo "⚠️ Backend container'ının çalıştığından emin olun."
+                        echo "⚠️ Testler çalıştırılacak ama backend'e erişemezlerse başarısız olacaklar."
+                    }
+                    
+                    // Environment variable'ları güncelle (bulunan URL'leri kullan)
+                    if (actualFrontendUrl) {
+                        env.FRONTEND_URL = actualFrontendUrl
+                    }
+                    if (actualBackendUrl) {
+                        env.BACKEND_URL = actualBackendUrl
+                    }
                 }
                 dir('backend') {
                     sh '''
@@ -576,5 +624,6 @@ pipeline {
         }
     }
 }
+
 
 
