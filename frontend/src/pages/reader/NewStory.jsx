@@ -375,7 +375,14 @@ const NewStory = ({ sidebarOpen, setSidebarOpen }) => {
 
     try {
       setLoading(true);
+      console.log('📤 Resim yükleniyor:', {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
+      
       const response = await dosyaAPI.yukle(file);
+      console.log('✅ Resim yükleme başarılı:', response.data);
       const imageUrl = response.data.url;
 
       // Eğer mevcut bir resim bloğunu güncelliyorsak
@@ -410,8 +417,23 @@ const NewStory = ({ sidebarOpen, setSidebarOpen }) => {
 
       event.target.value = '';
     } catch (error) {
-      console.error('Resim yüklenirken hata:', error);
-      alert('Resim yüklenirken bir hata oluştu');
+      console.error('❌ Resim yüklenirken hata:', error);
+      console.error('❌ Hata detayları:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers
+        }
+      });
+      
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Resim yüklenirken bir hata oluştu';
+      alert(`Resim yüklenirken hata: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

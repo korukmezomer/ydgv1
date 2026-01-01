@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,6 +27,8 @@ import java.util.UUID;
 @Transactional
 public class MediaFileServiceImpl implements MediaFileService {
 
+    private static final Logger logger = LoggerFactory.getLogger(MediaFileServiceImpl.class);
+
     @Autowired
     private MediaFileRepository mediaFileRepository;
 
@@ -36,6 +40,18 @@ public class MediaFileServiceImpl implements MediaFileService {
 
     @Override
     public MediaFileResponse uploadFile(Long userId, MultipartFile file) {
+        logger.info("📤 MediaFileService.uploadFile çağrıldı - UserId: {}, File: {}", 
+                   userId, file != null ? file.getOriginalFilename() : "NULL");
+        
+        // Dosya null veya boş kontrolü
+        if (file == null || file.isEmpty()) {
+            logger.error("❌ Dosya null veya boş");
+            throw new BadRequestException("Dosya boş veya bulunamadı");
+        }
+        
+        logger.info("📄 Dosya bilgileri: Name={}, Size={}, ContentType={}", 
+                   file.getOriginalFilename(), file.getSize(), file.getContentType());
+        
         try {
             // Dosya adını oluştur
             String originalFilename = file.getOriginalFilename();
@@ -85,8 +101,17 @@ public class MediaFileServiceImpl implements MediaFileService {
             
             mediaFile = mediaFileRepository.save(mediaFile);
             
-            return toResponse(mediaFile);
+            logger.info("✅ Dosya başarıyla kaydedildi: ID={}, Path={}", mediaFile.getId(), mediaFile.getFilePath());
+            
+            MediaFileResponse response = toResponse(mediaFile);
+            logger.info("✅ Response URL: {}", response.getUrl());
+            
+            return response;
         } catch (IOException e) {
+            logger.error("❌ IO hatası: {}", e.getMessage(), e);
+            throw new BadRequestException("Dosya yüklenirken hata oluştu: " + e.getMessage());
+        } catch (Exception e) {
+            logger.error("❌ Beklenmeyen hata: {}", e.getMessage(), e);
             throw new BadRequestException("Dosya yüklenirken hata oluştu: " + e.getMessage());
         }
     }

@@ -14,6 +14,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -22,6 +24,8 @@ import java.nio.file.Paths;
 @RequestMapping("/api/dosyalar")
 @CrossOrigin(origins = "*")
 public class MediaFileController {
+
+    private static final Logger logger = LoggerFactory.getLogger(MediaFileController.class);
 
     @Autowired
     private MediaFileService mediaFileService;
@@ -34,11 +38,47 @@ public class MediaFileController {
 
     @PostMapping("/yukle")
     public ResponseEntity<MediaFileResponse> dosyaYukle(
-            @RequestHeader("Authorization") String token,
-            @RequestParam("file") MultipartFile file) {
-        Long kullaniciId = getKullaniciIdFromToken(token);
-        MediaFileResponse response = mediaFileService.uploadFile(kullaniciId, file);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        
+        logger.info("📤 Dosya yükleme isteği alındı");
+        logger.info("Token: {}", token != null ? (token.length() > 20 ? token.substring(0, 20) + "..." : token) : "NULL");
+        logger.info("File: {}", file != null ? (file.isEmpty() ? "EMPTY" : "Size: " + file.getSize() + ", Name: " + file.getOriginalFilename()) : "NULL");
+        
+        // Token kontrolü
+        if (token == null || token.trim().isEmpty()) {
+            logger.error("❌ Token eksik");
+            throw new com.example.backend.application.exception.BadRequestException("Authorization token eksik");
+        }
+        
+        // Dosya null veya boş kontrolü
+        if (file == null) {
+            logger.error("❌ Dosya null");
+            throw new com.example.backend.application.exception.BadRequestException("Dosya null");
+        }
+        
+        if (file.isEmpty()) {
+            logger.error("❌ Dosya boş");
+            throw new com.example.backend.application.exception.BadRequestException("Dosya boş");
+        }
+        
+        logger.info("✅ Dosya validasyonu başarılı: {} ({} bytes)", file.getOriginalFilename(), file.getSize());
+        
+        try {
+            Long kullaniciId = getKullaniciIdFromToken(token);
+            logger.info("✅ Kullanıcı ID: {}", kullaniciId);
+            
+            MediaFileResponse response = mediaFileService.uploadFile(kullaniciId, file);
+            logger.info("✅ Dosya başarıyla yüklendi: {}", response.getUrl());
+            
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (com.example.backend.application.exception.UnauthorizedException e) {
+            logger.error("❌ Token geçersiz: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            logger.error("❌ Dosya yükleme hatası: {}", e.getMessage(), e);
+            throw new com.example.backend.application.exception.BadRequestException("Dosya yüklenirken hata: " + e.getMessage());
+        }
     }
 
     @GetMapping("/{year}/{month}/{filename:.+}")
