@@ -203,11 +203,11 @@ pipeline {
                         if [ -f maven-test-output.log ]; then
                             echo "📄 Maven çıktısı özeti:"
                             echo "--- Test başlatma mesajları ---"
-                            grep -i "test\|running\|executing" maven-test-output.log | head -20 || echo "Test mesajı bulunamadı"
+                            grep -iE 'test|running|executing' maven-test-output.log | head -20 || echo "Test mesajı bulunamadı"
                             echo "--- Hata mesajları ---"
-                            grep -i "error\|exception\|failed\|timeout" maven-test-output.log | head -30 || echo "Hata mesajı bulunamadı"
+                            grep -iE 'error|exception|failed|timeout' maven-test-output.log | head -30 || echo "Hata mesajı bulunamadı"
                             echo "--- Test sonuçları ---"
-                            grep -E "Tests run:|BUILD" maven-test-output.log | tail -10 || echo "Test sonucu bulunamadı"
+                            grep -E 'Tests run:|BUILD' maven-test-output.log | tail -10 || echo "Test sonucu bulunamadı"
                         fi
                         
                         echo "📊 Test sonuçları:"
