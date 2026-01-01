@@ -213,19 +213,7 @@ pipeline {
                             fi
                         fi
                         
-                        # 3. localhost:5173 (container içinden)
-                        if [ ${FRONTEND_OK} -eq 0 ]; then
-                            echo "  Deneniyor: http://localhost:5173"
-                            if curl -f -s --max-time 10 http://localhost:5173 > /dev/null 2>&1; then
-                                echo "✅ Frontend http://localhost:5173 üzerinden erişilebilir"
-                                FRONTEND_OK=1
-                                FRONTEND_URL_FOUND="http://localhost:5173"
-                            else
-                                echo "  ❌ http://localhost:5173 erişilemiyor"
-                            fi
-                        fi
-                        
-                        # 4. Environment variable'dan gelen URL
+                        # 3. Environment variable'dan gelen URL
                         if [ ${FRONTEND_OK} -eq 0 ] && [ -n "${FRONTEND_URL}" ]; then
                             echo "  Deneniyor: ${FRONTEND_URL}"
                             if curl -f -s --max-time 10 "${FRONTEND_URL}" > /dev/null 2>&1; then
