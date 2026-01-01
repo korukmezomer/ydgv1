@@ -162,8 +162,16 @@ pipeline {
                         fi
                         
                         echo "📊 Servis durumu:"
-                        echo "  Frontend: ${FRONTEND_OK ? '✅ Erişilebilir' : '❌ Erişilemez'} (http://host.docker.internal:5173)"
-                        echo "  Backend: ${BACKEND_OK ? '✅ Erişilebilir' : '❌ Erişilemez'} (http://backend:8080)"
+                        if [ ${FRONTEND_OK} -eq 1 ]; then
+                            echo "  Frontend: ✅ Erişilebilir (http://host.docker.internal:5173)"
+                        else
+                            echo "  Frontend: ❌ Erişilemez (http://host.docker.internal:5173)"
+                        fi
+                        if [ ${BACKEND_OK} -eq 1 ]; then
+                            echo "  Backend: ✅ Erişilebilir (http://backend:8080)"
+                        else
+                            echo "  Backend: ❌ Erişilemez (http://backend:8080)"
+                        fi
                         
                         if [ ${FRONTEND_OK} -eq 0 ]; then
                             echo "⚠️ UYARI: Frontend erişilemiyor"
