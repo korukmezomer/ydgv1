@@ -792,7 +792,7 @@ public abstract class BaseSeleniumTest {
             boolean loginCompleted = false;
             while (loginWaitCount < 20 && !loginCompleted) {
                 Thread.sleep(500);
-                String currentUrl = driver.getCurrentUrl();
+                currentUrl = driver.getCurrentUrl(); // Mevcut değişkeni kullan
                 // Dashboard'lardan birine yönlendirildi mi?
                 if (currentUrl.contains("/dashboard") || currentUrl.contains("/admin/") || 
                     currentUrl.contains("/yazar/") || currentUrl.contains("/reader/")) {
@@ -1564,7 +1564,7 @@ public abstract class BaseSeleniumTest {
             boolean publishCompleted = false;
             while (publishWaitCount < 20 && !publishCompleted) {
                 Thread.sleep(500);
-                String currentUrl = driver.getCurrentUrl();
+                currentUrl = driver.getCurrentUrl(); // Mevcut değişkeni kullan
                 // Story sayfasına yönlendirildi mi veya dashboard'da mıyız?
                 if (currentUrl.contains("/haberler/") || currentUrl.contains("/dashboard") || currentUrl.contains("/yazar/")) {
                     publishCompleted = true;
