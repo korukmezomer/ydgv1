@@ -54,6 +54,7 @@ public abstract class BaseSeleniumTest {
     
     // Spring Boot context'i bir kez başlat (tabloları oluşturmak için)
     private static volatile boolean databaseInitialized = false;
+    private static volatile boolean frontendChecked = false;
     
     @BeforeAll
     static void initializeDatabase() {
@@ -382,28 +383,14 @@ public abstract class BaseSeleniumTest {
         }
         wait = new WebDriverWait(driver, DEFAULT_TIMEOUT);
         
-        // Frontend erişilebilirlik kontrolü
-        try {
-            System.out.println("🔍 Frontend erişilebilirlik kontrolü: " + BASE_URL);
-            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(10));
-            driver.get(BASE_URL);
-            System.out.println("✅ Frontend erişilebilir: " + BASE_URL);
-        } catch (org.openqa.selenium.TimeoutException e) {
-            String errorMsg = "❌ Frontend'e erişilemiyor: " + BASE_URL + 
-                "\nFrontend'in çalıştığından ve erişilebilir olduğundan emin olun." +
-                "\nHata: " + e.getMessage();
-            System.err.println(errorMsg);
-            driver.quit();
-            throw new RuntimeException(errorMsg, e);
-        } catch (Exception e) {
-            String errorMsg = "❌ Frontend bağlantı hatası: " + BASE_URL + 
-                "\nHata: " + e.getMessage();
-            System.err.println(errorMsg);
-            driver.quit();
-            throw new RuntimeException(errorMsg, e);
-        } finally {
-            // Timeout'u normale döndür
-            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(30));
+        // Frontend erişilebilirlik kontrolü (sadece bir kez)
+        if (!frontendChecked) {
+            synchronized (BaseSeleniumTest.class) {
+                if (!frontendChecked) {
+                    checkFrontendAccess();
+                    frontendChecked = true;
+                }
+            }
         }
         
         // Önce localStorage ve cookies'i temizle (önceki oturumları temizlemek için)
@@ -450,6 +437,34 @@ public abstract class BaseSeleniumTest {
     public void tearDown() {
         if (driver != null) {
             driver.quit();
+        }
+    }
+    
+    /**
+     * Frontend erişilebilirliğini kontrol et (sadece bir kez çalışır)
+     */
+    private void checkFrontendAccess() {
+        try {
+            System.out.println("🔍 Frontend erişilebilirlik kontrolü: " + BASE_URL);
+            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(10));
+            driver.get(BASE_URL);
+            System.out.println("✅ Frontend erişilebilir: " + BASE_URL);
+        } catch (org.openqa.selenium.TimeoutException e) {
+            String errorMsg = "❌ Frontend'e erişilemiyor: " + BASE_URL + 
+                "\nFrontend'in çalıştığından ve erişilebilir olduğundan emin olun." +
+                "\nHata: " + e.getMessage();
+            System.err.println(errorMsg);
+            driver.quit();
+            throw new RuntimeException(errorMsg, e);
+        } catch (Exception e) {
+            String errorMsg = "❌ Frontend bağlantı hatası: " + BASE_URL + 
+                "\nHata: " + e.getMessage();
+            System.err.println(errorMsg);
+            driver.quit();
+            throw new RuntimeException(errorMsg, e);
+        } finally {
+            // Timeout'u normale döndür
+            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(30));
         }
     }
     
@@ -575,30 +590,37 @@ public abstract class BaseSeleniumTest {
         
         try (Connection conn = getTestDatabaseConnection()) {
             // Önce admin kullanıcısının var olup olmadığını kontrol et
-            String checkUserSql = "SELECT id FROM kullanicilar WHERE email = ?";
+            String checkUserSql = "SELECT id, sifre FROM kullanicilar WHERE email = ?";
             try (PreparedStatement stmt = conn.prepareStatement(checkUserSql)) {
                 stmt.setString(1, adminEmail);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) {
-                        // Kullanıcı zaten var, şifreyi güncelle ve admin rolünü kontrol et
+                        // Kullanıcı zaten var
                         Long userId = rs.getLong("id");
+                        String currentHashedPassword = rs.getString("sifre");
                         
-                        // Şifreyi güncelle (her test öncesi tutarlılık için)
-                        String encodedPassword = passwordEncoder.encode(adminPassword);
-                        String updatePasswordSql = "UPDATE kullanicilar SET sifre = ? WHERE id = ?";
-                        try (PreparedStatement updateStmt = conn.prepareStatement(updatePasswordSql)) {
-                            updateStmt.setString(1, encodedPassword);
-                            updateStmt.setLong(2, userId);
-                            updateStmt.executeUpdate();
-                            System.out.println("Admin kullanıcısı şifresi güncellendi: " + adminEmail);
+                        // Şifrenin doğru olup olmadığını kontrol et
+                        if (!passwordEncoder.matches(adminPassword, currentHashedPassword)) {
+                            // Şifre yanlış, güncelle
+                            String newEncodedPassword = passwordEncoder.encode(adminPassword);
+                            String updatePasswordSql = "UPDATE kullanicilar SET sifre = ? WHERE id = ?";
+                            try (PreparedStatement updateStmt = conn.prepareStatement(updatePasswordSql)) {
+                                updateStmt.setString(1, newEncodedPassword);
+                                updateStmt.setLong(2, userId);
+                                updateStmt.executeUpdate();
+                                System.out.println("✅ Admin kullanıcısı şifresi güncellendi: " + adminEmail);
+                            }
+                        } else {
+                            System.out.println("✅ Admin kullanıcısı mevcut, şifre doğru: " + adminEmail);
                         }
                         
+                        // Admin rolünü kontrol et
                         if (hasAdminRole(conn, userId)) {
                             return new AdminCredentials(adminEmail, adminPassword);
                         } else {
                             // Kullanıcı var ama admin rolü yok, ekle
                             addAdminRole(conn, userId);
-                            System.out.println("Admin rolü eklendi: " + adminEmail);
+                            System.out.println("✅ Admin rolü eklendi: " + adminEmail);
                             return new AdminCredentials(adminEmail, adminPassword);
                         }
                     }
@@ -606,6 +628,7 @@ public abstract class BaseSeleniumTest {
             }
             
             // Kullanıcı yok, oluştur
+            System.out.println("📝 Admin kullanıcısı oluşturuluyor: " + adminEmail);
             // Önce ADMIN rolünün ID'sini al
             Long adminRoleId = getRoleId(conn, "ADMIN");
             if (adminRoleId == null) {
