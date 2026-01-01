@@ -3,6 +3,7 @@ package com.example.backend.selenium;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -145,44 +146,83 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
             try {
                 org.openqa.selenium.logging.LogEntries logEntries = driver.manage().logs().get(org.openqa.selenium.logging.LogType.BROWSER);
                 System.out.println("Case 4d: Browser console logları kontrol ediliyor...");
+                boolean hasError = false;
                 for (org.openqa.selenium.logging.LogEntry entry : logEntries) {
                     String message = entry.getMessage();
-                    if (message.contains("Resim yüklenirken hata") || message.contains("error") || message.contains("Error") || 
-                        message.contains("AxiosError") || message.contains("CORS") || message.contains("Network")) {
-                        System.out.println("🔴 Browser Console (Resim Yükleme): " + message);
+                    String level = entry.getLevel().toString();
+                    if (message.contains("Resim yüklenirken hata") || message.contains("AxiosError") || 
+                        message.contains("CORS") || message.contains("Network") || 
+                        level.contains("SEVERE") || level.contains("ERROR")) {
+                        System.out.println("🔴 Browser Console (Resim Yükleme): [" + level + "] " + message);
+                        hasError = true;
                     }
+                }
+                if (hasError) {
+                    System.out.println("Case 4d: ⚠️ Browser console'da hatalar var, resim yükleme başarısız olabilir");
                 }
             } catch (Exception e) {
                 System.out.println("Case 4d: Browser console logları alınamadı: " + e.getMessage());
             }
             
-            // Alert kontrolü (resim yükleme hatası için)
+            // Alert kontrolü (resim yükleme hatası için) - async alert için bekle
+            Thread.sleep(1000);
             try {
                 org.openqa.selenium.Alert alert = driver.switchTo().alert();
                 String alertText = alert.getText();
-                System.out.println("🔴 Alert mesajı: " + alertText);
+                System.out.println("🔴 Alert mesajı bulundu: " + alertText);
                 alert.accept();
-                if (alertText.contains("hata") || alertText.contains("error")) {
-                    System.out.println("Case 4d: Resim yükleme hatası - Alert: " + alertText);
-                    // Hata varsa testi başarısız yap
-                    fail("Case 4d: Resim yükleme başarısız - " + alertText);
-                }
+                System.out.println("Case 4d: ❌ Resim yükleme hatası - Alert: " + alertText);
+                // Hata varsa testi başarısız yap
+                fail("Case 4d: Resim yükleme başarısız - " + alertText);
             } catch (org.openqa.selenium.NoAlertPresentException e) {
-                // Alert yoksa devam et
+                // Alert yoksa devam et - bu normal olabilir
             } catch (Exception e) {
-                System.out.println("Case 4d: Alert kontrolü hatası: " + e.getMessage());
+                // Alert kontrolü başarısız, devam et
             }
             
-            // 10. Resim bloğunun oluşmasını bekle (image-block-container) - daha uzun timeout
+            // Resim yükleme başarısız olduysa, hata mesajını göster ve testi sonlandır
+            // Sayfada hata mesajı var mı kontrol et
+            try {
+                java.util.List<WebElement> errorElements = driver.findElements(By.cssSelector(".auth-error, .error, [role='alert'], .alert-error"));
+                for (WebElement errorElement : errorElements) {
+                    if (errorElement.isDisplayed()) {
+                        String errorText = errorElement.getText();
+                        if (errorText.contains("hata") || errorText.contains("error") || errorText.contains("Resim")) {
+                            System.out.println("Case 4d: ❌ Sayfada hata mesajı bulundu: " + errorText);
+                            fail("Case 4d: Resim yükleme başarısız - " + errorText);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Hata mesajı kontrolü başarısız, devam et
+            }
+            
+            // Resim yükleme başarısız olduysa, hata mesajını JavaScript'ten al
+            try {
+                Object errorInfo = ((JavascriptExecutor) driver).executeScript(
+                    "try { " +
+                    "  var lastError = window.lastImageUploadError; " +
+                    "  if (lastError) return JSON.stringify({message: lastError.message, status: lastError.response?.status, url: lastError.config?.url}); " +
+                    "  return null; " +
+                    "} catch(e) { return null; }"
+                );
+                if (errorInfo != null) {
+                    System.out.println("Case 4d: 🔴 JavaScript'ten alınan hata detayı: " + errorInfo.toString());
+                }
+            } catch (Exception e) {
+                // Ignore
+            }
+            
+            // 10. Resim bloğunun oluşmasını bekle (image-block-container)
             System.out.println("Case 4d: Resim bloğu aranıyor (.image-block-container)...");
-            Thread.sleep(3000); // Ek bekleme
+            Thread.sleep(2000); // Kısa bekleme
             
             // Önce sayfanın mevcut durumunu kontrol et
             String pageSource = driver.getPageSource();
             if (pageSource.contains("image-block-container")) {
                 System.out.println("Case 4d: image-block-container sayfa kaynağında bulundu");
             } else {
-                System.out.println("Case 4d: image-block-container sayfa kaynağında bulunamadı");
+                System.out.println("Case 4d: ⚠️ image-block-container sayfa kaynağında bulunamadı - resim yükleme başarısız olabilir");
                 System.out.println("Case 4d: Mevcut editor blokları:");
                 try {
                     java.util.List<WebElement> editorBlocks = driver.findElements(By.cssSelector(".editor-block"));
@@ -195,13 +235,25 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
                 } catch (Exception e) {
                     System.out.println("Case 4d: Editor blokları bulunamadı: " + e.getMessage());
                 }
+                
+                // Resim yükleme başarısız olduysa testi sonlandır
+                System.out.println("Case 4d: ❌ Resim yükleme başarısız - image-block-container oluşturulamadı");
+                fail("Case 4d: Resim yükleme başarısız - image-block-container oluşturulamadı. Browser console'da AxiosError görüldü.");
             }
             
-            WebElement imageBlockContainer = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector(".image-block-container, .editor-block.image-block-container, .editor-block[class*='image']")
-                )
-            );
+            // Resim bloğunu bul (kısa timeout ile)
+            WebElement imageBlockContainer = null;
+            try {
+                imageBlockContainer = wait.until(
+                    ExpectedConditions.presenceOfElementLocated(
+                        By.cssSelector(".image-block-container, .editor-block.image-block-container, .editor-block[class*='image']")
+                    )
+                );
+                System.out.println("Case 4d: ✅ Resim bloğu bulundu!");
+            } catch (org.openqa.selenium.TimeoutException e) {
+                System.out.println("Case 4d: ❌ Resim bloğu bulunamadı - timeout");
+                fail("Case 4d: Resim bloğu bulunamadı. Resim yükleme başarısız olmuş olabilir. Browser console'da AxiosError görüldü.");
+            }
             assertNotNull(imageBlockContainer, "Case 4d: Resim bloğu oluşturulamadı");
             
             // 10. Resim elementinin görünür olduğunu doğrula
