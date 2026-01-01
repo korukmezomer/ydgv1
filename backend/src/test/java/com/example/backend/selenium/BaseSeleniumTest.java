@@ -817,6 +817,20 @@ public abstract class BaseSeleniumTest {
                         if (errorElement.isDisplayed()) {
                             String errorText = errorElement.getText();
                             System.err.println("❌ Login hatası: " + errorText);
+                            
+                            // Browser console'u da kontrol et
+                            try {
+                                org.openqa.selenium.logging.LogEntries logEntries = driver.manage().logs().get(org.openqa.selenium.logging.LogType.BROWSER);
+                                System.out.println("🔍 Browser console logları (login error):");
+                                for (org.openqa.selenium.logging.LogEntry entry : logEntries) {
+                                    String message = entry.getMessage();
+                                    if (message.contains("ERROR") || message.contains("SEVERE") || message.contains("401") || message.contains("403") || message.contains("400")) {
+                                        System.out.println("  - " + entry.getLevel() + ": " + message);
+                                    }
+                                }
+                            } catch (Exception logEx) {
+                                // Ignore
+                            }
                             break;
                         }
                     } catch (Exception e) {
@@ -839,7 +853,20 @@ public abstract class BaseSeleniumTest {
                     String errorText = errorElement.getText();
                     System.err.println("❌ Login hatası: " + errorText);
                 } catch (Exception e) {
-                    // Hata mesajı yoksa devam et
+                    // Hata mesajı yoksa browser console'u kontrol et
+                    try {
+                        org.openqa.selenium.logging.LogEntries logEntries = driver.manage().logs().get(org.openqa.selenium.logging.LogType.BROWSER);
+                        System.out.println("🔍 Browser console logları (login timeout):");
+                        int logCount = 0;
+                        for (org.openqa.selenium.logging.LogEntry entry : logEntries) {
+                            String message = entry.getMessage();
+                            System.out.println("  - " + entry.getLevel() + ": " + message);
+                            logCount++;
+                            if (logCount >= 10) break; // İlk 10 log
+                        }
+                    } catch (Exception logEx) {
+                        System.out.println("Browser console logları alınamadı: " + logEx.getMessage());
+                    }
                 }
             }
         } catch (Exception e) {
