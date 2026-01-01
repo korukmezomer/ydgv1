@@ -31,14 +31,21 @@ public abstract class BaseSeleniumTest {
     
     protected WebDriver driver;
     protected WebDriverWait wait;
-    protected static final String BASE_URL = "http://localhost:5173";
-    protected static final String BACKEND_URL = "http://localhost:8080";
+    // URL'leri environment variable veya system property'den al, yoksa localhost kullan
+    protected static final String BASE_URL = System.getProperty("frontend.url", 
+        System.getenv("FRONTEND_URL") != null ? System.getenv("FRONTEND_URL") : "http://localhost:5173");
+    protected static final String BACKEND_URL = System.getProperty("backend.url",
+        System.getenv("BACKEND_URL") != null ? System.getenv("BACKEND_URL") : "http://localhost:8080");
     protected static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30); // Daha uzun timeout
     
     // Test veritabanı bağlantı bilgileri
-    private static final String TEST_DB_URL = System.getProperty("test.db.url", "jdbc:postgresql://localhost:5433/yazilimdogrulama_test");
-    private static final String TEST_DB_USER = System.getProperty("test.db.user", "postgres");
-    private static final String TEST_DB_PASSWORD = System.getProperty("test.db.password", "postgres");
+    // Önce system property, sonra environment variable, son olarak default değer
+    private static final String TEST_DB_URL = System.getProperty("test.db.url", 
+        System.getenv("TEST_DB_URL") != null ? System.getenv("TEST_DB_URL") : "jdbc:postgresql://localhost:5433/yazilimdogrulama_test");
+    private static final String TEST_DB_USER = System.getProperty("test.db.user",
+        System.getenv("TEST_DB_USER") != null ? System.getenv("TEST_DB_USER") : "postgres");
+    private static final String TEST_DB_PASSWORD = System.getProperty("test.db.password",
+        System.getenv("TEST_DB_PASSWORD") != null ? System.getenv("TEST_DB_PASSWORD") : "postgres");
     
     private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     

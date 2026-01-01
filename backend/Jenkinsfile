@@ -142,7 +142,15 @@ pipeline {
                 dir('backend') {
                     sh '''
                         echo "🧪 Selenium testleri çalıştırılıyor..."
-                        mvn test jacoco:report -Dtest="*Selenium*Test" -Dselenium.headless=true
+                        echo "📡 Frontend URL: ${FRONTEND_URL}"
+                        echo "📡 Backend URL: ${BACKEND_URL}"
+                        echo "📡 Test DB URL: ${TEST_DB_URL}"
+                        mvn test jacoco:report -Dtest="*Selenium*Test" -Dselenium.headless=true \
+                            -Dfrontend.url="${FRONTEND_URL}" \
+                            -Dbackend.url="${BACKEND_URL}" \
+                            -Dtest.db.url="${TEST_DB_URL}" \
+                            -Dtest.db.user="${TEST_DB_USER}" \
+                            -Dtest.db.password="${TEST_DB_PASSWORD}"
                         echo "✅ Selenium testleri tamamlandı"
                         echo "📊 Test sonuçları:"
                         find target/surefire-reports -name "*.xml" -type f | head -5 || echo "Test raporu bulunamadı"
