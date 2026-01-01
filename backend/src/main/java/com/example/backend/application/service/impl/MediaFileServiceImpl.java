@@ -66,9 +66,24 @@ public class MediaFileServiceImpl implements MediaFileService {
             String yearMonth = now.getYear() + "/" + String.format("%02d", now.getMonthValue());
             Path uploadPath = Paths.get(uploadDir, yearMonth);
             
-            // Klasör yoksa oluştur
+            // Klasör yoksa oluştur - hata durumunda detaylı log
             if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
+                try {
+                    Files.createDirectories(uploadPath);
+                    logger.info("✅ Upload klasörü oluşturuldu: {}", uploadPath.toAbsolutePath());
+                } catch (IOException e) {
+                    logger.error("❌ Upload klasörü oluşturulamadı: {}", uploadPath.toAbsolutePath(), e);
+                    // Alternatif olarak temp dizin kullan
+                    Path tempUploadPath = Paths.get(System.getProperty("java.io.tmpdir"), "uploads", yearMonth);
+                    try {
+                        Files.createDirectories(tempUploadPath);
+                        logger.info("✅ Temp upload klasörü kullanılıyor: {}", tempUploadPath.toAbsolutePath());
+                        uploadPath = tempUploadPath;
+                    } catch (IOException e2) {
+                        logger.error("❌ Temp upload klasörü de oluşturulamadı: {}", tempUploadPath.toAbsolutePath(), e2);
+                        throw new BadRequestException("Upload klasörü oluşturulamadı: " + e.getMessage());
+                    }
+                }
             }
             
             // Dosyayı kaydet
