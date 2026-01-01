@@ -1,6 +1,35 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+// Backend URL'i environment variable'dan al, yoksa otomatik tespit et
+// Vite'da environment variable'lar VITE_ prefix'i ile başlamalı
+const getApiBaseUrl = () => {
+  // Environment variable'dan al (öncelikli)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // Browser'ın çalıştığı host'u kontrol et
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  const port = window.location.port;
+  
+  // Eğer host.docker.internal veya Docker network IP'si ise
+  // Browser Jenkins container'ında çalışıyor, backend container'ına erişebilir
+  if (hostname === 'host.docker.internal' || hostname.startsWith('172.17.') || hostname.startsWith('172.20.')) {
+    // Jenkins container'ından backend container'ına erişim
+    // Browser Jenkins container'ında çalışıyor, Docker network'üne erişebilir
+    // backend:8080 hostname'i Docker network'ünde çözümlenir
+    return 'http://backend:8080/api';
+  }
+  
+  // Varsayılan: localhost (normal development)
+  return 'http://localhost:8080/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+// Debug için log
+console.log('API Base URL:', API_BASE_URL);
 
 // Axios instance oluştur
 const api = axios.create({
