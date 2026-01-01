@@ -608,20 +608,54 @@ public abstract class BaseSeleniumTest {
                         System.out.println("  - is_active: " + isActive);
                         System.out.println("  - Şifre eşleşiyor: " + passwordMatches);
                         
-                        // Şifre eşleşmiyorsa uyarı ver (ama güncelleme yapma, backend'in oluşturduğu şifreyi kullan)
+                        // Güncelleme gerekip gerekmediğini kontrol et
+                        boolean needsUpdate = false;
+                        String newEncodedPassword = null;
+                        
+                        // Şifre eşleşmiyorsa güncelle (testlerin kullandığı şifre ile eşleşmeli)
                         if (!passwordMatches) {
-                            System.err.println("⚠️ UYARI: Admin kullanıcısının şifresi backend'in oluşturduğu şifre ile eşleşmiyor!");
-                            System.err.println("⚠️ Backend'in oluşturduğu şifreyi kullanmak için backend'i yeniden başlatın veya şifreyi backend'den kontrol edin.");
+                            System.out.println("⚠️ Admin kullanıcısının şifresi eşleşmiyor, güncelleniyor: " + adminEmail);
+                            newEncodedPassword = passwordEncoder.encode(adminPassword);
+                            needsUpdate = true;
                         }
                         
-                        // Sadece is_active kontrolü yap (backend findActiveByEmail kullanıyor)
+                        // is_active kontrolü - backend findActiveByEmail kullanıyor, bu yüzden aktif olmalı
                         if (!isActive) {
-                            String updateSql = "UPDATE kullanicilar SET is_active = ? WHERE id = ?";
-                            try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
-                                updateStmt.setBoolean(1, true);
-                                updateStmt.setLong(2, userId);
-                                updateStmt.executeUpdate();
-                                System.out.println("✅ Admin kullanıcısı aktif yapıldı: " + adminEmail);
+                            System.out.println("⚠️ Admin kullanıcısı pasif, aktif yapılıyor: " + adminEmail);
+                            needsUpdate = true;
+                        }
+                        
+                        // Güncelleme varsa yap
+                        if (needsUpdate) {
+                            String updateSql;
+                            if (newEncodedPassword != null && !isActive) {
+                                // Hem şifre hem is_active güncelle
+                                updateSql = "UPDATE kullanicilar SET is_active = ?, sifre = ? WHERE id = ?";
+                                try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                                    updateStmt.setBoolean(1, true);
+                                    updateStmt.setString(2, newEncodedPassword);
+                                    updateStmt.setLong(3, userId);
+                                    updateStmt.executeUpdate();
+                                    System.out.println("✅ Admin kullanıcısı güncellendi (şifre + aktif): " + adminEmail);
+                                }
+                            } else if (newEncodedPassword != null) {
+                                // Sadece şifre güncelle
+                                updateSql = "UPDATE kullanicilar SET sifre = ? WHERE id = ?";
+                                try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                                    updateStmt.setString(1, newEncodedPassword);
+                                    updateStmt.setLong(2, userId);
+                                    updateStmt.executeUpdate();
+                                    System.out.println("✅ Admin kullanıcısı şifresi güncellendi: " + adminEmail);
+                                }
+                            } else if (!isActive) {
+                                // Sadece is_active güncelle
+                                updateSql = "UPDATE kullanicilar SET is_active = ? WHERE id = ?";
+                                try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                                    updateStmt.setBoolean(1, true);
+                                    updateStmt.setLong(2, userId);
+                                    updateStmt.executeUpdate();
+                                    System.out.println("✅ Admin kullanıcısı aktif yapıldı: " + adminEmail);
+                                }
                             }
                         }
                         
