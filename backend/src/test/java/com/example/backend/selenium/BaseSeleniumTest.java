@@ -2,6 +2,7 @@ package com.example.backend.selenium;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
@@ -13,6 +14,8 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -48,6 +51,54 @@ public abstract class BaseSeleniumTest {
         System.getenv("TEST_DB_PASSWORD") != null ? System.getenv("TEST_DB_PASSWORD") : "postgres");
     
     private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    
+    // Spring Boot context'i bir kez başlat (tabloları oluşturmak için)
+    private static volatile boolean databaseInitialized = false;
+    
+    @BeforeAll
+    static void initializeDatabase() {
+        if (!databaseInitialized) {
+            synchronized (BaseSeleniumTest.class) {
+                if (!databaseInitialized) {
+                    ConfigurableApplicationContext springContext = null;
+                    try {
+                        System.out.println("🔧 Test veritabanı tabloları oluşturuluyor...");
+                        // Spring Boot'u başlat (sadece tabloları oluşturmak için)
+                        System.setProperty("spring.datasource.url", TEST_DB_URL);
+                        System.setProperty("spring.datasource.username", TEST_DB_USER);
+                        System.setProperty("spring.datasource.password", TEST_DB_PASSWORD);
+                        System.setProperty("spring.jpa.hibernate.ddl-auto", "create");
+                        System.setProperty("spring.jpa.show-sql", "false");
+                        System.setProperty("server.port", "0"); // Random port
+                        System.setProperty("spring.main.web-application-type", "none"); // Web server başlatma
+                        
+                        // Spring Boot'u başlat
+                        springContext = SpringApplication.run(
+                            com.example.backend.BackendApplication.class,
+                            new String[]{}
+                        );
+                        
+                        // Context başlatıldıktan sonra tablolar oluşturulmuş olacak
+                        System.out.println("✅ Test veritabanı tabloları oluşturuldu");
+                        databaseInitialized = true;
+                    } catch (Exception e) {
+                        System.err.println("⚠️ Database initialization hatası: " + e.getMessage());
+                        e.printStackTrace();
+                        // Hata olsa bile devam et, belki tablolar zaten var
+                    } finally {
+                        // Context'i kapat (sadece tabloları oluşturmak için başlattık)
+                        if (springContext != null) {
+                            try {
+                                springContext.close();
+                            } catch (Exception e) {
+                                // Ignore
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     
     @BeforeEach
     public void setUp() {
