@@ -85,13 +85,22 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor - 401 hatası durumunda logout
+// Response interceptor - 401 hatası durumunda token'ı sil
+// Login sayfasında zaten yönlendirme yapılıyor, burada sadece token'ı silelim
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Token'ı sil ama sayfayı yönlendirme (Login sayfasında zaten yönlendirme var)
+      // Eğer zaten login sayfasındaysak yönlendirme yapma
+      if (!window.location.pathname.includes('/login')) {
+        localStorage.removeItem('token');
+        // Sadece login sayfasında değilsek yönlendir
+        window.location.href = '/login';
+      } else {
+        // Login sayfasındaysak sadece token'ı sil
+        localStorage.removeItem('token');
+      }
     }
     return Promise.reject(error);
   }

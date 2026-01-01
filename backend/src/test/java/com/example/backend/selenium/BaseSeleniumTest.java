@@ -590,14 +590,29 @@ public abstract class BaseSeleniumTest {
         
         try (Connection conn = getTestDatabaseConnection()) {
             // Admin kullanıcısının var olup olmadığını kontrol et
-            String checkUserSql = "SELECT id, is_active FROM kullanicilar WHERE email = ?";
+            String checkUserSql = "SELECT id, sifre, is_active FROM kullanicilar WHERE email = ?";
             try (PreparedStatement stmt = conn.prepareStatement(checkUserSql)) {
                 stmt.setString(1, adminEmail);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) {
                         // Kullanıcı var
                         Long userId = rs.getLong("id");
+                        String hashedPassword = rs.getString("sifre");
                         Boolean isActive = rs.getBoolean("is_active");
+                        
+                        // Şifre kontrolü - backend'in oluşturduğu şifre ile eşleşiyor mu?
+                        boolean passwordMatches = passwordEncoder.matches(adminPassword, hashedPassword);
+                        System.out.println("🔍 Admin kullanıcısı bulundu:");
+                        System.out.println("  - ID: " + userId);
+                        System.out.println("  - Email: " + adminEmail);
+                        System.out.println("  - is_active: " + isActive);
+                        System.out.println("  - Şifre eşleşiyor: " + passwordMatches);
+                        
+                        // Şifre eşleşmiyorsa uyarı ver (ama güncelleme yapma, backend'in oluşturduğu şifreyi kullan)
+                        if (!passwordMatches) {
+                            System.err.println("⚠️ UYARI: Admin kullanıcısının şifresi backend'in oluşturduğu şifre ile eşleşmiyor!");
+                            System.err.println("⚠️ Backend'in oluşturduğu şifreyi kullanmak için backend'i yeniden başlatın veya şifreyi backend'den kontrol edin.");
+                        }
                         
                         // Sadece is_active kontrolü yap (backend findActiveByEmail kullanıyor)
                         if (!isActive) {
