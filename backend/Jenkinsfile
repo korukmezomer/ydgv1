@@ -260,10 +260,24 @@ pipeline {
                             ls -la target/ 2>/dev/null | head -20 || echo "target klasörü yok"
                         fi
                         
-                        # Maven exit code'u 0 değilse uyarı ver
+                        # Maven exit code'u 0 değilse uyarı ver ve başarısız testleri göster
                         if [ ${MVN_EXIT_CODE} -ne 0 ]; then
                             echo "⚠️ Maven test komutu hata ile çıktı (kod: ${MVN_EXIT_CODE})"
                             echo "📋 Detaylı hata bilgisi için yukarıdaki logları kontrol edin"
+                            
+                            # Başarısız testleri bul ve göster
+                            echo "🔍 Başarısız testler aranıyor..."
+                            if [ -d "target/surefire-reports" ]; then
+                                echo "📊 Başarısız test raporları:"
+                                find target/surefire-reports -name "*.xml" -type f -exec grep -l "failures=\"[1-9]" {} \; 2>/dev/null | while read report; do
+                                    echo "❌ Başarısız test: ${report}"
+                                    grep -E "testcase.*failure|failure message" "${report}" | head -5 || true
+                                done
+                                
+                                # Hata mesajlarını göster
+                                echo "📋 Hata mesajları:"
+                                find target/surefire-reports -name "*.xml" -type f -exec grep -A 5 "failure message" {} \; 2>/dev/null | head -30 || echo "Hata mesajı bulunamadı"
+                            fi
                         else
                             echo "✅ Maven test komutu başarıyla tamamlandı"
                         fi
@@ -292,6 +306,22 @@ pipeline {
                                 ).trim()
                                 if (testResults) {
                                     echo "📊 Selenium test sonuçları: ${testResults}"
+                                }
+                                
+                                // Başarısız testleri bul ve göster
+                                def failedTests = sh(
+                                    script: 'find target/surefire-reports -name "*.xml" -type f -exec grep -l "failures=\"[1-9]" {} \\; 2>/dev/null | wc -l',
+                                    returnStdout: true
+                                ).trim()
+                                if (failedTests != "0") {
+                                    echo "❌ Başarısız test sayısı: ${failedTests}"
+                                    echo "📋 Başarısız test dosyaları:"
+                                    sh '''
+                                        find target/surefire-reports -name "*.xml" -type f -exec grep -l "failures=\"[1-9]" {} \; 2>/dev/null | while read report; do
+                                            echo "  - ${report}"
+                                            grep -E "testsuite.*failures" "${report}" | head -1 || true
+                                        done
+                                    '''
                                 }
                             } catch (Exception e) {
                                 echo "⚠️ Test sonuçları parse edilemedi: ${e.getMessage()}"
