@@ -275,11 +275,30 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
             assertNotNull(imageBlockContainer, "Case 4d: Resim bloğu oluşturulamadı");
             
             // 10. Resim elementinin görünür olduğunu doğrula
-            WebElement imageElement = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(
-                    By.cssSelector(".block-image, .image-block-container img, img[src*='http']")
-                )
-            );
+            System.out.println("Case 4d: Resim container bulundu, img elementi bekleniyor...");
+            WebElement imageElement = null;
+            try {
+                // Image container içindeki img elementini bul
+                imageElement = imageBlockContainer.findElement(By.cssSelector("img.block-image"));
+                // Eğer bulunamazsa genel selector ile dene
+                if (!imageElement.isDisplayed()) {
+                    System.out.println("Case 4d: Container içindeki img görünür değil, genel selector deneniyor...");
+                    imageElement = wait.until(
+                        ExpectedConditions.visibilityOfElementLocated(
+                            By.cssSelector(".image-block-container img, img.block-image")
+                        )
+                    );
+                }
+            } catch (Exception e) {
+                System.out.println("Case 4d: Container içinde img bulunamadı: " + e.getMessage());
+                System.out.println("Case 4d: Container HTML: " + imageBlockContainer.getAttribute("outerHTML"));
+                // Genel selector ile dene
+                imageElement = wait.until(
+                    ExpectedConditions.visibilityOfElementLocated(
+                        By.cssSelector(".image-block-container img, img.block-image")
+                    )
+                );
+            }
             assertNotNull(imageElement, "Case 4d: Resim elementi bulunamadı");
             
             // 11. Resim URL'sinin doğru olduğunu kontrol et

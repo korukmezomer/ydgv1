@@ -786,17 +786,46 @@ public abstract class BaseSeleniumTest {
             
             safeSubmitForm(submitButton, form);
             
-            // API çağrısının tamamlanmasını bekle
-            Thread.sleep(3000);
+            // API çağrısının tamamlanmasını ve dashboard'a yönlendirilmeyi bekle
+            System.out.println("Login işlemi tamamlanıyor, dashboard yönlendirmesi bekleniyor...");
+            int loginWaitCount = 0;
+            boolean loginCompleted = false;
+            while (loginWaitCount < 20 && !loginCompleted) {
+                Thread.sleep(500);
+                String currentUrl = driver.getCurrentUrl();
+                // Dashboard'lardan birine yönlendirildi mi?
+                if (currentUrl.contains("/dashboard") || currentUrl.contains("/admin/") || 
+                    currentUrl.contains("/yazar/") || currentUrl.contains("/reader/")) {
+                    loginCompleted = true;
+                    System.out.println("✅ Login başarılı. Dashboard URL: " + currentUrl);
+                } else if (currentUrl.contains("/login")) {
+                    // Hala login sayfasındaysak hata olabilir
+                    try {
+                        WebElement errorElement = driver.findElement(By.cssSelector(".auth-error"));
+                        if (errorElement.isDisplayed()) {
+                            String errorText = errorElement.getText();
+                            System.err.println("❌ Login hatası: " + errorText);
+                            break;
+                        }
+                    } catch (Exception e) {
+                        // Hata mesajı yoksa devam et
+                    }
+                } else if (currentUrl.endsWith("/") || currentUrl.equals(BASE_URL)) {
+                    // Home sayfasına yönlendirildiyse, biraz daha bekle (rol bazlı yönlendirme için)
+                    // Home sayfası kullanıcının rolüne göre dashboard'a yönlendirir
+                    System.out.println("Home sayfasında, dashboard yönlendirmesi bekleniyor...");
+                }
+                loginWaitCount++;
+            }
             
-            // Başarılı giriş kontrolü (URL değişikliği veya hata mesajı)
-            String finalUrl = driver.getCurrentUrl();
-            if (finalUrl.contains("/login")) {
+            if (!loginCompleted) {
+                String finalUrl = driver.getCurrentUrl();
+                System.out.println("⚠️ Login işlemi 10 saniye içinde dashboard'a yönlendirmedi. Final URL: " + finalUrl);
                 // Hata mesajı var mı kontrol et
                 try {
                     WebElement errorElement = driver.findElement(By.cssSelector(".auth-error"));
                     String errorText = errorElement.getText();
-                    System.err.println("Login hatası: " + errorText);
+                    System.err.println("❌ Login hatası: " + errorText);
                 } catch (Exception e) {
                     // Hata mesajı yoksa devam et
                 }
@@ -1515,7 +1544,7 @@ public abstract class BaseSeleniumTest {
                 )
             );
             publishButton.click();
-            Thread.sleep(5000);
+            Thread.sleep(2000);
             
             // Alert'leri kontrol et ve kabul et
             try {
@@ -1527,6 +1556,42 @@ public abstract class BaseSeleniumTest {
             } catch (Exception alertEx) {
                 // Alert yoksa devam et
             }
+            
+            // Publish işleminin tamamlanmasını bekle (URL değişimi veya başarı mesajı)
+            // Ya story slug sayfasına yönlendiriliriz ya da dashboard'a gideriz
+            System.out.println("Publish işlemi bekleniyor...");
+            int publishWaitCount = 0;
+            boolean publishCompleted = false;
+            while (publishWaitCount < 20 && !publishCompleted) {
+                Thread.sleep(500);
+                String currentUrl = driver.getCurrentUrl();
+                // Story sayfasına yönlendirildi mi veya dashboard'da mıyız?
+                if (currentUrl.contains("/haberler/") || currentUrl.contains("/dashboard") || currentUrl.contains("/yazar/")) {
+                    publishCompleted = true;
+                    System.out.println("Publish işlemi tamamlandı. URL: " + currentUrl);
+                } else {
+                    // Publish butonunu kontrol et - disabled veya "Yayınlanıyor..." yazısı var mı?
+                    try {
+                        WebElement pubBtn = driver.findElement(By.cssSelector(".publish-button"));
+                        String btnText = pubBtn.getText();
+                        boolean isDisabled = !pubBtn.isEnabled() || btnText.contains("Yayınlanıyor");
+                        if (!isDisabled) {
+                            // Buton tekrar aktif oldu, publish tamamlandı
+                            publishCompleted = true;
+                            System.out.println("Publish butonu tekrar aktif oldu.");
+                        }
+                    } catch (Exception e) {
+                        // Buton bulunamadı, devam et
+                    }
+                }
+                publishWaitCount++;
+            }
+            
+            if (!publishCompleted) {
+                System.out.println("⚠️ Publish işlemi 10 saniye içinde tamamlanmadı, devam ediliyor...");
+            }
+            
+            Thread.sleep(2000); // Ek güvenlik için bekle
             
             // Story ID'yi al (retry ile
             Long storyId = null;
