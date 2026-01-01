@@ -1144,6 +1144,25 @@ public abstract class BaseSeleniumTest {
                 if (errorElement.isDisplayed()) {
                     String errorText = errorElement.getText();
                     System.out.println("Kayıt hatası: " + errorText);
+                    
+                    // window.lastRegistrationError flag'ini kontrol et (frontend'den gelen detaylı hata bilgisi)
+                    try {
+                        String errorInfo = (String) ((JavascriptExecutor) driver).executeScript(
+                            "if (!window.lastRegistrationError) return null;" +
+                            "try {" +
+                            "  return JSON.stringify(window.lastRegistrationError, null, 2);" +
+                            "} catch(e) {" +
+                            "  return 'Error parsing: ' + e.message;" +
+                            "}"
+                        );
+                        if (errorInfo != null && !errorInfo.equals("null")) {
+                            System.err.println("🔴 Backend Kayıt Hatası Detayları:");
+                            System.err.println(errorInfo);
+                        }
+                    } catch (Exception jsEx) {
+                        // Ignore
+                    }
+                    
                     return false;
                 }
             } catch (Exception e) {
@@ -1302,6 +1321,24 @@ public abstract class BaseSeleniumTest {
                 if (errorElement.isDisplayed()) {
                     String errorText = errorElement.getText();
                     System.out.println("Kayıt hatası: " + errorText);
+                    
+                    // window.lastRegistrationError flag'ini kontrol et (frontend'den gelen detaylı hata bilgisi)
+                    try {
+                        String errorInfo = (String) ((JavascriptExecutor) driver).executeScript(
+                            "if (!window.lastRegistrationError) return null;" +
+                            "try {" +
+                            "  return JSON.stringify(window.lastRegistrationError, null, 2);" +
+                            "} catch(e) {" +
+                            "  return 'Error parsing: ' + e.message;" +
+                            "}"
+                        );
+                        if (errorInfo != null && !errorInfo.equals("null")) {
+                            System.err.println("🔴 Backend Kayıt Hatası Detayları:");
+                            System.err.println(errorInfo);
+                        }
+                    } catch (Exception jsEx) {
+                        // Ignore
+                    }
                     
                     // Hata mesajının detaylarını al
                     try {

@@ -48,7 +48,30 @@ const Register = () => {
       // Tüm roller için home sayfasına yönlendir
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Kayıt olurken bir hata oluştu');
+      const errorMessage = err.response?.data?.message || 'Kayıt olurken bir hata oluştu';
+      const errorStatus = err.response?.status;
+      const errorData = err.response?.data;
+      
+      // Selenium testleri için detaylı hata bilgisi
+      window.lastRegistrationError = {
+        message: errorMessage,
+        status: errorStatus,
+        statusText: err.response?.statusText,
+        data: errorData,
+        requestUrl: err.config?.url,
+        requestData: formData,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.error('Kayıt hatası:', {
+        message: errorMessage,
+        status: errorStatus,
+        statusText: err.response?.statusText,
+        data: errorData,
+        requestUrl: err.config?.url
+      });
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
