@@ -590,7 +590,7 @@ public abstract class BaseSeleniumTest {
         
         try (Connection conn = getTestDatabaseConnection()) {
             // Önce admin kullanıcısının var olup olmadığını kontrol et
-            String checkUserSql = "SELECT id, sifre FROM kullanicilar WHERE email = ?";
+            String checkUserSql = "SELECT id, sifre, is_active FROM kullanicilar WHERE email = ?";
             try (PreparedStatement stmt = conn.prepareStatement(checkUserSql)) {
                 stmt.setString(1, adminEmail);
                 try (ResultSet rs = stmt.executeQuery()) {
@@ -598,20 +598,46 @@ public abstract class BaseSeleniumTest {
                         // Kullanıcı zaten var
                         Long userId = rs.getLong("id");
                         String currentHashedPassword = rs.getString("sifre");
+                        Boolean isActive = rs.getBoolean("is_active");
+                        
+                        // Kullanıcıyı aktif yap ve şifreyi kontrol et/güncelle
+                        boolean needsUpdate = false;
+                        String newEncodedPassword = null;
+                        
+                        // is_active kontrolü - backend findActiveByEmail kullanıyor, bu yüzden aktif olmalı
+                        if (!isActive) {
+                            needsUpdate = true;
+                            System.out.println("⚠️ Admin kullanıcısı pasif, aktif yapılıyor: " + adminEmail);
+                        }
                         
                         // Şifrenin doğru olup olmadığını kontrol et
                         if (!passwordEncoder.matches(adminPassword, currentHashedPassword)) {
                             // Şifre yanlış, güncelle
-                            String newEncodedPassword = passwordEncoder.encode(adminPassword);
-                            String updatePasswordSql = "UPDATE kullanicilar SET sifre = ? WHERE id = ?";
-                            try (PreparedStatement updateStmt = conn.prepareStatement(updatePasswordSql)) {
-                                updateStmt.setString(1, newEncodedPassword);
-                                updateStmt.setLong(2, userId);
-                                updateStmt.executeUpdate();
-                                System.out.println("✅ Admin kullanıcısı şifresi güncellendi: " + adminEmail);
-                            }
+                            newEncodedPassword = passwordEncoder.encode(adminPassword);
+                            needsUpdate = true;
+                            System.out.println("⚠️ Admin kullanıcısı şifresi yanlış, güncelleniyor: " + adminEmail);
                         } else {
                             System.out.println("✅ Admin kullanıcısı mevcut, şifre doğru: " + adminEmail);
+                        }
+                        
+                        // Güncelleme varsa yap
+                        if (needsUpdate) {
+                            String updateSql = "UPDATE kullanicilar SET is_active = ?";
+                            if (newEncodedPassword != null) {
+                                updateSql += ", sifre = ?";
+                            }
+                            updateSql += " WHERE id = ?";
+                            
+                            try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                                int paramIndex = 1;
+                                updateStmt.setBoolean(paramIndex++, true); // is_active = true
+                                if (newEncodedPassword != null) {
+                                    updateStmt.setString(paramIndex++, newEncodedPassword);
+                                }
+                                updateStmt.setLong(paramIndex, userId);
+                                updateStmt.executeUpdate();
+                                System.out.println("✅ Admin kullanıcısı güncellendi: " + adminEmail);
+                            }
                         }
                         
                         // Admin rolünü kontrol et
