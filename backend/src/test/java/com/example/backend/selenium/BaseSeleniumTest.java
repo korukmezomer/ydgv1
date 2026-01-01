@@ -760,6 +760,8 @@ public abstract class BaseSeleniumTest {
                 Thread.sleep(1000);
             }
             
+            System.out.println("🔐 Login başlatılıyor - Email: " + email);
+            
             // Email input'unu bul ve doldur
             WebElement emailInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.id("email"))
@@ -770,6 +772,8 @@ public abstract class BaseSeleniumTest {
             ((JavascriptExecutor) driver).executeScript(
                 "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", emailInput);
             Thread.sleep(200);
+            
+            System.out.println("✉️ Email girildi: " + emailInput.getAttribute("value"));
             
             // Password input'unu bul ve doldur
             WebElement passwordInput = wait.until(
@@ -782,6 +786,8 @@ public abstract class BaseSeleniumTest {
                 "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", passwordInput);
             Thread.sleep(200);
             
+            System.out.println("🔑 Password girildi (uzunluk: " + password.length() + ")");
+            
             // Form submit
             WebElement form = wait.until(
                 ExpectedConditions.presenceOfElementLocated(By.cssSelector("form"))
@@ -792,19 +798,43 @@ public abstract class BaseSeleniumTest {
             
             // Butonun disabled olmadığından emin ol
             if (submitButton.getAttribute("disabled") != null) {
-                System.out.println("Login submit butonu disabled, form değerlerini kontrol ediyoruz...");
+                System.out.println("⚠️ Login submit butonu disabled, form değerlerini kontrol ediyoruz...");
                 Thread.sleep(2000);
             }
             
+            System.out.println("🖱️ Login formu gönderiliyor...");
             safeSubmitForm(submitButton, form);
+            System.out.println("✅ Form gönderildi, backend response bekleniyor...");
             
             // API çağrısının tamamlanmasını ve dashboard'a yönlendirilmeyi bekle
             System.out.println("Login işlemi tamamlanıyor, dashboard yönlendirmesi bekleniyor...");
             int loginWaitCount = 0;
             boolean loginCompleted = false;
-            while (loginWaitCount < 20 && !loginCompleted) {
+            boolean errorFound = false;
+            
+            while (loginWaitCount < 20 && !loginCompleted && !errorFound) {
                 Thread.sleep(500);
                 currentUrl = driver.getCurrentUrl(); // Mevcut değişkeni kullan
+                
+                // Browser console'dan hata kontrolü (her iterasyonda)
+                if (loginWaitCount % 2 == 0) { // Her 1 saniyede bir kontrol et
+                    try {
+                        org.openqa.selenium.logging.LogEntries logEntries = driver.manage().logs().get(org.openqa.selenium.logging.LogType.BROWSER);
+                        for (org.openqa.selenium.logging.LogEntry entry : logEntries) {
+                            String message = entry.getMessage();
+                            // Login API çağrısı ile ilgili hataları kontrol et
+                            if (message.contains("/api/auth/giris") && 
+                                (message.contains("401") || message.contains("403") || message.contains("400") || 
+                                 message.contains("500") || message.contains("SEVERE") || message.contains("ERROR"))) {
+                                System.err.println("❌ Login API hatası tespit edildi: " + message);
+                                errorFound = true;
+                            }
+                        }
+                    } catch (Exception logEx) {
+                        // Ignore
+                    }
+                }
+                
                 // Dashboard'lardan birine yönlendirildi mi?
                 if (currentUrl.contains("/dashboard") || currentUrl.contains("/admin/") || 
                     currentUrl.contains("/yazar/") || currentUrl.contains("/reader/")) {
@@ -816,22 +846,8 @@ public abstract class BaseSeleniumTest {
                         WebElement errorElement = driver.findElement(By.cssSelector(".auth-error"));
                         if (errorElement.isDisplayed()) {
                             String errorText = errorElement.getText();
-                            System.err.println("❌ Login hatası: " + errorText);
-                            
-                            // Browser console'u da kontrol et
-                            try {
-                                org.openqa.selenium.logging.LogEntries logEntries = driver.manage().logs().get(org.openqa.selenium.logging.LogType.BROWSER);
-                                System.out.println("🔍 Browser console logları (login error):");
-                                for (org.openqa.selenium.logging.LogEntry entry : logEntries) {
-                                    String message = entry.getMessage();
-                                    if (message.contains("ERROR") || message.contains("SEVERE") || message.contains("401") || message.contains("403") || message.contains("400")) {
-                                        System.out.println("  - " + entry.getLevel() + ": " + message);
-                                    }
-                                }
-                            } catch (Exception logEx) {
-                                // Ignore
-                            }
-                            break;
+                            System.err.println("❌ Login UI hatası: " + errorText);
+                            errorFound = true;
                         }
                     } catch (Exception e) {
                         // Hata mesajı yoksa devam et
@@ -839,33 +855,47 @@ public abstract class BaseSeleniumTest {
                 } else if (currentUrl.endsWith("/") || currentUrl.equals(BASE_URL)) {
                     // Home sayfasına yönlendirildiyse, biraz daha bekle (rol bazlı yönlendirme için)
                     // Home sayfası kullanıcının rolüne göre dashboard'a yönlendirir
-                    System.out.println("Home sayfasında, dashboard yönlendirmesi bekleniyor...");
+                    if (loginWaitCount % 4 == 0) {
+                        System.out.println("🏠 Home sayfasında, dashboard yönlendirmesi bekleniyor... (" + loginWaitCount/2 + "s)");
+                    }
                 }
                 loginWaitCount++;
             }
             
             if (!loginCompleted) {
                 String finalUrl = driver.getCurrentUrl();
-                System.out.println("⚠️ Login işlemi 10 saniye içinde dashboard'a yönlendirmedi. Final URL: " + finalUrl);
+                System.err.println("❌ Login işlemi " + (loginWaitCount/2) + " saniye içinde dashboard'a yönlendirmedi. Final URL: " + finalUrl);
+                
                 // Hata mesajı var mı kontrol et
                 try {
                     WebElement errorElement = driver.findElement(By.cssSelector(".auth-error"));
-                    String errorText = errorElement.getText();
-                    System.err.println("❌ Login hatası: " + errorText);
+                    if (errorElement.isDisplayed()) {
+                        String errorText = errorElement.getText();
+                        System.err.println("❌ Login UI hatası: " + errorText);
+                    }
                 } catch (Exception e) {
                     // Hata mesajı yoksa browser console'u kontrol et
+                    System.out.println("🔍 Login hatası - Tüm browser console logları:");
                     try {
                         org.openqa.selenium.logging.LogEntries logEntries = driver.manage().logs().get(org.openqa.selenium.logging.LogType.BROWSER);
-                        System.out.println("🔍 Browser console logları (login timeout):");
-                        int logCount = 0;
+                        boolean hasLoginApiLogs = false;
                         for (org.openqa.selenium.logging.LogEntry entry : logEntries) {
                             String message = entry.getMessage();
-                            System.out.println("  - " + entry.getLevel() + ": " + message);
-                            logCount++;
-                            if (logCount >= 10) break; // İlk 10 log
+                            // Login API ile ilgili tüm logları göster
+                            if (message.contains("/api/auth/giris") || message.contains("auth") || 
+                                message.contains("401") || message.contains("403") || 
+                                message.contains("ERROR") || message.contains("SEVERE")) {
+                                System.err.println("  🔴 " + entry.getLevel() + ": " + message);
+                                hasLoginApiLogs = true;
+                            } else {
+                                System.out.println("  - " + entry.getLevel() + ": " + message);
+                            }
+                        }
+                        if (!hasLoginApiLogs) {
+                            System.out.println("  ℹ️ Login API ile ilgili log bulunamadı. Backend çalışmıyor olabilir.");
                         }
                     } catch (Exception logEx) {
-                        System.out.println("Browser console logları alınamadı: " + logEx.getMessage());
+                        System.err.println("Browser console logları alınamadı: " + logEx.getMessage());
                     }
                 }
             }
