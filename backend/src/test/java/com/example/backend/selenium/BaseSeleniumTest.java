@@ -580,13 +580,25 @@ public abstract class BaseSeleniumTest {
                 stmt.setString(1, adminEmail);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) {
-                        // Kullanıcı zaten var, admin rolünü kontrol et
+                        // Kullanıcı zaten var, şifreyi güncelle ve admin rolünü kontrol et
                         Long userId = rs.getLong("id");
+                        
+                        // Şifreyi güncelle (her test öncesi tutarlılık için)
+                        String encodedPassword = passwordEncoder.encode(adminPassword);
+                        String updatePasswordSql = "UPDATE kullanicilar SET sifre = ? WHERE id = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updatePasswordSql)) {
+                            updateStmt.setString(1, encodedPassword);
+                            updateStmt.setLong(2, userId);
+                            updateStmt.executeUpdate();
+                            System.out.println("Admin kullanıcısı şifresi güncellendi: " + adminEmail);
+                        }
+                        
                         if (hasAdminRole(conn, userId)) {
                             return new AdminCredentials(adminEmail, adminPassword);
                         } else {
                             // Kullanıcı var ama admin rolü yok, ekle
                             addAdminRole(conn, userId);
+                            System.out.println("Admin rolü eklendi: " + adminEmail);
                             return new AdminCredentials(adminEmail, adminPassword);
                         }
                     }
