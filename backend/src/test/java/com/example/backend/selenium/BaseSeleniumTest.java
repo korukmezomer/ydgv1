@@ -105,6 +105,39 @@ public abstract class BaseSeleniumTest {
             options.addArguments("--disable-canvas-aa");
             options.addArguments("--disable-2d-canvas-clip-aa");
             options.addArguments("--disable-gl-drawing-for-tests");
+            // D-Bus hatalarını önle (container'da D-Bus yok)
+            options.addArguments("--disable-dev-shm-usage");
+            options.addArguments("--disable-software-rasterizer");
+            options.addArguments("--disable-gpu-compositing");
+            options.addArguments("--disable-background-networking");
+            options.addArguments("--disable-default-apps");
+            options.addArguments("--disable-sync");
+            options.addArguments("--metrics-recording-only");
+            options.addArguments("--no-first-run");
+            options.addArguments("--safebrowsing-disable-auto-update");
+            options.addArguments("--disable-extensions");
+            options.addArguments("--disable-plugins");
+            options.addArguments("--disable-plugins-discovery");
+            options.addArguments("--disable-preconnect");
+            options.addArguments("--disable-translate");
+            options.addArguments("--disable-background-timer-throttling");
+            options.addArguments("--disable-renderer-backgrounding");
+            options.addArguments("--disable-backgrounding-occluded-windows");
+            options.addArguments("--disable-breakpad");
+            options.addArguments("--disable-client-side-phishing-detection");
+            options.addArguments("--disable-crash-reporter");
+            options.addArguments("--disable-hang-monitor");
+            options.addArguments("--disable-popup-blocking");
+            options.addArguments("--disable-prompt-on-repost");
+            options.addArguments("--disable-domain-reliability");
+            options.addArguments("--disable-component-update");
+            options.addArguments("--disable-background-downloads");
+            options.addArguments("--disable-add-to-shelf");
+            options.addArguments("--disable-breakpad");
+            options.addArguments("--disable-features=TranslateUI,BlinkGenPropertyTrees");
+            // D-Bus hatalarını tamamen devre dışı bırak
+            System.setProperty("DBUS_SESSION_BUS_ADDRESS", "");
+            System.setProperty("CHROME_DEVEL_SANDBOX", "");
         } else {
             options.addArguments("--start-maximized");
         }

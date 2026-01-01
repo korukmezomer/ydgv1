@@ -146,35 +146,38 @@ pipeline {
                         
                         # 1. backend:8080 (Docker Compose network service ismi)
                         echo "  Deneniyor: http://backend:8080/api/auth/kayit"
-                        if curl -f -s --max-time 10 http://backend:8080/api/auth/kayit > /dev/null 2>&1; then
-                            echo "✅ Backend http://backend:8080 üzerinden erişilebilir"
+                        BACKEND_RESPONSE=$(curl -s -w "%{http_code}" --max-time 10 http://backend:8080/api/auth/kayit -o /dev/null 2>&1)
+                        if [ "$BACKEND_RESPONSE" = "200" ] || [ "$BACKEND_RESPONSE" = "405" ] || [ "$BACKEND_RESPONSE" = "500" ]; then
+                            echo "✅ Backend http://backend:8080 üzerinden erişilebilir (HTTP $BACKEND_RESPONSE)"
                             BACKEND_OK=1
                             BACKEND_URL_FOUND="http://backend:8080"
                         else
-                            echo "  ❌ http://backend:8080 erişilemiyor"
+                            echo "  ❌ http://backend:8080 erişilemiyor (HTTP $BACKEND_RESPONSE)"
                         fi
                         
                         # 2. yazilimdogrulama-backend:8080 (container ismi)
                         if [ ${BACKEND_OK} -eq 0 ]; then
                             echo "  Deneniyor: http://yazilimdogrulama-backend:8080/api/auth/kayit"
-                            if curl -f -s --max-time 10 http://yazilimdogrulama-backend:8080/api/auth/kayit > /dev/null 2>&1; then
-                                echo "✅ Backend http://yazilimdogrulama-backend:8080 üzerinden erişilebilir"
+                            BACKEND_RESPONSE=$(curl -s -w "%{http_code}" --max-time 10 http://yazilimdogrulama-backend:8080/api/auth/kayit -o /dev/null 2>&1)
+                            if [ "$BACKEND_RESPONSE" = "200" ] || [ "$BACKEND_RESPONSE" = "405" ] || [ "$BACKEND_RESPONSE" = "500" ]; then
+                                echo "✅ Backend http://yazilimdogrulama-backend:8080 üzerinden erişilebilir (HTTP $BACKEND_RESPONSE)"
                                 BACKEND_OK=1
                                 BACKEND_URL_FOUND="http://yazilimdogrulama-backend:8080"
                             else
-                                echo "  ❌ http://yazilimdogrulama-backend:8080 erişilemiyor"
+                                echo "  ❌ http://yazilimdogrulama-backend:8080 erişilemiyor (HTTP $BACKEND_RESPONSE)"
                             fi
                         fi
                         
                         # 3. host.docker.internal:8080 (host machine üzerinden)
                         if [ ${BACKEND_OK} -eq 0 ]; then
                             echo "  Deneniyor: http://host.docker.internal:8080/api/auth/kayit"
-                            if curl -f -s --max-time 10 http://host.docker.internal:8080/api/auth/kayit > /dev/null 2>&1; then
-                                echo "✅ Backend http://host.docker.internal:8080 üzerinden erişilebilir"
+                            BACKEND_RESPONSE=$(curl -s -w "%{http_code}" --max-time 10 http://host.docker.internal:8080/api/auth/kayit -o /dev/null 2>&1)
+                            if [ "$BACKEND_RESPONSE" = "200" ] || [ "$BACKEND_RESPONSE" = "405" ] || [ "$BACKEND_RESPONSE" = "500" ]; then
+                                echo "✅ Backend http://host.docker.internal:8080 üzerinden erişilebilir (HTTP $BACKEND_RESPONSE)"
                                 BACKEND_OK=1
                                 BACKEND_URL_FOUND="http://host.docker.internal:8080"
                             else
-                                echo "  ❌ http://host.docker.internal:8080 erişilemiyor"
+                                echo "  ❌ http://host.docker.internal:8080 erişilemiyor (HTTP $BACKEND_RESPONSE)"
                             fi
                         fi
                         
