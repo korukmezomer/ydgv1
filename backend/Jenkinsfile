@@ -36,7 +36,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                echo 'Git repository\'den kod çekiliyor...'
+                echo "Git repository'den kod çekiliyor..."
                 checkout scm
             }
         }
@@ -269,7 +269,7 @@ pipeline {
                             echo "🔍 Başarısız testler aranıyor..."
                             if [ -d "target/surefire-reports" ]; then
                                 echo "📊 Başarısız test raporları:"
-                                find target/surefire-reports -name "*.xml" -type f | xargs grep -l "failures=\"[1-9]" 2>/dev/null | while read report; do
+                                find target/surefire-reports -name "*.xml" -type f | xargs grep -l 'failures="[1-9]' 2>/dev/null | while read report; do
                                     echo "❌ Başarısız test: ${report}"
                                     grep -E "testcase.*failure|failure message" "${report}" | head -5 || true
                                 done
@@ -310,14 +310,14 @@ pipeline {
                                 
                                 // Başarısız testleri bul ve göster
                                 def failedTests = sh(
-                                    script: 'find target/surefire-reports -name "*.xml" -type f | xargs grep -l "failures=\"[1-9]" 2>/dev/null | wc -l',
+                                    script: 'find target/surefire-reports -name "*.xml" -type f | xargs grep -l \'failures="[1-9]\' 2>/dev/null | wc -l',
                                     returnStdout: true
                                 ).trim()
                                 if (failedTests != "0") {
                                     echo "❌ Başarısız test sayısı: ${failedTests}"
                                     echo "📋 Başarısız test dosyaları:"
                                     sh '''
-                                        find target/surefire-reports -name "*.xml" -type f | xargs grep -l "failures=\"[1-9]" 2>/dev/null | while read report; do
+                                        find target/surefire-reports -name "*.xml" -type f | xargs grep -l 'failures="[1-9]' 2>/dev/null | while read report; do
                                             echo "  - ${report}"
                                             grep -E "testsuite.*failures" "${report}" | head -1 || true
                                         done
@@ -476,7 +476,7 @@ pipeline {
             echo 'Pipeline tamamlandı.'
             script {
                 def testResults = sh(
-                    script: 'find backend/target/surefire-reports -name "*.xml" -exec grep -l "testsuite" {} \\; | wc -l',
+                    script: 'find backend/target/surefire-reports -name "*.xml" -type f | xargs grep -l "testsuite" 2>/dev/null | wc -l',
                     returnStdout: true
                 ).trim()
                 echo "Test dosyası sayısı: ${testResults}"
