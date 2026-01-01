@@ -276,10 +276,13 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
             
             // 10. Resim elementinin görünür olduğunu doğrula
             System.out.println("Case 4d: Resim container bulundu, img elementi bekleniyor...");
+            System.out.println("Case 4d: Container HTML: " + imageBlockContainer.getAttribute("outerHTML"));
+            
             WebElement imageElement = null;
             try {
                 // Image container içindeki img elementini bul
                 imageElement = imageBlockContainer.findElement(By.cssSelector("img.block-image"));
+                System.out.println("Case 4d: img.block-image bulundu!");
                 // Eğer bulunamazsa genel selector ile dene
                 if (!imageElement.isDisplayed()) {
                     System.out.println("Case 4d: Container içindeki img görünür değil, genel selector deneniyor...");
@@ -289,15 +292,27 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
                         )
                     );
                 }
-            } catch (Exception e) {
-                System.out.println("Case 4d: Container içinde img bulunamadı: " + e.getMessage());
-                System.out.println("Case 4d: Container HTML: " + imageBlockContainer.getAttribute("outerHTML"));
+            } catch (org.openqa.selenium.NoSuchElementException e) {
+                System.out.println("Case 4d: Container içinde img bulunamadı (NoSuchElementException): " + e.getMessage());
+                System.out.println("Case 4d: Tüm img elementlerini kontrol ediyorum...");
+                java.util.List<WebElement> allImgs = driver.findElements(By.tagName("img"));
+                System.out.println("Case 4d: Sayfada toplam " + allImgs.size() + " img elementi var");
                 // Genel selector ile dene
-                imageElement = wait.until(
-                    ExpectedConditions.visibilityOfElementLocated(
-                        By.cssSelector(".image-block-container img, img.block-image")
-                    )
-                );
+                try {
+                    imageElement = wait.until(
+                        ExpectedConditions.visibilityOfElementLocated(
+                            By.cssSelector(".image-block-container img, img.block-image")
+                        )
+                    );
+                    System.out.println("Case 4d: Genel selector ile img bulundu!");
+                } catch (Exception e2) {
+                    System.out.println("Case 4d: Genel selector ile de img bulunamadı: " + e2.getMessage());
+                    fail("Case 4d: Resim elementi bulunamadı. Container var ama içinde img yok. Resim yükleme başarısız olmuş olabilir.");
+                }
+            } catch (Exception e) {
+                System.out.println("Case 4d: Beklenmeyen hata: " + e.getMessage());
+                e.printStackTrace();
+                fail("Case 4d: Resim elementi ararken hata: " + e.getMessage());
             }
             assertNotNull(imageElement, "Case 4d: Resim elementi bulunamadı");
             
