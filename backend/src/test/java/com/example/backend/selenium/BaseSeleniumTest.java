@@ -55,58 +55,48 @@ public abstract class BaseSeleniumTest {
         // ARM64 için doğru driver'ı indirmesini sağla
         String osArch = System.getProperty("os.arch", "");
         if (osArch.contains("aarch64") || osArch.contains("arm64")) {
-            // ARM64 için WebDriverManager kullan (manuel URL çalışmıyor)
-            // Driver'ı sadece yoksa indir, her test başlangıcında silme
-            String chromeVersion = "143.0.7499.169"; // Chromium versiyonu
-            String cacheDir = System.getProperty("user.home") + "/.cache/selenium/chromedriver/linux-arm64/" + chromeVersion;
-            String driverPath = cacheDir + "/chromedriver";
+            // ARM64 için container'da kurulu olan chromedriver'ı kullan
+            // WebDriverManager yanlış mimari için driver indiriyor (linux64 yerine linux-arm64)
+            String[] systemDriverPaths = {
+                "/usr/bin/chromedriver",  // Container'da kurulu ARM64 driver
+                "/usr/bin/chromium-driver",
+                "/usr/local/bin/chromedriver"
+            };
             
-            java.io.File driverFile = new java.io.File(driverPath);
-            
-            // Driver yoksa veya çalıştırılamıyorsa WebDriverManager ile indir
-            if (!driverFile.exists() || !driverFile.canExecute()) {
-                System.out.println("📥 ARM64 ChromeDriver indiriliyor (WebDriverManager ile)...");
-                try {
-                    // WebDriverManager'ı kullan (doğru driver'ı indirmeli)
-                    WebDriverManager.chromedriver()
-                        .driverVersion(chromeVersion)
-                        .setup();
-                    
-                    // WebDriverManager'ın ayarladığı path'i kullan
-                    String wdmDriverPath = System.getProperty("webdriver.chrome.driver");
-                    if (wdmDriverPath != null && new java.io.File(wdmDriverPath).exists()) {
-                        System.out.println("✅ ARM64 ChromeDriver hazır: " + wdmDriverPath);
-                    } else {
-                        // WebDriverManager path ayarlamadıysa, cache'den bul
-                        String[] possiblePaths = {
-                            cacheDir + "/chromedriver",
-                            System.getProperty("user.home") + "/.cache/selenium/chromedriver/linux-arm64/" + chromeVersion + "/chromedriver"
-                        };
-                        boolean found = false;
-                        for (String path : possiblePaths) {
-                            java.io.File f = new java.io.File(path);
-                            if (f.exists() && f.canExecute()) {
-                                System.setProperty("webdriver.chrome.driver", path);
-                                System.out.println("✅ ARM64 ChromeDriver bulundu: " + path);
-                                found = true;
-                                break;
-                            }
-                        }
-                        if (!found) {
-                            throw new RuntimeException("ChromeDriver bulunamadı");
-                        }
-                    }
-                } catch (Exception e) {
-                    System.out.println("⚠️ ChromeDriver indirme hatası: " + e.getMessage());
-                    throw new RuntimeException("ChromeDriver indirilemedi: " + e.getMessage(), e);
+            String driverPath = null;
+            for (String path : systemDriverPaths) {
+                java.io.File driverFile = new java.io.File(path);
+                if (driverFile.exists() && driverFile.canExecute()) {
+                    driverPath = path;
+                    System.out.println("✅ Container'da kurulu ARM64 ChromeDriver bulundu: " + path);
+                    break;
                 }
-            } else {
-                // Driver zaten mevcut, kullan
-                System.setProperty("webdriver.chrome.driver", driverPath);
-                System.out.println("✅ ARM64 ChromeDriver cache'de mevcut: " + driverPath);
             }
             
-            System.out.println("📥 ARM64 ChromeDriver yapılandırması tamamlandı");
+            // System driver bulunamazsa WebDriverManager'ı dene (fallback)
+            if (driverPath == null) {
+                System.out.println("⚠️ System driver bulunamadı, WebDriverManager deneniyor...");
+                try {
+                    WebDriverManager.chromedriver()
+                        .driverVersion("143.0.7499.169")
+                        .setup();
+                    
+                    String wdmPath = System.getProperty("webdriver.chrome.driver");
+                    if (wdmPath != null && new java.io.File(wdmPath).exists()) {
+                        driverPath = wdmPath;
+                        System.out.println("✅ WebDriverManager ile driver bulundu: " + wdmPath);
+                    }
+                } catch (Exception e) {
+                    System.out.println("⚠️ WebDriverManager hatası: " + e.getMessage());
+                }
+            }
+            
+            if (driverPath == null) {
+                throw new RuntimeException("ChromeDriver bulunamadı. Container'da /usr/bin/chromedriver kurulu olmalı.");
+            }
+            
+            System.setProperty("webdriver.chrome.driver", driverPath);
+            System.out.println("📥 ARM64 ChromeDriver yapılandırması tamamlandı: " + driverPath);
         } else {
             try {
                 WebDriverManager.chromedriver().setup();
