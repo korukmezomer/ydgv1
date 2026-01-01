@@ -9,6 +9,13 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     // Docker container'larından erişim için gerekli
+    allowedHosts: [
+      'localhost',
+      '.localhost',
+      'host.docker.internal',
+      '172.17.0.1',
+      '127.0.0.1'
+    ],
     watch: {
       usePolling: true
     }

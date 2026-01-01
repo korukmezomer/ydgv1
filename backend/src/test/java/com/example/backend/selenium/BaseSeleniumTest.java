@@ -88,6 +88,23 @@ public abstract class BaseSeleniumTest {
             options.addArguments("--single-process"); // ARM64 için daha stabil
             options.addArguments("--disable-features=TranslateUI");
             options.addArguments("--disable-ipc-flooding-protection");
+            options.addArguments("--disable-setuid-sandbox"); // Container'da gerekli
+            options.addArguments("--disable-seccomp-filter-sandbox"); // Container'da gerekli
+            options.addArguments("--disable-background-timer-throttling");
+            options.addArguments("--disable-backgrounding-occluded-windows");
+            options.addArguments("--disable-renderer-backgrounding");
+            options.addArguments("--disable-features=BlinkGenPropertyTrees");
+            options.addArguments("--disable-features=IsolateOrigins,site-per-process");
+            options.addArguments("--run-all-compositor-stages-before-draw");
+            options.addArguments("--disable-threaded-animation");
+            options.addArguments("--disable-threaded-scrolling");
+            options.addArguments("--disable-in-process-stack-traces");
+            options.addArguments("--disable-histogram-customizer");
+            options.addArguments("--disable-gl-extensions");
+            options.addArguments("--disable-composited-antialiasing");
+            options.addArguments("--disable-canvas-aa");
+            options.addArguments("--disable-2d-canvas-clip-aa");
+            options.addArguments("--disable-gl-drawing-for-tests");
         } else {
             options.addArguments("--start-maximized");
         }
