@@ -39,12 +39,13 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // Localhost ve Docker network'ünden erişim için CORS ayarları
-        configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:5173",
-            "http://localhost:3000",
-            "http://host.docker.internal:5173",  // Jenkins container'ından frontend'e erişim
-            "http://172.17.0.1:5173",  // Docker bridge IP
-            "http://172.20.0.1:5173"   // Docker network IP
+        // setAllowedOriginPatterns kullanarak daha esnek origin kontrolü
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+            "http://localhost:*",
+            "http://127.0.0.1:*",
+            "http://host.docker.internal:*",  // Docker Desktop için
+            "http://172.17.*:*",  // Docker bridge IP range
+            "http://172.20.*:*"   // Docker network IP range
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
