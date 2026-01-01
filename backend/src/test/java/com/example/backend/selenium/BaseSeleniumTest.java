@@ -803,6 +803,13 @@ public abstract class BaseSeleniumTest {
             }
             
             System.out.println("🖱️ Login formu gönderiliyor...");
+            
+            // Frontend'de login çağrısını yakalayabilmek için bir flag ekle
+            ((JavascriptExecutor) driver).executeScript(
+                "window.lastLoginAttempt = { email: arguments[0], timestamp: Date.now(), status: 'pending' };",
+                email
+            );
+            
             safeSubmitForm(submitButton, form);
             System.out.println("✅ Form gönderildi, backend response bekleniyor...");
             
@@ -865,6 +872,53 @@ public abstract class BaseSeleniumTest {
             if (!loginCompleted) {
                 String finalUrl = driver.getCurrentUrl();
                 System.err.println("❌ Login işlemi " + (loginWaitCount/2) + " saniye içinde dashboard'a yönlendirmedi. Final URL: " + finalUrl);
+                
+                // JavaScript'te login attempt flag'ini kontrol et
+                try {
+                    Object loginAttemptObj = ((JavascriptExecutor) driver).executeScript(
+                        "return window.lastLoginAttempt;"
+                    );
+                    if (loginAttemptObj != null) {
+                        System.out.println("🔍 Login Attempt Flag: " + loginAttemptObj.toString());
+                    } else {
+                        System.out.println("⚠️ Login Attempt Flag bulunamadı (form submit olmamış olabilir)");
+                    }
+                } catch (Exception jsEx) {
+                    System.out.println("⚠️ Login Attempt Flag kontrolü başarısız: " + jsEx.getMessage());
+                }
+                
+                // localStorage'dan token'ı kontrol et
+                try {
+                    Object tokenObj = ((JavascriptExecutor) driver).executeScript(
+                        "return localStorage.getItem('token');"
+                    );
+                    if (tokenObj != null) {
+                        String token = tokenObj.toString();
+                        System.out.println("✅ Token localStorage'da mevcut (uzunluk: " + token.length() + ")");
+                        
+                        // Token'ı decode et ve rolleri kontrol et
+                        try {
+                            Object rolesObj = ((JavascriptExecutor) driver).executeScript(
+                                "const token = localStorage.getItem('token');" +
+                                "if (!token) return null;" +
+                                "try {" +
+                                "  const base64Url = token.split('.')[1];" +
+                                "  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');" +
+                                "  const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));" +
+                                "  const decoded = JSON.parse(jsonPayload);" +
+                                "  return { roller: decoded.roller, roles: decoded.roles, userId: decoded.userId, email: decoded.sub };" +
+                                "} catch(e) { return 'decode_error: ' + e.message; }"
+                            );
+                            System.out.println("📊 Token içeriği: " + (rolesObj != null ? rolesObj.toString() : "null"));
+                        } catch (Exception decodeEx) {
+                            System.out.println("⚠️ Token decode hatası: " + decodeEx.getMessage());
+                        }
+                    } else {
+                        System.out.println("❌ Token localStorage'da YOK (login başarısız veya token kaydedilmemiş)");
+                    }
+                } catch (Exception tokenEx) {
+                    System.out.println("⚠️ Token kontrolü başarısız: " + tokenEx.getMessage());
+                }
                 
                 // Hata mesajı var mı kontrol et
                 try {
