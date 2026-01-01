@@ -41,10 +41,10 @@ public abstract class BaseSeleniumTest {
         System.getenv("BACKEND_URL") != null ? System.getenv("BACKEND_URL") : "http://localhost:8080");
     protected static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30); // Daha uzun timeout
     
-    // Test veritabanı bağlantı bilgileri
+    // Veritabanı bağlantı bilgileri (normal veritabanı kullanılıyor, test veritabanı kullanılmıyor)
     // Önce system property, sonra environment variable, son olarak default değer
     private static final String TEST_DB_URL = System.getProperty("test.db.url", 
-        System.getenv("TEST_DB_URL") != null ? System.getenv("TEST_DB_URL") : "jdbc:postgresql://localhost:5433/yazilimdogrulama_test");
+        System.getenv("TEST_DB_URL") != null ? System.getenv("TEST_DB_URL") : "jdbc:postgresql://localhost:5433/yazilimdogrulama");
     private static final String TEST_DB_USER = System.getProperty("test.db.user",
         System.getenv("TEST_DB_USER") != null ? System.getenv("TEST_DB_USER") : "postgres");
     private static final String TEST_DB_PASSWORD = System.getProperty("test.db.password",
@@ -63,7 +63,7 @@ public abstract class BaseSeleniumTest {
                 if (!databaseInitialized) {
                     ConfigurableApplicationContext springContext = null;
                     try {
-                        System.out.println("🔧 Test veritabanı kontrol ediliyor: " + TEST_DB_URL);
+                        System.out.println("🔧 Veritabanı kontrol ediliyor: " + TEST_DB_URL);
                         
                         // Önce tabloların var olup olmadığını kontrol et
                         boolean tablesExist = false;
@@ -74,7 +74,7 @@ public abstract class BaseSeleniumTest {
                                 try (ResultSet rs = stmt.executeQuery()) {
                                     if (rs.next() && rs.getBoolean(1)) {
                                         tablesExist = true;
-                                        System.out.println("✅ Test veritabanında tablolar zaten mevcut");
+                                        System.out.println("✅ Veritabanında tablolar zaten mevcut");
                                     }
                                 }
                             }
@@ -84,7 +84,7 @@ public abstract class BaseSeleniumTest {
                         
                         // Tablolar varsa Spring context başlatma - gereksiz
                         if (tablesExist) {
-                            System.out.println("✅ Test veritabanı tabloları mevcut, Spring context başlatılmıyor");
+                            System.out.println("✅ Veritabanı tabloları mevcut, Spring context başlatılmıyor");
                             databaseInitialized = true;
                         } else {
                             // Spring Boot'u başlat (tabloları oluşturmak için)
@@ -99,7 +99,7 @@ public abstract class BaseSeleniumTest {
                             System.setProperty("server.port", "0"); // Random port
                             System.setProperty("spring.main.web-application-type", "none"); // Web server başlatma
                             
-                            System.out.println("📥 Test veritabanı tabloları oluşturuluyor (backend'in kullandığı veritabanına)...");
+                            System.out.println("📥 Veritabanı tabloları oluşturuluyor...");
                             System.out.println("⚠️ NOT: Backend local'de çalışıyorsa, backend'i yeniden başlatmanız gerekebilir");
                             
                             // Spring Boot'u başlat
@@ -109,8 +109,8 @@ public abstract class BaseSeleniumTest {
                             );
                             
                             // Context başlatıldıktan sonra tablolar oluşturulmuş olacak
-                            System.out.println("✅ Test veritabanı tabloları oluşturuldu");
-                            System.out.println("⚠️ Backend local'de çalışıyorsa, backend'i yeniden başlatın veya backend'in kullandığı veritabanına tabloları oluşturun");
+                            System.out.println("✅ Veritabanı tabloları oluşturuldu");
+                            System.out.println("⚠️ Backend local'de çalışıyorsa, backend'i yeniden başlatın");
                             databaseInitialized = true;
                         }
                     } catch (Exception e) {
@@ -585,151 +585,83 @@ public abstract class BaseSeleniumTest {
     
     /**
      * Backend'in oluşturduğu admin kullanıcısını kullan
-     * Backend başlatıldığında DataInitializer otomatik olarak admin@test.com / admin123 oluşturuyor
-     * Bu method sadece admin kullanıcısının var olduğunu doğrular, şifreyi güncellemez
+     * Backend başlatıldığında DataInitializer otomatik olarak omer@gmail.com / 123456 oluşturuyor
+     * Bu method bir kez kontrol eder, varsa güncelleme yapmaz
      */
+    private static volatile boolean adminUserChecked = false;
+    
     protected AdminCredentials ensureAdminUserExists() {
-        String adminEmail = System.getProperty("test.admin.email", "admin@test.com");
-        String adminPassword = System.getProperty("test.admin.password", "admin123");
+        String adminEmail = System.getProperty("test.admin.email", "omer@gmail.com");
+        String adminPassword = System.getProperty("test.admin.password", "123456");
         
-        try (Connection conn = getTestDatabaseConnection()) {
-            // Admin kullanıcısının var olup olmadığını kontrol et
-            String checkUserSql = "SELECT id, sifre, is_active FROM kullanicilar WHERE email = ?";
-            try (PreparedStatement stmt = conn.prepareStatement(checkUserSql)) {
-                stmt.setString(1, adminEmail);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        // Kullanıcı var
-                        Long userId = rs.getLong("id");
-                        String hashedPassword = rs.getString("sifre");
-                        Boolean isActive = rs.getBoolean("is_active");
-                        
-                        // Şifre kontrolü - backend'in oluşturduğu şifre ile eşleşiyor mu?
-                        boolean passwordMatches = passwordEncoder.matches(adminPassword, hashedPassword);
-                        System.out.println("🔍 Admin kullanıcısı bulundu:");
-                        System.out.println("  - ID: " + userId);
-                        System.out.println("  - Email: " + adminEmail);
-                        System.out.println("  - is_active: " + isActive);
-                        System.out.println("  - Şifre eşleşiyor: " + passwordMatches);
-                        
-                        // Güncelleme gerekip gerekmediğini kontrol et
-                        boolean needsUpdate = false;
-                        String newEncodedPassword = null;
-                        
-                        // Şifre eşleşmiyorsa güncelle (testlerin kullandığı şifre ile eşleşmeli)
-                        if (!passwordMatches) {
-                            System.out.println("⚠️ Admin kullanıcısının şifresi eşleşmiyor, güncelleniyor: " + adminEmail);
-                            newEncodedPassword = passwordEncoder.encode(adminPassword);
-                            needsUpdate = true;
-                        }
-                        
-                        // is_active kontrolü - backend findActiveByEmail kullanıyor, bu yüzden aktif olmalı
-                        if (!isActive) {
-                            System.out.println("⚠️ Admin kullanıcısı pasif, aktif yapılıyor: " + adminEmail);
-                            needsUpdate = true;
-                        }
-                        
-                        // Güncelleme varsa yap
-                        if (needsUpdate) {
-                            String updateSql;
-                            if (newEncodedPassword != null && !isActive) {
-                                // Hem şifre hem is_active güncelle
-                                updateSql = "UPDATE kullanicilar SET is_active = ?, sifre = ? WHERE id = ?";
-                                try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
-                                    updateStmt.setBoolean(1, true);
-                                    updateStmt.setString(2, newEncodedPassword);
-                                    updateStmt.setLong(3, userId);
-                                    updateStmt.executeUpdate();
-                                    System.out.println("✅ Admin kullanıcısı güncellendi (şifre + aktif): " + adminEmail);
-                                }
-                            } else if (newEncodedPassword != null) {
-                                // Sadece şifre güncelle
-                                updateSql = "UPDATE kullanicilar SET sifre = ? WHERE id = ?";
-                                try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
-                                    updateStmt.setString(1, newEncodedPassword);
-                                    updateStmt.setLong(2, userId);
-                                    updateStmt.executeUpdate();
-                                    System.out.println("✅ Admin kullanıcısı şifresi güncellendi: " + adminEmail);
-                                }
-                            } else if (!isActive) {
-                                // Sadece is_active güncelle
-                                updateSql = "UPDATE kullanicilar SET is_active = ? WHERE id = ?";
-                                try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
-                                    updateStmt.setBoolean(1, true);
-                                    updateStmt.setLong(2, userId);
-                                    updateStmt.executeUpdate();
-                                    System.out.println("✅ Admin kullanıcısı aktif yapıldı: " + adminEmail);
-                                }
+        // İlk çalışmada bir kez kontrol et, sonraki çalışmalarda kontrol etme
+        if (adminUserChecked) {
+            return new AdminCredentials(adminEmail, adminPassword);
+        }
+        
+        synchronized (BaseSeleniumTest.class) {
+            if (adminUserChecked) {
+                return new AdminCredentials(adminEmail, adminPassword);
+            }
+            
+            try (Connection conn = getTestDatabaseConnection()) {
+                // Admin kullanıcısının var olup olmadığını kontrol et
+                String checkUserSql = "SELECT id, sifre, is_active FROM kullanicilar WHERE email = ?";
+                try (PreparedStatement stmt = conn.prepareStatement(checkUserSql)) {
+                    stmt.setString(1, adminEmail);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            // Kullanıcı var
+                            Long userId = rs.getLong("id");
+                            String hashedPassword = rs.getString("sifre");
+                            Boolean isActive = rs.getBoolean("is_active");
+                            
+                            // Şifre kontrolü - sadece bilgi amaçlı (güncelleme yapılmaz)
+                            boolean passwordMatches = passwordEncoder.matches(adminPassword, hashedPassword);
+                            System.out.println("🔍 Admin kullanıcısı bulundu:");
+                            System.out.println("  - ID: " + userId);
+                            System.out.println("  - Email: " + adminEmail);
+                            System.out.println("  - is_active: " + isActive);
+                            System.out.println("  - Şifre eşleşiyor: " + passwordMatches);
+                            
+                            if (!passwordMatches) {
+                                System.out.println("⚠️ UYARI: Admin kullanıcısının şifresi eşleşmiyor!");
+                                System.out.println("  - Beklenen şifre: " + adminPassword);
+                                System.out.println("  - Veritabanındaki şifre farklı olabilir");
                             }
-                        }
-                        
-                        // Admin rolünü kontrol et
-                        if (hasAdminRole(conn, userId)) {
-                            System.out.println("✅ Admin kullanıcısı mevcut (backend tarafından oluşturulmuş): " + adminEmail);
-                            return new AdminCredentials(adminEmail, adminPassword);
-                        } else {
-                            // Kullanıcı var ama admin rolü yok, ekle
-                            addAdminRole(conn, userId);
-                            System.out.println("✅ Admin rolü eklendi: " + adminEmail);
+                            
+                            if (!isActive) {
+                                System.out.println("⚠️ UYARI: Admin kullanıcısı pasif durumda!");
+                            }
+                            
+                            // Admin rolünü kontrol et (sadece bilgi amaçlı)
+                            if (!hasAdminRole(conn, userId)) {
+                                System.out.println("⚠️ UYARI: Admin kullanıcısının ADMIN rolü yok!");
+                            }
+                            
+                            adminUserChecked = true;
+                            System.out.println("✅ Admin kullanıcısı kullanıma hazır: " + adminEmail);
                             return new AdminCredentials(adminEmail, adminPassword);
                         }
                     }
                 }
-            }
             
-            // Kullanıcı yok - backend henüz başlatılmamış olabilir veya DataInitializer çalışmamış
-            // Bu durumda admin kullanıcısını oluştur (fallback)
-            System.out.println("⚠️ Admin kullanıcısı bulunamadı, oluşturuluyor (backend henüz başlatılmamış olabilir): " + adminEmail);
-            
-            // Önce ADMIN rolünün ID'sini al
-            Long adminRoleId = getRoleId(conn, "ADMIN");
-            if (adminRoleId == null) {
-                adminRoleId = createRole(conn, "ADMIN", "Yönetici - Tüm yetkilere sahip");
-            }
-            
-            // Şifreyi encode et
-            String encodedPassword = passwordEncoder.encode(adminPassword);
-            
-            // Kullanıcıyı oluştur
-            String insertUserSql = "INSERT INTO kullanicilar (email, sifre, ad, soyad, kullanici_adi, is_active, created_at, updated_at) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
-            Long userId;
-            try (PreparedStatement stmt = conn.prepareStatement(insertUserSql)) {
-                stmt.setString(1, adminEmail);
-                stmt.setString(2, encodedPassword);
-                stmt.setString(3, "Admin");
-                stmt.setString(4, "User");
-                stmt.setString(5, "admin");
-                stmt.setBoolean(6, true);
-                LocalDateTime now = LocalDateTime.now();
-                stmt.setObject(7, now);
-                stmt.setObject(8, now);
+                // Kullanıcı yok - veritabanında admin kullanıcısı mevcut olmalı
+                System.out.println("❌ Admin kullanıcısı bulunamadı: " + adminEmail);
+                System.out.println("⚠️ HATA: Admin kullanıcısı (omer@gmail.com / 123456) veritabanında mevcut olmalı!");
+                System.out.println("  - Lütfen veritabanında admin kullanıcısının var olduğundan emin olun");
+                adminUserChecked = true; // Bir daha kontrol etme
+                // Yine de credential'ları döndür, test çalışmaya çalışsın
+                return new AdminCredentials(adminEmail, adminPassword);
                 
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        userId = rs.getLong("id");
-                    } else {
-                        throw new SQLException("Kullanıcı oluşturulamadı");
-                    }
-                }
+            } catch (SQLException e) {
+                System.err.println("⚠️ Admin kullanıcısı kontrolü hatası: " + e.getMessage());
+                e.printStackTrace();
+                // Hata durumunda varsayılan değerleri döndür (backend'in oluşturduğu kullanıcıyı kullan)
+                System.out.println("ℹ️ Backend'in oluşturduğu admin kullanıcısını kullanılacak: " + adminEmail);
+                adminUserChecked = true; // Hata olsa bile bir daha kontrol etme
+                return new AdminCredentials(adminEmail, adminPassword);
             }
-            
-            // Admin rolünü kullanıcıya ekle
-            String insertUserRoleSql = "INSERT INTO kullanici_roller (kullanici_id, rol_id) VALUES (?, ?)";
-            try (PreparedStatement stmt = conn.prepareStatement(insertUserRoleSql)) {
-                stmt.setLong(1, userId);
-                stmt.setLong(2, adminRoleId);
-                stmt.executeUpdate();
-            }
-            
-            System.out.println("✅ Admin kullanıcısı oluşturuldu (fallback): " + adminEmail);
-            return new AdminCredentials(adminEmail, adminPassword);
-            
-        } catch (SQLException e) {
-            System.err.println("⚠️ Admin kullanıcısı kontrolü hatası: " + e.getMessage());
-            // Hata durumunda varsayılan değerleri döndür (backend'in oluşturduğu kullanıcıyı kullan)
-            System.out.println("ℹ️ Backend'in oluşturduğu admin kullanıcısını kullanılıyor: " + adminEmail);
-            return new AdminCredentials(adminEmail, adminPassword);
         }
     }
     

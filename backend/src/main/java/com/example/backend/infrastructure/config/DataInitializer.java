@@ -8,11 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-
-import java.util.HashSet;
-import java.util.Set;
 
 @Component
 @Profile("!test") // Test profili dışında tüm profillerde çalışır
@@ -24,14 +20,16 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired
     private UserRepository userRepository;
     
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    
     @Value("${spring.datasource.url:}")
     private String datasourceUrl;
 
     @Override
     public void run(String... args) throws Exception {
+        System.out.println("===========================================");
+        System.out.println("🚀 DataInitializer başlatılıyor...");
+        System.out.println("📊 Veritabanı URL: " + (datasourceUrl != null ? datasourceUrl : "null"));
+        System.out.println("===========================================");
+        
         // Eski rol isimlerini yeni isimlere güncelle
         updateRoleName("READER", "USER", "Kullanıcı - Okuma, beğeni, kayıt, liste oluşturma ve takip yetkisi");
         updateRoleName("AUTHOR", "WRITER", "Yazar - İçerik oluşturma yetkisi");
@@ -43,6 +41,10 @@ public class DataInitializer implements CommandLineRunner {
         
         // Test için admin kullanıcısı oluştur (sadece test veritabanında)
         createAdminUserIfNotExists();
+        
+        System.out.println("===========================================");
+        System.out.println("✅ DataInitializer tamamlandı");
+        System.out.println("===========================================");
     }
 
     private void updateRoleName(String oldRolAdi, String newRolAdi, String newAciklama) {
@@ -71,47 +73,47 @@ public class DataInitializer implements CommandLineRunner {
     }
     
     /**
-     * Test için admin kullanıcısı oluştur
-     * Sadece test veritabanında (yazilimdogrulama_test) çalışır
+     * Admin kullanıcısını kontrol et (oluşturma veya güncelleme yapılmaz)
+     * Veritabanında zaten mevcut olan omer@gmail.com / 123456 kullanıcısı kullanılır
      */
     private void createAdminUserIfNotExists() {
-        String adminEmail = "admin@test.com";
-        String adminPassword = "admin123";
+        String adminEmail = "omer@gmail.com";
         
-        // Sadece test veritabanında admin kullanıcısı oluştur
-        if (datasourceUrl == null || !datasourceUrl.contains("yazilimdogrulama_test")) {
-            // Production veritabanında admin kullanıcısı oluşturma
-            return;
-        }
+        System.out.println("📋 Admin kullanıcısı kontrolü başlatılıyor...");
+        System.out.println("  - Email: " + adminEmail);
+        System.out.println("  - Veritabanı URL: " + (datasourceUrl != null ? datasourceUrl : "null"));
         
         try {
-            // Admin kullanıcısı zaten var mı kontrol et
-            if (userRepository.findActiveByEmail(adminEmail).isPresent()) {
-                return; // Zaten var, oluşturma
+            // Admin kullanıcısı zaten var mı kontrol et (aktif olanları)
+            var existingActiveUser = userRepository.findActiveByEmail(adminEmail);
+            if (existingActiveUser.isPresent()) {
+                User user = existingActiveUser.get();
+                System.out.println("✅ Admin kullanıcısı zaten var (aktif): " + adminEmail);
+                System.out.println("  - ID: " + user.getId());
+                System.out.println("  - Username: " + user.getUsername());
+                System.out.println("  - Roller: " + user.getRoles().stream().map(Role::getName).toList());
+                return; // Zaten var, hiçbir şey yapma
             }
             
-            // ADMIN rolünü bul
-            Role adminRole = rolRepository.findByName("ADMIN")
-                .orElseThrow(() -> new RuntimeException("ADMIN rolü bulunamadı"));
+            // Pasif admin kullanıcısı var mı kontrol et
+            var existingUser = userRepository.findByEmail(adminEmail);
+            if (existingUser.isPresent()) {
+                User user = existingUser.get();
+                System.out.println("⚠️ Admin kullanıcısı var ama pasif: " + adminEmail);
+                System.out.println("  - ID: " + user.getId());
+                System.out.println("  - Username: " + user.getUsername());
+                System.out.println("  - Roller: " + user.getRoles().stream().map(Role::getName).toList());
+                System.out.println("ℹ️ Kullanıcı pasif durumda, manuel olarak aktif yapılması gerekebilir");
+                return;
+            }
             
-            // Admin kullanıcısı oluştur
-            User adminUser = new User();
-            adminUser.setEmail(adminEmail);
-            adminUser.setPassword(passwordEncoder.encode(adminPassword));
-            adminUser.setFirstName("Admin");
-            adminUser.setLastName("User");
-            adminUser.setUsername("admin");
-            adminUser.setIsActive(true);
-            
-            Set<Role> roles = new HashSet<>();
-            roles.add(adminRole);
-            adminUser.setRoles(roles);
-            
-            userRepository.save(adminUser);
-            System.out.println("✅ Test admin kullanıcısı oluşturuldu: " + adminEmail);
+            // Kullanıcı bulunamadı
+            System.out.println("⚠️ Admin kullanıcısı bulunamadı: " + adminEmail);
+            System.out.println("ℹ️ Admin kullanıcısı veritabanında mevcut olmalı (omer@gmail.com / 123456)");
         } catch (Exception e) {
             // Hata durumunda logla ama uygulamayı durdurma
-            System.err.println("⚠️ Admin kullanıcısı oluşturulurken hata: " + e.getMessage());
+            System.err.println("⚠️ Admin kullanıcısı kontrolü hatası: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
