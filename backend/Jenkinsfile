@@ -195,8 +195,9 @@ pipeline {
                         # jacoco.exec varsa sadece rapor oluştur
                         if [ -f "target/jacoco.exec" ]; then
                             echo "✅ jacoco.exec bulundu, rapor oluşturuluyor..."
-                            # site klasörünü oluşturmak için site goal'ını da çalıştır
-                            mvn jacoco:report site:site -DskipTests=true || mvn jacoco:report -DskipTests=true
+                            # Sadece jacoco:report çalıştır (site:site çok uzun sürer ve gerekli değil)
+                            mvn jacoco:report -DskipTests=true
+                            echo "✅ Coverage raporu oluşturuldu"
                         else
                             echo "⚠️ jacoco.exec bulunamadı, tüm testleri çalıştırıp rapor oluşturuyoruz..."
                             # Clean yapmadan testleri çalıştır (target klasörünü korumak için)
