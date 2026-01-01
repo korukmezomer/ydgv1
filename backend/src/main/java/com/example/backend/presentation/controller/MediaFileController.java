@@ -45,10 +45,10 @@ public class MediaFileController {
         logger.info("Token: {}", token != null ? (token.length() > 20 ? token.substring(0, 20) + "..." : token) : "NULL");
         logger.info("File: {}", file != null ? (file.isEmpty() ? "EMPTY" : "Size: " + file.getSize() + ", Name: " + file.getOriginalFilename()) : "NULL");
         
-        // Token kontrolü
+        // Token kontrolü - eksikse UnauthorizedException fırlat (401)
         if (token == null || token.trim().isEmpty()) {
             logger.error("❌ Token eksik");
-            throw new com.example.backend.application.exception.BadRequestException("Authorization token eksik");
+            throw new UnauthorizedException("Authorization token eksik");
         }
         
         // Dosya null veya boş kontrolü
