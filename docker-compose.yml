@@ -76,11 +76,20 @@ services:
       - JENKINS_OPTS=--httpPort=8080
       # DNS ayarları (GitHub erişimi için)
       - GIT_SSL_NO_VERIFY=false
+      # ChromeDriver için environment variable'lar
+      - DBUS_SESSION_BUS_ADDRESS=
+      - CHROME_DEVEL_SANDBOX=
+      - DISPLAY=
     dns:
       - 8.8.8.8
       - 8.8.4.4
     extra_hosts:
       - "host.docker.internal:host-gateway"  # Docker Desktop için host machine erişimi
+    # ChromeDriver için gerekli capability'ler (ARM64 için)
+    cap_add:
+      - SYS_ADMIN  # Chromium'un başlatılması için gerekli
+    security_opt:
+      - seccomp=unconfined  # ARM64'te Chromium için gerekli
     networks:
       - backend-network
     depends_on:

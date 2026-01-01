@@ -187,7 +187,42 @@ public abstract class BaseSeleniumTest {
         System.setProperty("webdriver.chrome.silentOutput", "true");
         System.setProperty("org.openqa.selenium.chrome.driver.silent", "true");
         
-        driver = new ChromeDriver(options);
+        // Environment variable'ları ayarla (ChromeDriver başlatılmadan önce)
+        if ("true".equalsIgnoreCase(headless) || System.getenv("CI") != null) {
+            // System property'ler (bazı ChromeDriver versiyonları bunları okur)
+            System.setProperty("DBUS_SESSION_BUS_ADDRESS", "");
+            System.setProperty("CHROME_DEVEL_SANDBOX", "");
+            System.setProperty("DISPLAY", "");
+            System.setProperty("QT_QPA_PLATFORM", "offscreen");
+        }
+        
+        // ChromeDriver'ı başlat (retry mekanizması ile)
+        int maxRetries = 3;
+        int retryCount = 0;
+        
+        while (retryCount < maxRetries) {
+            try {
+                driver = new ChromeDriver(options);
+                break; // Başarılı, döngüden çık
+            } catch (org.openqa.selenium.WebDriverException e) {
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    System.out.println("⚠️ ChromeDriver başlatılamadı, tekrar deneniyor (" + retryCount + "/" + maxRetries + "): " + e.getMessage());
+                    try {
+                        Thread.sleep(1000); // 1 saniye bekle
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                    // Her denemede ek argümanlar ekle
+                    if (retryCount == 2) {
+                        options.addArguments("--disable-features=VizDisplayCompositor");
+                        options.addArguments("--disable-software-rasterizer");
+                    }
+                } else {
+                    throw new RuntimeException("ChromeDriver " + maxRetries + " denemede başlatılamadı. Son hata: " + e.getMessage(), e);
+                }
+            }
+        }
         wait = new WebDriverWait(driver, DEFAULT_TIMEOUT);
         
         // Frontend erişilebilirlik kontrolü
