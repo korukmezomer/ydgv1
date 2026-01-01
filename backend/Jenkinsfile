@@ -269,14 +269,14 @@ pipeline {
                             echo "🔍 Başarısız testler aranıyor..."
                             if [ -d "target/surefire-reports" ]; then
                                 echo "📊 Başarısız test raporları:"
-                                find target/surefire-reports -name "*.xml" -type f -exec grep -l "failures=\"[1-9]" {} \; 2>/dev/null | while read report; do
+                                find target/surefire-reports -name "*.xml" -type f | xargs grep -l "failures=\"[1-9]" 2>/dev/null | while read report; do
                                     echo "❌ Başarısız test: ${report}"
                                     grep -E "testcase.*failure|failure message" "${report}" | head -5 || true
                                 done
                                 
                                 # Hata mesajlarını göster
                                 echo "📋 Hata mesajları:"
-                                find target/surefire-reports -name "*.xml" -type f -exec grep -A 5 "failure message" {} \; 2>/dev/null | head -30 || echo "Hata mesajı bulunamadı"
+                                find target/surefire-reports -name "*.xml" -type f | xargs grep -A 5 "failure message" 2>/dev/null | head -30 || echo "Hata mesajı bulunamadı"
                             fi
                         else
                             echo "✅ Maven test komutu başarıyla tamamlandı"
@@ -310,14 +310,14 @@ pipeline {
                                 
                                 // Başarısız testleri bul ve göster
                                 def failedTests = sh(
-                                    script: 'find target/surefire-reports -name "*.xml" -type f -exec grep -l "failures=\"[1-9]" {} \\; 2>/dev/null | wc -l',
+                                    script: 'find target/surefire-reports -name "*.xml" -type f | xargs grep -l "failures=\"[1-9]" 2>/dev/null | wc -l',
                                     returnStdout: true
                                 ).trim()
                                 if (failedTests != "0") {
                                     echo "❌ Başarısız test sayısı: ${failedTests}"
                                     echo "📋 Başarısız test dosyaları:"
                                     sh '''
-                                        find target/surefire-reports -name "*.xml" -type f -exec grep -l "failures=\"[1-9]" {} \; 2>/dev/null | while read report; do
+                                        find target/surefire-reports -name "*.xml" -type f | xargs grep -l "failures=\"[1-9]" 2>/dev/null | while read report; do
                                             echo "  - ${report}"
                                             grep -E "testsuite.*failures" "${report}" | head -1 || true
                                         done
