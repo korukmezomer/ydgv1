@@ -7,6 +7,7 @@ import com.example.backend.domain.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +15,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Component
+@Profile("!test") // Test profili dışında tüm profillerde çalışır
 public class DataInitializer implements CommandLineRunner {
 
     @Autowired
