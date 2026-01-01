@@ -332,8 +332,15 @@ public abstract class BaseSeleniumTest {
         }
         
         // System property ile Selenium log seviyesini ayarla
-        System.setProperty("webdriver.chrome.silentOutput", "true");
-        System.setProperty("org.openqa.selenium.chrome.driver.silent", "true");
+        // Console logging'i etkinleştir (browser console loglarını yakalamak için)
+        System.setProperty("webdriver.chrome.silentOutput", "false");
+        System.setProperty("org.openqa.selenium.chrome.driver.silent", "false");
+        
+        // Browser console loglarını yakalamak için LoggingPreferences ekle
+        org.openqa.selenium.logging.LoggingPreferences loggingPreferences = new org.openqa.selenium.logging.LoggingPreferences();
+        loggingPreferences.enable(org.openqa.selenium.logging.LogType.BROWSER, java.util.logging.Level.ALL);
+        loggingPreferences.enable(org.openqa.selenium.logging.LogType.PERFORMANCE, java.util.logging.Level.ALL);
+        options.setCapability(org.openqa.selenium.chrome.ChromeOptions.LOGGING_PREFS, loggingPreferences);
         
         // Environment variable'ları ayarla (ChromeDriver başlatılmadan önce)
         if ("true".equalsIgnoreCase(headless) || System.getenv("CI") != null) {
@@ -1023,12 +1030,44 @@ public abstract class BaseSeleniumTest {
             String currentUrl = driver.getCurrentUrl();
             System.out.println("Kayıt sonrası URL: " + currentUrl);
             
+            // Browser console loglarını yakala ve yazdır
+            try {
+                org.openqa.selenium.logging.LogEntries logEntries = driver.manage().logs().get(org.openqa.selenium.logging.LogType.BROWSER);
+                System.out.println("📋 Browser Console Logları (registerWriter):");
+                boolean hasErrors = false;
+                for (org.openqa.selenium.logging.LogEntry entry : logEntries) {
+                    String level = entry.getLevel().toString();
+                    String message = entry.getMessage();
+                    if (level.contains("SEVERE") || level.contains("ERROR")) {
+                        System.out.println("🔴 Browser Console ERROR: " + message);
+                        hasErrors = true;
+                    } else if (level.contains("WARNING")) {
+                        System.out.println("⚠️ Browser Console WARNING: " + message);
+                    } else if (message.contains("API") || message.contains("api") || message.contains("Base URL") || message.contains("CORS") || message.contains("Network")) {
+                        System.out.println("📡 Browser Console INFO (API/Network): " + message);
+                    }
+                }
+                if (hasErrors) {
+                    System.out.println("⚠️ Browser console'da hatalar var, kayıt başarısız olabilir");
+                }
+            } catch (Exception e) {
+                System.out.println("Browser console logları alınamadı: " + e.getMessage());
+            }
+            
             // Hata mesajı kontrolü
             try {
                 WebElement errorElement = driver.findElement(By.cssSelector(".auth-error, .error, [role='alert']"));
                 if (errorElement.isDisplayed()) {
                     String errorText = errorElement.getText();
                     System.out.println("Kayıt hatası: " + errorText);
+                    
+                    // Hata mesajının detaylarını al
+                    try {
+                        String errorHtml = errorElement.getAttribute("innerHTML");
+                        System.out.println("Hata mesajı HTML: " + errorHtml);
+                    } catch (Exception e) {
+                        // Ignore
+                    }
                     return false;
                 }
             } catch (Exception e) {
