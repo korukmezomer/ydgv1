@@ -1,16 +1,32 @@
 package com.example.backend.infrastructure.config;
 
 import com.example.backend.domain.entity.Role;
+import com.example.backend.domain.entity.User;
 import com.example.backend.domain.repository.RoleRepository;
+import com.example.backend.domain.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+
+import java.util.HashSet;
+import java.util.Set;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
 
     @Autowired
     private RoleRepository rolRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    
+    @Value("${spring.datasource.url:}")
+    private String datasourceUrl;
 
     @Override
     public void run(String... args) throws Exception {
@@ -22,6 +38,9 @@ public class DataInitializer implements CommandLineRunner {
         createRoleIfNotExists("ADMIN", "Yönetici - Tüm yetkilere sahip");
         createRoleIfNotExists("WRITER", "Yazar - İçerik oluşturma yetkisi");
         createRoleIfNotExists("USER", "Kullanıcı - Okuma, beğeni, kayıt, liste oluşturma ve takip yetkisi");
+        
+        // Test için admin kullanıcısı oluştur (sadece test veritabanında)
+        createAdminUserIfNotExists();
     }
 
     private void updateRoleName(String oldRolAdi, String newRolAdi, String newAciklama) {
@@ -46,6 +65,51 @@ public class DataInitializer implements CommandLineRunner {
             rol.setDescription(aciklama);
             rol.setIsActive(true);
             rolRepository.save(rol);
+        }
+    }
+    
+    /**
+     * Test için admin kullanıcısı oluştur
+     * Sadece test veritabanında (yazilimdogrulama_test) çalışır
+     */
+    private void createAdminUserIfNotExists() {
+        String adminEmail = "admin@test.com";
+        String adminPassword = "admin123";
+        
+        // Sadece test veritabanında admin kullanıcısı oluştur
+        if (datasourceUrl == null || !datasourceUrl.contains("yazilimdogrulama_test")) {
+            // Production veritabanında admin kullanıcısı oluşturma
+            return;
+        }
+        
+        try {
+            // Admin kullanıcısı zaten var mı kontrol et
+            if (userRepository.findActiveByEmail(adminEmail).isPresent()) {
+                return; // Zaten var, oluşturma
+            }
+            
+            // ADMIN rolünü bul
+            Role adminRole = rolRepository.findByName("ADMIN")
+                .orElseThrow(() -> new RuntimeException("ADMIN rolü bulunamadı"));
+            
+            // Admin kullanıcısı oluştur
+            User adminUser = new User();
+            adminUser.setEmail(adminEmail);
+            adminUser.setPassword(passwordEncoder.encode(adminPassword));
+            adminUser.setFirstName("Admin");
+            adminUser.setLastName("User");
+            adminUser.setUsername("admin");
+            adminUser.setIsActive(true);
+            
+            Set<Role> roles = new HashSet<>();
+            roles.add(adminRole);
+            adminUser.setRoles(roles);
+            
+            userRepository.save(adminUser);
+            System.out.println("✅ Test admin kullanıcısı oluşturuldu: " + adminEmail);
+        } catch (Exception e) {
+            // Hata durumunda logla ama uygulamayı durdurma
+            System.err.println("⚠️ Admin kullanıcısı oluşturulurken hata: " + e.getMessage());
         }
     }
 }
