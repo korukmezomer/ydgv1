@@ -56,39 +56,75 @@ public abstract class BaseSeleniumTest {
         String osArch = System.getProperty("os.arch", "");
         if (osArch.contains("aarch64") || osArch.contains("arm64")) {
             // ARM64 için WebDriverManager'ı yapılandır
-            System.setProperty("wdm.architecture", "ARM64");
-            System.setProperty("wdm.os", "LINUX");
-            // Cache'i temizleme - internet erişimi yoksa cache'den kullan
-            try {
-                WebDriverManager.chromedriver()
-                    .driverVersion("latest")
-                    .setup();
-                System.out.println("📥 ARM64 ChromeDriver yapılandırması tamamlandı");
-            } catch (Exception e) {
-                // Internet erişimi yoksa cache'den kullan
-                System.out.println("⚠️ ChromeDriver indirilemedi, cache'den kullanılıyor: " + e.getMessage());
-                // Son çare: Manuel path belirt (cache'den)
-                String[] possibleCachePaths = {
-                    "/root/.cache/selenium/chromedriver/linux-arm64/143.0.7499.169/chromedriver",
-                    "/root/.cache/selenium/chromedriver/linux-arm64/chromedriver",
-                    System.getProperty("user.home") + "/.cache/selenium/chromedriver/linux-arm64/143.0.7499.169/chromedriver"
-                };
-                
-                boolean driverFound = false;
-                for (String cachedDriverPath : possibleCachePaths) {
-                    java.io.File driverFile = new java.io.File(cachedDriverPath);
-                    if (driverFile.exists() && driverFile.canExecute()) {
-                        System.setProperty("webdriver.chrome.driver", cachedDriverPath);
-                        System.out.println("✅ Cache'den ChromeDriver path'i ayarlandı: " + cachedDriverPath);
-                        driverFound = true;
-                        break;
+            // WebDriverManager'ın architecture algılaması çalışmıyor, manuel olarak ARM64 driver'ı indir
+            String chromeVersion = "143.0.7499.169"; // Chromium versiyonu
+            String arm64DriverUrl = "https://storage.googleapis.com/chrome-for-testing-public/" + chromeVersion + "/linux-arm64/chromedriver-linux-arm64.zip";
+            String cacheDir = System.getProperty("user.home") + "/.cache/selenium/chromedriver/linux-arm64/" + chromeVersion;
+            String driverPath = cacheDir + "/chromedriver";
+            
+            java.io.File driverFile = new java.io.File(driverPath);
+            if (!driverFile.exists() || !driverFile.canExecute()) {
+                // Driver yoksa manuel olarak indir
+                System.out.println("📥 ARM64 ChromeDriver indiriliyor: " + arm64DriverUrl);
+                try {
+                    // WebDriverManager'ı bypass et, manuel indirme yap
+                    java.net.URL url = new java.net.URL(arm64DriverUrl);
+                    java.io.File zipFile = new java.io.File(cacheDir + "/chromedriver-linux-arm64.zip");
+                    zipFile.getParentFile().mkdirs();
+                    
+                    try (java.io.InputStream in = url.openStream();
+                         java.io.FileOutputStream out = new java.io.FileOutputStream(zipFile)) {
+                        byte[] buffer = new byte[8192];
+                        int bytesRead;
+                        while ((bytesRead = in.read(buffer)) != -1) {
+                            out.write(buffer, 0, bytesRead);
+                        }
+                    }
+                    
+                    // ZIP'i aç
+                    try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(zipFile)) {
+                        java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = zip.entries();
+                        while (entries.hasMoreElements()) {
+                            java.util.zip.ZipEntry entry = entries.nextElement();
+                            if (entry.getName().endsWith("chromedriver") && !entry.isDirectory()) {
+                                java.io.File extractedFile = new java.io.File(driverPath);
+                                extractedFile.getParentFile().mkdirs();
+                                try (java.io.InputStream zipIn = zip.getInputStream(entry);
+                                     java.io.FileOutputStream fileOut = new java.io.FileOutputStream(extractedFile)) {
+                                    byte[] buffer = new byte[8192];
+                                    int bytesRead;
+                                    while ((bytesRead = zipIn.read(buffer)) != -1) {
+                                        fileOut.write(buffer, 0, bytesRead);
+                                    }
+                                }
+                                // Execute permission ver
+                                extractedFile.setExecutable(true);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // ZIP dosyasını sil
+                    zipFile.delete();
+                    System.out.println("✅ ARM64 ChromeDriver indirildi: " + driverPath);
+                } catch (Exception e) {
+                    System.out.println("⚠️ ARM64 ChromeDriver manuel indirme başarısız: " + e.getMessage());
+                    // Fallback: WebDriverManager'ı dene
+                    try {
+                        WebDriverManager.chromedriver()
+                            .driverVersion(chromeVersion)
+                            .setup();
+                    } catch (Exception e2) {
+                        throw new RuntimeException("ChromeDriver indirilemedi: " + e2.getMessage(), e2);
                     }
                 }
-                
-                if (!driverFound) {
-                    throw new RuntimeException("ChromeDriver bulunamadı ve indirilemedi. Internet erişimi veya cache kontrolü gerekli.", e);
-                }
+            } else {
+                System.out.println("✅ ARM64 ChromeDriver cache'de mevcut: " + driverPath);
             }
+            
+            // Driver path'ini ayarla
+            System.setProperty("webdriver.chrome.driver", driverPath);
+            System.out.println("📥 ARM64 ChromeDriver yapılandırması tamamlandı");
         } else {
             try {
                 WebDriverManager.chromedriver().setup();
