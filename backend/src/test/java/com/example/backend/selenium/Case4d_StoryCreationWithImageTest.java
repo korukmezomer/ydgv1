@@ -215,19 +215,19 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
             
             // 10. Resim bloğunun oluşmasını bekle (image-block-container)
             System.out.println("Case 4d: Resim bloğu aranıyor (.image-block-container)...");
-            Thread.sleep(2000); // Kısa bekleme
+            Thread.sleep(3000); // Resim yükleme ve render için bekleme
             
             // Önce sayfanın mevcut durumunu kontrol et
             String pageSource = driver.getPageSource();
-            if (pageSource.contains("image-block-container")) {
-                System.out.println("Case 4d: image-block-container sayfa kaynağında bulundu");
-            } else {
-                System.out.println("Case 4d: ⚠️ image-block-container sayfa kaynağında bulunamadı - resim yükleme başarısız olabilir");
+            boolean hasImageBlock = pageSource.contains("image-block-container");
+            
+            if (!hasImageBlock) {
+                System.out.println("Case 4d: ⚠️ image-block-container sayfa kaynağında bulunamadı");
                 System.out.println("Case 4d: Mevcut editor blokları:");
                 try {
                     java.util.List<WebElement> editorBlocks = driver.findElements(By.cssSelector(".editor-block"));
                     System.out.println("Case 4d: Editor blok sayısı: " + editorBlocks.size());
-                    for (int i = 0; i < editorBlocks.size(); i++) {
+                    for (int i = 0; i < editorBlocks.size() && i < 5; i++) {
                         WebElement block = editorBlocks.get(i);
                         String blockClass = block.getAttribute("class");
                         System.out.println("Case 4d: Blok " + i + " class: " + blockClass);
@@ -235,24 +235,42 @@ public class Case4d_StoryCreationWithImageTest extends BaseSeleniumTest {
                 } catch (Exception e) {
                     System.out.println("Case 4d: Editor blokları bulunamadı: " + e.getMessage());
                 }
-                
-                // Resim yükleme başarısız olduysa testi sonlandır
-                System.out.println("Case 4d: ❌ Resim yükleme başarısız - image-block-container oluşturulamadı");
-                fail("Case 4d: Resim yükleme başarısız - image-block-container oluşturulamadı. Browser console'da AxiosError görüldü.");
             }
             
-            // Resim bloğunu bul (kısa timeout ile)
+            // Resim bloğunu bul - daha esnek selector ve kısa timeout
             WebElement imageBlockContainer = null;
             try {
-                imageBlockContainer = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(
-                        By.cssSelector(".image-block-container, .editor-block.image-block-container, .editor-block[class*='image']")
-                    )
-                );
-                System.out.println("Case 4d: ✅ Resim bloğu bulundu!");
+                // Önce basit selector dene
+                imageBlockContainer = new org.openqa.selenium.support.ui.WebDriverWait(driver, java.time.Duration.ofSeconds(5))
+                    .until(ExpectedConditions.presenceOfElementLocated(
+                        By.cssSelector(".image-block-container")
+                    ));
+                System.out.println("Case 4d: ✅ Resim bloğu bulundu (.image-block-container)!");
             } catch (org.openqa.selenium.TimeoutException e) {
-                System.out.println("Case 4d: ❌ Resim bloğu bulunamadı - timeout");
-                fail("Case 4d: Resim bloğu bulunamadı. Resim yükleme başarısız olmuş olabilir. Browser console'da AxiosError görüldü.");
+                try {
+                    // Alternatif selector dene
+                    imageBlockContainer = new org.openqa.selenium.support.ui.WebDriverWait(driver, java.time.Duration.ofSeconds(5))
+                        .until(ExpectedConditions.presenceOfElementLocated(
+                            By.cssSelector(".editor-block.image-block-container")
+                        ));
+                    System.out.println("Case 4d: ✅ Resim bloğu bulundu (.editor-block.image-block-container)!");
+                } catch (org.openqa.selenium.TimeoutException e2) {
+                    System.out.println("Case 4d: ❌ Resim bloğu bulunamadı");
+                    // Son bir deneme - tüm img elementlerini kontrol et
+                    try {
+                        java.util.List<WebElement> images = driver.findElements(By.cssSelector(".editor-blocks img, .block-image"));
+                        if (!images.isEmpty()) {
+                            System.out.println("Case 4d: ⚠️ Resim elementleri bulundu ama container yok. Resim sayısı: " + images.size());
+                            for (int i = 0; i < images.size() && i < 3; i++) {
+                                String imgSrc = images.get(i).getAttribute("src");
+                                System.out.println("Case 4d: Resim " + i + " src: " + imgSrc);
+                            }
+                        }
+                    } catch (Exception e3) {
+                        // Ignore
+                    }
+                    fail("Case 4d: Resim bloğu bulunamadı. Resim yükleme başarısız olmuş olabilir. Browser console'da AxiosError görüldü.");
+                }
             }
             assertNotNull(imageBlockContainer, "Case 4d: Resim bloğu oluşturulamadı");
             
