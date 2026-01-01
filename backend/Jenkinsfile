@@ -140,7 +140,13 @@ pipeline {
                     '''
                 }
                 dir('backend') {
-                    sh 'mvn test jacoco:report -Dtest="*Selenium*Test" -Dselenium.headless=true'
+                    sh '''
+                        echo "🧪 Selenium testleri çalıştırılıyor..."
+                        mvn test jacoco:report -Dtest="*Selenium*Test" -Dselenium.headless=true
+                        echo "✅ Selenium testleri tamamlandı"
+                        echo "📊 Test sonuçları:"
+                        find target/surefire-reports -name "*.xml" -type f | head -5 || echo "Test raporu bulunamadı"
+                    '''
                 }
             }
             post {
@@ -148,6 +154,16 @@ pipeline {
                     junit 'backend/target/surefire-reports/*.xml'
                     // Selenium screenshot'larını kaydet (eğer varsa)
                     archiveArtifacts artifacts: 'backend/target/screenshots/**/*', allowEmptyArchive: true
+                    script {
+                        // Test sonuçlarını özetle
+                        dir('backend') {
+                            def testFiles = sh(
+                                script: 'find target/surefire-reports -name "*.xml" -type f 2>/dev/null | wc -l',
+                                returnStdout: true
+                            ).trim()
+                            echo "📈 Toplam test raporu sayısı: ${testFiles}"
+                        }
+                    }
                 }
             }
         }
