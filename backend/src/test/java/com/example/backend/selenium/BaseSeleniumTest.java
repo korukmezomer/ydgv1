@@ -59,22 +59,79 @@ public abstract class BaseSeleniumTest {
         // CI/CD ortamı için headless mod kontrolü
         String headless = System.getProperty("selenium.headless", "false");
         if ("true".equalsIgnoreCase(headless) || System.getenv("CI") != null) {
-            options.addArguments("--headless");
-            options.addArguments("--no-sandbox");
-            options.addArguments("--disable-dev-shm-usage");
-            options.addArguments("--disable-gpu");
+            // Headless mod için gerekli tüm argümanlar (ARM64 uyumluluğu dahil)
+            options.addArguments("--headless=new"); // Yeni headless mod (daha stabil)
+            options.addArguments("--no-sandbox"); // Container'da gerekli
+            options.addArguments("--disable-dev-shm-usage"); // /dev/shm sorunlarını önler
+            options.addArguments("--disable-gpu"); // GPU gereksiz
+            options.addArguments("--disable-software-rasterizer"); // ARM64 için
+            options.addArguments("--disable-extensions"); // Extension'lar gereksiz
+            options.addArguments("--disable-background-networking"); // Arka plan ağ trafiğini azalt
+            options.addArguments("--disable-background-timer-throttling");
+            options.addArguments("--disable-renderer-backgrounding");
+            options.addArguments("--disable-backgrounding-occluded-windows");
+            options.addArguments("--disable-breakpad"); // Crash reporting
+            options.addArguments("--disable-client-side-phishing-detection");
+            options.addArguments("--disable-crash-reporter");
+            options.addArguments("--disable-default-apps");
+            options.addArguments("--disable-hang-monitor");
+            options.addArguments("--disable-popup-blocking");
+            options.addArguments("--disable-prompt-on-repost");
+            options.addArguments("--disable-sync");
+            options.addArguments("--disable-translate");
+            options.addArguments("--metrics-recording-only");
+            options.addArguments("--no-first-run");
+            options.addArguments("--safebrowsing-disable-auto-update");
+            options.addArguments("--enable-automation");
+            options.addArguments("--password-store=basic");
+            options.addArguments("--use-mock-keychain"); // macOS için (ARM64'te de gerekli olabilir)
+            options.addArguments("--single-process"); // ARM64 için daha stabil
+            options.addArguments("--disable-features=TranslateUI");
+            options.addArguments("--disable-ipc-flooding-protection");
         } else {
             options.addArguments("--start-maximized");
         }
         
         options.addArguments("--disable-blink-features=AutomationControlled");
-        options.addArguments("--disable-extensions");
         options.addArguments("--window-size=1920,1080");
         
         // CDP uyarılarını azaltmak için
         options.addArguments("--remote-allow-origins=*");
         options.addArguments("--disable-logging");
         options.addArguments("--log-level=3"); // Sadece fatal hataları göster
+        
+        // ARM64 için özel ayarlar ve Chrome binary path'i
+        String osArch = System.getProperty("os.arch", "");
+        if (osArch.contains("aarch64") || osArch.contains("arm64")) {
+            options.addArguments("--disable-software-rasterizer");
+            options.addArguments("--disable-gpu-sandbox");
+            options.addArguments("--disable-accelerated-2d-canvas");
+        }
+        
+        // CI/CD ortamında Chrome binary path'ini belirle
+        if ("true".equalsIgnoreCase(headless) || System.getenv("CI") != null) {
+            // Container'da chromium genellikle bu path'lerden birinde olur
+            String[] possiblePaths = {
+                "/usr/bin/chromium",
+                "/usr/bin/chromium-browser",
+                "/usr/bin/google-chrome",
+                "/usr/bin/google-chrome-stable"
+            };
+            
+            // İlk bulunan path'i kullan
+            for (String path : possiblePaths) {
+                try {
+                    java.io.File chromeFile = new java.io.File(path);
+                    if (chromeFile.exists() && chromeFile.canExecute()) {
+                        options.setBinary(path);
+                        System.out.println("✅ Chrome binary bulundu: " + path);
+                        break;
+                    }
+                } catch (Exception e) {
+                    // Path kontrolü başarısız, devam et
+                }
+            }
+        }
         
         // System property ile Selenium log seviyesini ayarla
         System.setProperty("webdriver.chrome.silentOutput", "true");
