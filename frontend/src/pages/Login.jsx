@@ -72,6 +72,7 @@ const Login = () => {
                   required
                   placeholder="ornek@email.com"
                   className="form-input"
+                  autoComplete="email"
                 />
               </div>
 
@@ -86,6 +87,7 @@ const Login = () => {
                   required
                   placeholder="••••••••"
                   className="form-input"
+                  autoComplete="current-password"
                 />
               </div>
 

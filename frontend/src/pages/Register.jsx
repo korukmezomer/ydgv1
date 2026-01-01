@@ -82,6 +82,7 @@ const Register = () => {
                   required
                   placeholder="Adınız"
                   className="form-input"
+                  autoComplete="given-name"
                 />
               </div>
 
@@ -95,6 +96,7 @@ const Register = () => {
                   onChange={handleChange}
                   placeholder="Soyadınız"
                   className="form-input"
+                  autoComplete="family-name"
                 />
               </div>
 
@@ -109,6 +111,7 @@ const Register = () => {
                   required
                   placeholder="ornek@email.com"
                   className="form-input"
+                  autoComplete="email"
                 />
               </div>
 
@@ -122,6 +125,7 @@ const Register = () => {
                   onChange={handleChange}
                   placeholder="kullaniciadi"
                   className="form-input"
+                  autoComplete="username"
                 />
               </div>
 
@@ -137,6 +141,7 @@ const Register = () => {
                   minLength={6}
                   placeholder="En az 6 karakter"
                   className="form-input"
+                  autoComplete="new-password"
                 />
               </div>
 
