@@ -580,68 +580,39 @@ public abstract class BaseSeleniumTest {
     }
     
     /**
-     * Test veritabanında admin kullanıcısı oluştur veya mevcut olanı kullan
-     * Bu method test veritabanına direkt JDBC ile bağlanır
+     * Backend'in oluşturduğu admin kullanıcısını kullan
+     * Backend başlatıldığında DataInitializer otomatik olarak admin@test.com / admin123 oluşturuyor
+     * Bu method sadece admin kullanıcısının var olduğunu doğrular, şifreyi güncellemez
      */
     protected AdminCredentials ensureAdminUserExists() {
         String adminEmail = System.getProperty("test.admin.email", "admin@test.com");
         String adminPassword = System.getProperty("test.admin.password", "admin123");
-        String adminUsername = System.getProperty("test.admin.username", "admin");
         
         try (Connection conn = getTestDatabaseConnection()) {
-            // Önce admin kullanıcısının var olup olmadığını kontrol et
-            String checkUserSql = "SELECT id, sifre, is_active FROM kullanicilar WHERE email = ?";
+            // Admin kullanıcısının var olup olmadığını kontrol et
+            String checkUserSql = "SELECT id, is_active FROM kullanicilar WHERE email = ?";
             try (PreparedStatement stmt = conn.prepareStatement(checkUserSql)) {
                 stmt.setString(1, adminEmail);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) {
-                        // Kullanıcı zaten var
+                        // Kullanıcı var
                         Long userId = rs.getLong("id");
-                        String currentHashedPassword = rs.getString("sifre");
                         Boolean isActive = rs.getBoolean("is_active");
                         
-                        // Kullanıcıyı aktif yap ve şifreyi kontrol et/güncelle
-                        boolean needsUpdate = false;
-                        String newEncodedPassword = null;
-                        
-                        // is_active kontrolü - backend findActiveByEmail kullanıyor, bu yüzden aktif olmalı
+                        // Sadece is_active kontrolü yap (backend findActiveByEmail kullanıyor)
                         if (!isActive) {
-                            needsUpdate = true;
-                            System.out.println("⚠️ Admin kullanıcısı pasif, aktif yapılıyor: " + adminEmail);
-                        }
-                        
-                        // Şifrenin doğru olup olmadığını kontrol et
-                        if (!passwordEncoder.matches(adminPassword, currentHashedPassword)) {
-                            // Şifre yanlış, güncelle
-                            newEncodedPassword = passwordEncoder.encode(adminPassword);
-                            needsUpdate = true;
-                            System.out.println("⚠️ Admin kullanıcısı şifresi yanlış, güncelleniyor: " + adminEmail);
-                        } else {
-                            System.out.println("✅ Admin kullanıcısı mevcut, şifre doğru: " + adminEmail);
-                        }
-                        
-                        // Güncelleme varsa yap
-                        if (needsUpdate) {
-                            String updateSql = "UPDATE kullanicilar SET is_active = ?";
-                            if (newEncodedPassword != null) {
-                                updateSql += ", sifre = ?";
-                            }
-                            updateSql += " WHERE id = ?";
-                            
+                            String updateSql = "UPDATE kullanicilar SET is_active = ? WHERE id = ?";
                             try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
-                                int paramIndex = 1;
-                                updateStmt.setBoolean(paramIndex++, true); // is_active = true
-                                if (newEncodedPassword != null) {
-                                    updateStmt.setString(paramIndex++, newEncodedPassword);
-                                }
-                                updateStmt.setLong(paramIndex, userId);
+                                updateStmt.setBoolean(1, true);
+                                updateStmt.setLong(2, userId);
                                 updateStmt.executeUpdate();
-                                System.out.println("✅ Admin kullanıcısı güncellendi: " + adminEmail);
+                                System.out.println("✅ Admin kullanıcısı aktif yapıldı: " + adminEmail);
                             }
                         }
                         
                         // Admin rolünü kontrol et
                         if (hasAdminRole(conn, userId)) {
+                            System.out.println("✅ Admin kullanıcısı mevcut (backend tarafından oluşturulmuş): " + adminEmail);
                             return new AdminCredentials(adminEmail, adminPassword);
                         } else {
                             // Kullanıcı var ama admin rolü yok, ekle
@@ -653,12 +624,13 @@ public abstract class BaseSeleniumTest {
                 }
             }
             
-            // Kullanıcı yok, oluştur
-            System.out.println("📝 Admin kullanıcısı oluşturuluyor: " + adminEmail);
+            // Kullanıcı yok - backend henüz başlatılmamış olabilir veya DataInitializer çalışmamış
+            // Bu durumda admin kullanıcısını oluştur (fallback)
+            System.out.println("⚠️ Admin kullanıcısı bulunamadı, oluşturuluyor (backend henüz başlatılmamış olabilir): " + adminEmail);
+            
             // Önce ADMIN rolünün ID'sini al
             Long adminRoleId = getRoleId(conn, "ADMIN");
             if (adminRoleId == null) {
-                // ADMIN rolü yok, oluştur
                 adminRoleId = createRole(conn, "ADMIN", "Yönetici - Tüm yetkilere sahip");
             }
             
@@ -674,7 +646,7 @@ public abstract class BaseSeleniumTest {
                 stmt.setString(2, encodedPassword);
                 stmt.setString(3, "Admin");
                 stmt.setString(4, "User");
-                stmt.setString(5, adminUsername);
+                stmt.setString(5, "admin");
                 stmt.setBoolean(6, true);
                 LocalDateTime now = LocalDateTime.now();
                 stmt.setObject(7, now);
@@ -697,13 +669,13 @@ public abstract class BaseSeleniumTest {
                 stmt.executeUpdate();
             }
             
-            System.out.println("Admin kullanıcısı test veritabanında oluşturuldu: " + adminEmail);
+            System.out.println("✅ Admin kullanıcısı oluşturuldu (fallback): " + adminEmail);
             return new AdminCredentials(adminEmail, adminPassword);
             
         } catch (SQLException e) {
-            System.err.println("Admin kullanıcısı oluşturulurken hata: " + e.getMessage());
-            e.printStackTrace();
-            // Hata durumunda varsayılan değerleri döndür
+            System.err.println("⚠️ Admin kullanıcısı kontrolü hatası: " + e.getMessage());
+            // Hata durumunda varsayılan değerleri döndür (backend'in oluşturduğu kullanıcıyı kullan)
+            System.out.println("ℹ️ Backend'in oluşturduğu admin kullanıcısını kullanılıyor: " + adminEmail);
             return new AdminCredentials(adminEmail, adminPassword);
         }
     }
@@ -977,29 +949,47 @@ public abstract class BaseSeleniumTest {
                         System.err.println("❌ Login UI hatası: " + errorText);
                     }
                 } catch (Exception e) {
-                    // Hata mesajı yoksa browser console'u kontrol et
-                    System.out.println("🔍 Login hatası - Tüm browser console logları:");
-                    try {
-                        org.openqa.selenium.logging.LogEntries logEntries = driver.manage().logs().get(org.openqa.selenium.logging.LogType.BROWSER);
-                        boolean hasLoginApiLogs = false;
-                        for (org.openqa.selenium.logging.LogEntry entry : logEntries) {
-                            String message = entry.getMessage();
-                            // Login API ile ilgili tüm logları göster
-                            if (message.contains("/api/auth/giris") || message.contains("auth") || 
-                                message.contains("401") || message.contains("403") || 
-                                message.contains("ERROR") || message.contains("SEVERE")) {
-                                System.err.println("  🔴 " + entry.getLevel() + ": " + message);
-                                hasLoginApiLogs = true;
-                            } else {
-                                System.out.println("  - " + entry.getLevel() + ": " + message);
-                            }
-                        }
-                        if (!hasLoginApiLogs) {
-                            System.out.println("  ℹ️ Login API ile ilgili log bulunamadı. Backend çalışmıyor olabilir.");
-                        }
-                    } catch (Exception logEx) {
-                        System.err.println("Browser console logları alınamadı: " + logEx.getMessage());
+                    // Hata mesajı yoksa devam et
+                }
+                
+                // window.lastLoginError flag'ini kontrol et (frontend'den gelen detaylı hata bilgisi)
+                try {
+                    String errorInfo = (String) ((JavascriptExecutor) driver).executeScript(
+                        "if (!window.lastLoginError) return null;" +
+                        "try {" +
+                        "  return JSON.stringify(window.lastLoginError, null, 2);" +
+                        "} catch(e) {" +
+                        "  return 'Error parsing: ' + e.message;" +
+                        "}"
+                    );
+                    if (errorInfo != null && !errorInfo.equals("null")) {
+                        System.err.println("🔴 Backend Login Hatası Detayları:");
+                        System.err.println(errorInfo);
                     }
+                } catch (Exception jsEx) {
+                    // Ignore
+                }
+                
+                // Browser console'u kontrol et
+                System.out.println("🔍 Login hatası - Browser console logları:");
+                try {
+                    org.openqa.selenium.logging.LogEntries logEntries = driver.manage().logs().get(org.openqa.selenium.logging.LogType.BROWSER);
+                    boolean hasLoginApiLogs = false;
+                    for (org.openqa.selenium.logging.LogEntry entry : logEntries) {
+                        String message = entry.getMessage();
+                        // Login API ile ilgili tüm logları göster
+                        if (message.contains("/api/auth/giris") || message.contains("auth") || 
+                            message.contains("401") || message.contains("403") || 
+                            message.contains("ERROR") || message.contains("SEVERE")) {
+                            System.err.println("  🔴 " + entry.getLevel() + ": " + message);
+                            hasLoginApiLogs = true;
+                        }
+                    }
+                    if (!hasLoginApiLogs) {
+                        System.out.println("  ℹ️ Login API ile ilgili log bulunamadı. Backend çalışmıyor olabilir.");
+                    }
+                } catch (Exception logEx) {
+                    System.err.println("Browser console logları alınamadı: " + logEx.getMessage());
                 }
             }
         } catch (Exception e) {
