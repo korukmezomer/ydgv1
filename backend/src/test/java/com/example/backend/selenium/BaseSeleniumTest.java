@@ -83,8 +83,31 @@ public abstract class BaseSeleniumTest {
         driver = new ChromeDriver(options);
         wait = new WebDriverWait(driver, DEFAULT_TIMEOUT);
         
+        // Frontend erişilebilirlik kontrolü
+        try {
+            System.out.println("🔍 Frontend erişilebilirlik kontrolü: " + BASE_URL);
+            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(10));
+            driver.get(BASE_URL);
+            System.out.println("✅ Frontend erişilebilir: " + BASE_URL);
+        } catch (org.openqa.selenium.TimeoutException e) {
+            String errorMsg = "❌ Frontend'e erişilemiyor: " + BASE_URL + 
+                "\nFrontend'in çalıştığından ve erişilebilir olduğundan emin olun." +
+                "\nHata: " + e.getMessage();
+            System.err.println(errorMsg);
+            driver.quit();
+            throw new RuntimeException(errorMsg, e);
+        } catch (Exception e) {
+            String errorMsg = "❌ Frontend bağlantı hatası: " + BASE_URL + 
+                "\nHata: " + e.getMessage();
+            System.err.println(errorMsg);
+            driver.quit();
+            throw new RuntimeException(errorMsg, e);
+        } finally {
+            // Timeout'u normale döndür
+            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(30));
+        }
+        
         // Önce localStorage ve cookies'i temizle (önceki oturumları temizlemek için)
-        driver.get(BASE_URL);
         try {
             Thread.sleep(500); // Sayfanın yüklenmesini bekle
             ((JavascriptExecutor) driver).executeScript("window.localStorage.clear();");
