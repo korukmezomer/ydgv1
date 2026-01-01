@@ -52,20 +52,30 @@ api.interceptors.request.use(
     // FormData gönderiliyorsa Content-Type header'ını kaldır
     // Axios otomatik olarak multipart/form-data ve boundary ekler
     if (config.data instanceof FormData) {
-      // Tüm Content-Type header'larını kaldır (common, post, put, patch)
-      delete config.headers['Content-Type'];
-      delete config.headers.common['Content-Type'];
-      delete config.headers.post['Content-Type'];
-      delete config.headers.put['Content-Type'];
-      delete config.headers.patch['Content-Type'];
+      // Tüm Content-Type header'larını kaldır (güvenli şekilde)
+      if (config.headers) {
+        delete config.headers['Content-Type'];
+        // Axios headers yapısı farklı olabilir, güvenli kontrol
+        if (config.headers.common && config.headers.common['Content-Type']) {
+          delete config.headers.common['Content-Type'];
+        }
+        if (config.headers.post && config.headers.post['Content-Type']) {
+          delete config.headers.post['Content-Type'];
+        }
+        if (config.headers.put && config.headers.put['Content-Type']) {
+          delete config.headers.put['Content-Type'];
+        }
+        if (config.headers.patch && config.headers.patch['Content-Type']) {
+          delete config.headers.patch['Content-Type'];
+        }
+      }
       // Axios'un otomatik olarak multipart/form-data eklemesine izin ver
       // Debug için log
       console.log('📤 FormData gönderiliyor:', {
         url: config.url,
         method: config.method,
         hasToken: !!token,
-        formDataKeys: Array.from(config.data.keys()),
-        headers: config.headers
+        formDataKeys: Array.from(config.data.keys())
       });
     }
     return config;
