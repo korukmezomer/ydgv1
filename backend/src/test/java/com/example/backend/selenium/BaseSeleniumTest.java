@@ -650,19 +650,12 @@ public abstract class BaseSeleniumTest {
                     }
                 }
             
-                // Kullanıcı yok - veritabanında admin kullanıcısı mevcut olmalı
-                System.out.println("❌ Admin kullanıcısı bulunamadı: " + adminEmail);
-                System.out.println("⚠️ HATA: Admin kullanıcısı (omer@gmail.com / 123456) veritabanında mevcut olmalı!");
-                System.out.println("  - Lütfen veritabanında admin kullanıcısının var olduğundan emin olun");
+                // Kullanıcı bulunamadı - yine de credential'ları döndür (backend'in oluşturduğu kullanıcıyı kullan)
                 adminUserChecked = true; // Bir daha kontrol etme
-                // Yine de credential'ları döndür, test çalışmaya çalışsın
                 return new AdminCredentials(adminEmail, adminPassword);
                 
             } catch (SQLException e) {
-                System.err.println("⚠️ Admin kullanıcısı kontrolü hatası: " + e.getMessage());
-                e.printStackTrace();
                 // Hata durumunda varsayılan değerleri döndür (backend'in oluşturduğu kullanıcıyı kullan)
-                System.out.println("ℹ️ Backend'in oluşturduğu admin kullanıcısını kullanılacak: " + adminEmail);
                 adminUserChecked = true; // Hata olsa bile bir daha kontrol etme
                 return new AdminCredentials(adminEmail, adminPassword);
             }
@@ -685,63 +678,6 @@ public abstract class BaseSeleniumTest {
             }
         }
         return false;
-    }
-    
-    /**
-     * Kullanıcıya admin rolü ekle
-     */
-    private void addAdminRole(Connection conn, Long userId) throws SQLException {
-        Long adminRoleId = getRoleId(conn, "ADMIN");
-        if (adminRoleId == null) {
-            adminRoleId = createRole(conn, "ADMIN", "Yönetici - Tüm yetkilere sahip");
-        }
-        
-        String sql = "INSERT INTO kullanici_roller (kullanici_id, rol_id) VALUES (?, ?) " +
-                     "ON CONFLICT DO NOTHING";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setLong(1, userId);
-            stmt.setLong(2, adminRoleId);
-            stmt.executeUpdate();
-        }
-    }
-    
-    /**
-     * Rol ID'sini al
-     */
-    private Long getRoleId(Connection conn, String roleName) throws SQLException {
-        String sql = "SELECT id FROM roller WHERE rol_adi = ? AND is_active = true";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, roleName);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getLong("id");
-                }
-            }
-        }
-        return null;
-    }
-    
-    /**
-     * Rol oluştur
-     */
-    private Long createRole(Connection conn, String roleName, String description) throws SQLException {
-        String sql = "INSERT INTO roller (rol_adi, aciklama, is_active, created_at, updated_at) " +
-                     "VALUES (?, ?, ?, ?, ?) RETURNING id";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, roleName);
-            stmt.setString(2, description);
-            stmt.setBoolean(3, true);
-            LocalDateTime now = LocalDateTime.now();
-            stmt.setObject(4, now);
-            stmt.setObject(5, now);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getLong("id");
-                }
-            }
-        }
-        throw new SQLException("Rol oluşturulamadı: " + roleName);
     }
     
     /**
