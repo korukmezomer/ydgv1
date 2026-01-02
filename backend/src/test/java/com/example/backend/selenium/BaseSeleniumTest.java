@@ -404,15 +404,28 @@ public abstract class BaseSeleniumTest {
         // Önce localStorage ve cookies'i temizle (önceki oturumları temizlemek için)
         try {
             Thread.sleep(500); // Sayfanın yüklenmesini bekle
-            ((JavascriptExecutor) driver).executeScript("window.localStorage.clear();");
-            ((JavascriptExecutor) driver).executeScript("window.sessionStorage.clear();");
+            String currentUrl = driver.getCurrentUrl();
+            // data: URL'lerinde localStorage kullanılamaz, sadece normal URL'lerde temizle
+            if (currentUrl != null && !currentUrl.startsWith("data:")) {
+                try {
+                    ((JavascriptExecutor) driver).executeScript("window.localStorage.clear();");
+                } catch (Exception e) {
+                    // localStorage temizleme hatası (data: URL'lerinde olabilir) - sessizce devam et
+                }
+                try {
+                    ((JavascriptExecutor) driver).executeScript("window.sessionStorage.clear();");
+                } catch (Exception e) {
+                    // sessionStorage temizleme hatası - sessizce devam et
+                }
+            }
             driver.manage().deleteAllCookies();
             // Sayfayı yeniden yükle
-            driver.navigate().refresh();
-            Thread.sleep(500);
+            if (currentUrl != null && !currentUrl.startsWith("data:")) {
+                driver.navigate().refresh();
+                Thread.sleep(500);
+            }
         } catch (Exception e) {
-            // Temizleme başarısız olursa devam et
-            System.out.println("LocalStorage/Cookie temizleme hatası: " + e.getMessage());
+            // Temizleme başarısız olursa devam et (hata mesajı gösterme)
         }
         
         // Ana sayfaya git ve oturum kontrolü yap
@@ -1313,25 +1326,46 @@ public abstract class BaseSeleniumTest {
                         Thread.sleep(500); // 2000 -> 500
                     } catch (Exception e2) {
                         // Logout sayfası yoksa JavaScript ile temizle
-                        ((JavascriptExecutor) driver).executeScript("window.localStorage.clear();");
-                        ((JavascriptExecutor) driver).executeScript("window.sessionStorage.clear();");
+                        try {
+                            String url = driver.getCurrentUrl();
+                            if (url != null && !url.startsWith("data:")) {
+                                ((JavascriptExecutor) driver).executeScript("window.localStorage.clear();");
+                                ((JavascriptExecutor) driver).executeScript("window.sessionStorage.clear();");
+                            }
+                        } catch (Exception e3) {
+                            // localStorage temizleme hatası - sessizce devam et
+                        }
                         driver.manage().deleteAllCookies();
                     }
                 }
             } else {
                 // Dashboard'da değilse direkt temizle
-                ((JavascriptExecutor) driver).executeScript("window.localStorage.clear();");
-                ((JavascriptExecutor) driver).executeScript("window.sessionStorage.clear();");
+                try {
+                    String url = driver.getCurrentUrl();
+                    if (url != null && !url.startsWith("data:")) {
+                        ((JavascriptExecutor) driver).executeScript("window.localStorage.clear();");
+                        ((JavascriptExecutor) driver).executeScript("window.sessionStorage.clear();");
+                    }
+                } catch (Exception e) {
+                    // localStorage temizleme hatası - sessizce devam et
+                }
                 driver.manage().deleteAllCookies();
             }
         } catch (Exception e) {
             // Hata olursa localStorage ve cookies'i temizle
             try {
-                ((JavascriptExecutor) driver).executeScript("window.localStorage.clear();");
-                ((JavascriptExecutor) driver).executeScript("window.sessionStorage.clear();");
+                String url = driver.getCurrentUrl();
+                if (url != null && !url.startsWith("data:")) {
+                    ((JavascriptExecutor) driver).executeScript("window.localStorage.clear();");
+                    ((JavascriptExecutor) driver).executeScript("window.sessionStorage.clear();");
+                }
+            } catch (Exception e2) {
+                // localStorage temizleme hatası - sessizce devam et
+            }
+            try {
                 driver.manage().deleteAllCookies();
             } catch (Exception e2) {
-                System.out.println("Logout hatası: " + e2.getMessage());
+                // Cookie temizleme hatası - sessizce devam et
             }
         }
     }
@@ -1372,18 +1406,45 @@ public abstract class BaseSeleniumTest {
      * Story ID'yi slug'dan al (veritabanından)
      */
     protected Long getStoryIdFromSlug(String slug) {
+        if (slug == null || slug.trim().isEmpty()) {
+            return null;
+        }
+        
+        // Slug'dan ID almayı dene
         try (Connection conn = getTestDatabaseConnection()) {
             String sql = "SELECT id FROM stories WHERE slug = ?";
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, slug);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) {
-                        return rs.getLong("id");
+                        Long id = rs.getLong("id");
+                        System.out.println("Story ID slug'dan alındı: " + id + " (slug: " + slug + ")");
+                        return id;
+                    }
+                }
+            }
+            
+            // Slug bulunamazsa, slug'ın son kısmını dene (URL'den gelen slug formatı farklı olabilir)
+            String slugPart = slug;
+            if (slug.contains("/")) {
+                slugPart = slug.substring(slug.lastIndexOf("/") + 1);
+            }
+            if (!slugPart.equals(slug)) {
+                sql = "SELECT id FROM stories WHERE slug = ? OR slug LIKE ?";
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setString(1, slugPart);
+                    stmt.setString(2, "%" + slugPart);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            Long id = rs.getLong("id");
+                            System.out.println("Story ID slug'dan alındı (partial match): " + id + " (slug: " + slugPart + ")");
+                            return id;
+                        }
                     }
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Story ID alınamadı: " + e.getMessage());
+            System.err.println("Story ID slug'dan alınamadı: " + e.getMessage());
         }
         return null;
     }
@@ -1826,13 +1887,22 @@ public abstract class BaseSeleniumTest {
             waitForPageLoad();
             Thread.sleep(1000); // 3000 -> 1000
             
+            // Sayfayı yenile (yeni story'nin görünmesi için)
+            driver.navigate().refresh();
+            waitForPageLoad();
+            Thread.sleep(1000);
+            
             // Story'yi bul ve onayla
             try {
-                WebElement storyRow = wait.until(
+                // Admin dashboard'da story'yi bul (admin-haber-item içinde)
+                WebElement storyTextElement = wait.until(
                     ExpectedConditions.presenceOfElementLocated(
-                        By.xpath("//*[contains(text(), '" + storyTitle + "')]")
+                        By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
                     )
                 );
+                
+                // Story item container'ını bul (parent'a çık)
+                WebElement storyRow = storyTextElement.findElement(By.xpath("./ancestor::div[contains(@class, 'admin-haber-item')]"));
                 
                 // Onayla butonunu bul ve tıkla
                 WebElement approveButton = storyRow.findElement(
@@ -1851,7 +1921,7 @@ public abstract class BaseSeleniumTest {
                 
                 // Story slug'ını al (onaylandıktan sonra)
                 // Story ID'yi bul ve slug'ı al
-                Long storyId = getStoryIdByTitle(storyTitle);
+                Long storyId = getStoryIdByTitle(storyTitle, null);
                 if (storyId != null) {
                     try (Connection conn = getTestDatabaseConnection()) {
                         String sql = "SELECT slug FROM stories WHERE id = ?";
@@ -1876,11 +1946,33 @@ public abstract class BaseSeleniumTest {
                 return storySlug;
                 
             } catch (Exception e) {
-                System.err.println("Story admin dashboard'da bulunamadı: " + e.getMessage());
-                // Backend API ile onaylamayı dene
-                Long storyId = getStoryIdByTitle(storyTitle);
+                // Story UI'da bulunamadı (pagination nedeniyle ilk 50'de olmayabilir)
+                // Direkt veritabanından onayla
+                System.out.println("Story admin dashboard'da bulunamadı, veritabanından onaylanıyor: " + storyTitle);
+                Long storyId = getStoryIdByTitle(storyTitle, null);
+                if (storyId == null) {
+                    // Son çare: En son oluşturulan story'yi al
+                    try (Connection conn = getTestDatabaseConnection()) {
+                        String sql = "SELECT id FROM stories WHERE baslik = ? ORDER BY created_at DESC LIMIT 1";
+                        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                            stmt.setString(1, storyTitle);
+                            try (ResultSet rs = stmt.executeQuery()) {
+                                if (rs.next()) {
+                                    storyId = rs.getLong("id");
+                                }
+                            }
+                        }
+                    } catch (SQLException ex) {
+                        System.err.println("Story ID alınamadı: " + ex.getMessage());
+                    }
+                }
+                
                 if (storyId != null) {
-                    approveStoryViaBackend(storyId, null);
+                    // Admin ID'yi al
+                    Long adminId = getUserIdByEmail(adminCreds.getEmail());
+                    approveStoryViaBackend(storyId, adminId);
+                    System.out.println("Story veritabanından onaylandı: " + storyId);
+                    
                     // Slug'ı veritabanından al
                     try (Connection conn = getTestDatabaseConnection()) {
                         String sql = "SELECT slug FROM stories WHERE id = ?";
@@ -1888,7 +1980,10 @@ public abstract class BaseSeleniumTest {
                             stmt.setLong(1, storyId);
                             try (ResultSet rs = stmt.executeQuery()) {
                                 if (rs.next()) {
-                                    return rs.getString("slug");
+                                    String slug = rs.getString("slug");
+                                    if (slug != null && !slug.isEmpty()) {
+                                        return slug;
+                                    }
                                 }
                             }
                         }
