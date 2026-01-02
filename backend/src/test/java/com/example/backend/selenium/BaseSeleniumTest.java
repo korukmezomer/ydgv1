@@ -1811,6 +1811,69 @@ public abstract class BaseSeleniumTest {
         return null;
     }
     
+    /**
+     * Kullanıcının aktiflik durumunu API üzerinden al
+     */
+    protected Boolean getUserActiveStatusViaApi(Long userId) {
+        try {
+            String url = BACKEND_URL + "/api/kullanicilar/" + userId;
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build();
+            
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode node = mapper.readTree(response.body());
+                if (node.has("aktif") || node.has("isActive")) {
+                    return node.has("aktif") ? node.get("aktif").asBoolean() : node.get("isActive").asBoolean();
+                }
+            } else {
+                System.out.println("API user detail isteği başarısız: " + response.statusCode() + " - " + response.body());
+            }
+        } catch (Exception e) {
+            System.err.println("API'den user aktif durumu alınamadı: " + e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
+     * Kullanıcının bir story'i kaydedip kaydetmediğini API üzerinden kontrol et
+     */
+    protected Boolean getSaveStatusViaApi(Long userId, Long storyId) {
+        try {
+            String url = BACKEND_URL + "/api/kaydedilenler/kullanici/" + userId + "/story/" + storyId;
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build();
+            
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode node = mapper.readTree(response.body());
+                // API true/false dönüyor varsayımı
+                if (node.isBoolean()) {
+                    return node.asBoolean();
+                }
+                // Eğer obje dönüyorsa isActive alanını oku
+                if (node.has("isActive")) {
+                    return node.get("isActive").asBoolean();
+                }
+            } else {
+                System.out.println("API save status isteği başarısız: " + response.statusCode() + " - " + response.body());
+            }
+        } catch (Exception e) {
+            System.err.println("API'den save status alınamadı: " + e.getMessage());
+        }
+        return null;
+    }
+    
     protected String getStoryTitleViaApi(Long storyId) {
         JsonNode node = getStoryViaApi(storyId);
         if (node != null) {

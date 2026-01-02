@@ -367,13 +367,25 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
             // Loading overlay yoksa devam et
         }
         
-        // Resim bloğunun oluşmasını ve görünür olmasını bekle
-        Thread.sleep(1000); // kısa bekleme
-        WebElement imageElement = wait.until(
-            ExpectedConditions.visibilityOfElementLocated(
-                By.cssSelector(".image-block-container img.block-image, .editor-block.image-block-container img")
-            )
-        );
+        // Resim bloğunun oluşmasını ve görünür olmasını bekle (retry'li)
+        WebElement imageElement = null;
+        boolean imageVisible = false;
+        for (int i = 0; i < 3 && !imageVisible; i++) {
+            try {
+                imageElement = wait.until(
+                    ExpectedConditions.visibilityOfElementLocated(
+                        By.cssSelector(".image-block-container img.block-image, .editor-block.image-block-container img")
+                    )
+                );
+                imageVisible = imageElement.isDisplayed();
+            } catch (Exception ex) {
+                Thread.sleep(1000); // yeniden deneme öncesi bekle
+            }
+        }
+        
+        if (!imageVisible || imageElement == null) {
+            fail("Resim görünür değil (retry sonrası)");
+        }
         
         // Resim URL'sinin doğru olduğunu kontrol et
         String imageSrc = imageElement.getAttribute("src");

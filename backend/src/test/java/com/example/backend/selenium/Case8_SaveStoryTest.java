@@ -236,26 +236,12 @@ public class Case8_SaveStoryTest extends BaseSeleniumTest {
                 "Case 8 Negative: İlk kaydetmeden önce buton active olmamalı");
             
             saveButton.click();
-            Thread.sleep(3000); // Kaydetme işleminin tamamlanması için bekle
+            Thread.sleep(1500); // Kaydetme işleminin tamamlanması için bekle
             
-            // Kaydetmenin veritabanına kaydedildiğini doğrula
-            boolean savedExists = false;
-            try (java.sql.Connection conn = getTestDatabaseConnection()) {
-                String sql = "SELECT COUNT(*) FROM saved_stories WHERE kullanici_id = ? AND story_id = ? AND is_active = true";
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setLong(1, userId);
-                    stmt.setLong(2, storyId);
-                    try (java.sql.ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            savedExists = rs.getInt(1) > 0;
-                        }
-                    }
-                }
-            } catch (java.sql.SQLException e) {
-                System.err.println("Case 8 Negative: Kaydetme kontrolü hatası: " + e.getMessage());
-            }
-            
-            assertTrue(savedExists, "Case 8 Negative: İlk kaydetme veritabanına kaydedilmedi");
+            // Kaydetmenin API'de kaydedildiğini doğrula
+            Boolean savedExists = getSaveStatusViaApi(userId, storyId);
+            assertNotNull(savedExists, "Case 8 Negative: Kaydetme durumu API'den alınamadı");
+            assertTrue(savedExists, "Case 8 Negative: İlk kaydetme API'de kaydedilmedi");
             
             // Buton artık active olmalı
             WebElement saveButtonAfter = wait.until(
@@ -271,24 +257,13 @@ public class Case8_SaveStoryTest extends BaseSeleniumTest {
             saveButtonAfter.click();
             Thread.sleep(3000); // Kaydetmenin kaldırılması için bekle
             
-            // Kaydetmenin veritabanından kaldırıldığını doğrula
-            boolean savedStillExists = false;
-            try (java.sql.Connection conn = getTestDatabaseConnection()) {
-                String sql = "SELECT COUNT(*) FROM saved_stories WHERE kullanici_id = ? AND story_id = ? AND is_active = true";
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setLong(1, userId);
-                    stmt.setLong(2, storyId);
-                    try (java.sql.ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            savedStillExists = rs.getInt(1) > 0;
-                        }
-                    }
-                }
-            } catch (java.sql.SQLException e) {
-                System.err.println("Case 8 Negative: Kaydetme kontrolü hatası: " + e.getMessage());
-            }
+            // Kaydetmenin API'de kaldırıldığını doğrula
+            saveButtonAfter.click();
+            Thread.sleep(1500); // Kaydetmenin kaldırılması için bekle
             
-            assertTrue(!savedStillExists, "Case 8 Negative: İkinci tıklamadan sonra kaydetme veritabanından kaldırılmalı");
+            Boolean savedStillExists = getSaveStatusViaApi(userId, storyId);
+            assertNotNull(savedStillExists, "Case 8 Negative: Kaydetme kaldırma durumu API'den alınamadı");
+            assertFalse(savedStillExists, "Case 8 Negative: Kaydetme kaldırılmadı (API)");
             
             // Buton artık active olmamalı
             WebElement saveButtonFinal = wait.until(

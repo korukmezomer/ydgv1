@@ -417,34 +417,14 @@ public class Case12a_AdminUserManagementTest extends BaseSeleniumTest {
                 System.out.println("Case 12a Negative: Kullanıcı listede bulunamadı (silindi)");
             }
             
-            // 9. Veritabanı kontrolü - soft delete olduğu için isActive = false olmalı
-            Thread.sleep(2000);
-            {
-                boolean dbUserIsActive = false;
-                boolean userExists = false;
-                try (java.sql.Connection conn = getTestDatabaseConnection()) {
-                    String sql = "SELECT is_active FROM kullanicilar WHERE (email = ? OR kullanici_adi = ?)";
-                    try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
-                        stmt.setString(1, testUserEmail);
-                        stmt.setString(2, testUserUsername);
-                        try (java.sql.ResultSet rs = stmt.executeQuery()) {
-                            if (rs.next()) {
-                                userExists = true;
-                                dbUserIsActive = rs.getBoolean("is_active");
-                            }
-                        }
-                    }
-                } catch (java.sql.SQLException e) {
-                    System.err.println("Case 12a Negative: Veritabanı kontrolü hatası: " + e.getMessage());
-                }
-                
-                if (!userExists) {
-                    fail("Case 12a Negative: Kullanıcı veritabanında bulunamadı");
-                } else if (dbUserIsActive) {
-                    fail("Case 12a Negative: Kullanıcı hala aktif (silinmedi, isActive = true)");
-                } else {
-                    assertTrue(true, "Case 12a Negative: Kullanıcı başarıyla silindi (isActive = false)");
-                }
+            // 9. API kontrolü - soft delete olduğu için isActive = false olmalı
+            Thread.sleep(500);
+            Long deletedUserId = getUserIdByEmail(testUserEmail);
+            Boolean isActive = deletedUserId != null ? getUserActiveStatusViaApi(deletedUserId) : null;
+            if (deletedUserId == null || isActive == null) {
+                fail("Case 12a Negative: Kullanıcı API'den doğrulanamadı (ID veya aktif durumu yok)");
+            } else {
+                assertFalse(isActive, "Case 12a Negative: Kullanıcı hala aktif (silinmedi, isActive = true)");
             }
             
             System.out.println("Case 12a Negative: Kullanıcı silme başarıyla test edildi");

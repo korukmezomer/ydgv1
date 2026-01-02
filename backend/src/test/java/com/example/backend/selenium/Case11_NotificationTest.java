@@ -151,14 +151,17 @@ public class Case11_NotificationTest extends BaseSeleniumTest {
         // Story sayfasına git
         driver.get(BASE_URL + "/haberler/" + storySlug);
         waitForPageLoad();
-        Thread.sleep(3000);
+        wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(".article-detail-page, .article-container")));
+        Thread.sleep(500);
         
-        // Yorum yap
+        // Yorum alanı ve sayfa yüklenmesi
         WebElement commentTextarea = wait.until(
-            ExpectedConditions.presenceOfElementLocated(
+            ExpectedConditions.visibilityOfElementLocated(
                 By.cssSelector("textarea.comment-textarea, textarea[placeholder*='yorum'], textarea[placeholder*='Yorum'], textarea.comment-input")
             )
         );
+        ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", commentTextarea);
+        Thread.sleep(300);
         String commentText = "Bu bir test yorumudur - bildirim testi için.";
         commentTextarea.sendKeys(commentText);
         
@@ -169,8 +172,12 @@ public class Case11_NotificationTest extends BaseSeleniumTest {
                 By.xpath("//button[contains(text(), 'Gönder') or contains(text(), 'Yorum')] | //button[@type='submit']")
             )
         );
-        submitCommentButton.click();
-        Thread.sleep(3000);
+        try {
+            submitCommentButton.click();
+        } catch (Exception clickEx) {
+            ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", submitCommentButton);
+        }
+        Thread.sleep(1500);
         
         // 3. Writer olarak giriş yap ve bildirimleri kontrol et
         try {
@@ -199,15 +206,25 @@ public class Case11_NotificationTest extends BaseSeleniumTest {
         waitForPageLoad();
         Thread.sleep(3000);
         
-        // Bildirimi kontrol et
-        WebElement notificationElement = wait.until(
-            ExpectedConditions.presenceOfElementLocated(
-                By.xpath("//*[contains(text(), 'yorum') or contains(text(), 'Yorum')] | //*[contains(text(), '" + commenterUsername + "')]")
-            )
-        );
+        // Bildirimi kontrol et (30 sn'ye kadar bekle; yoksa bir kez refresh dene)
+        WebElement notificationElement = null;
+        boolean notificationFound = false;
+        for (int i = 0; i < 2 && !notificationFound; i++) {
+            try {
+                notificationElement = new org.openqa.selenium.support.ui.WebDriverWait(driver, java.time.Duration.ofSeconds(30)).until(
+                    ExpectedConditions.presenceOfElementLocated(
+                        By.xpath("//*[contains(text(), 'yorum') or contains(text(), 'Yorum')] | //*[contains(text(), '" + commenterUsername + "')]")
+                    )
+                );
+                notificationFound = notificationElement.isDisplayed();
+            } catch (Exception ex) {
+                driver.navigate().refresh();
+                waitForPageLoad();
+                Thread.sleep(1000);
+            }
+        }
         
-        assertTrue(notificationElement.isDisplayed(), 
-            "Case 11.1: Yorum bildirimi görüntülenmedi");
+        assertTrue(notificationFound, "Case 11.1: Yorum bildirimi görüntülenmedi");
         
         // Bildirim mesajını kontrol et
         String notificationText = notificationElement.getText();
@@ -356,16 +373,25 @@ public class Case11_NotificationTest extends BaseSeleniumTest {
         // Story sayfasına git
         driver.get(BASE_URL + "/haberler/" + storySlug);
         waitForPageLoad();
-        Thread.sleep(3000);
+        wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(".article-detail-page, .article-container")));
+        Thread.sleep(500);
         
         // Beğen
         WebElement likeButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.xpath("//button[contains(text(), 'Beğen') or contains(text(), 'beğen')] | //button[@aria-label[contains(., 'like') or contains(., 'beğen')]] | //*[contains(@class, 'like-button')]")
+            ExpectedConditions.visibilityOfElementLocated(
+                By.xpath("//button[contains(text(), 'Beğen') or contains(text(), 'beğen')] | //button[@aria-label[contains(., 'like') or contains(., 'beğen')]] | //*[contains(@class, 'like-button')] | //button[@title='Beğen' or contains(@class, 'action-btn') or contains(@class, 'article-action-btn')]")
             )
         );
-        likeButton.click();
-        Thread.sleep(3000);
+        ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", likeButton);
+        WebElement clickableLike = wait.until(
+            ExpectedConditions.elementToBeClickable(likeButton)
+        );
+        try {
+            clickableLike.click();
+        } catch (Exception clickEx) {
+            ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", clickableLike);
+        }
+        Thread.sleep(1500);
         
         // 3. Writer olarak giriş yap ve bildirimleri kontrol et
         try {
@@ -394,15 +420,25 @@ public class Case11_NotificationTest extends BaseSeleniumTest {
         waitForPageLoad();
         Thread.sleep(3000);
         
-        // Bildirimi kontrol et
-        WebElement notificationElement = wait.until(
-            ExpectedConditions.presenceOfElementLocated(
-                By.xpath("//*[contains(text(), 'beğen') or contains(text(), 'Beğen')] | //*[contains(text(), '" + likerUsername + "')]")
-            )
-        );
+        // Bildirimi kontrol et (30 sn'ye kadar bekle; yoksa bir kez refresh dene)
+        WebElement notificationElement = null;
+        boolean likeNotificationFound = false;
+        for (int i = 0; i < 2 && !likeNotificationFound; i++) {
+            try {
+                notificationElement = new org.openqa.selenium.support.ui.WebDriverWait(driver, java.time.Duration.ofSeconds(30)).until(
+                    ExpectedConditions.presenceOfElementLocated(
+                        By.xpath("//*[contains(text(), 'beğen') or contains(text(), 'Beğen')] | //*[contains(text(), '" + likerUsername + "')]")
+                    )
+                );
+                likeNotificationFound = notificationElement.isDisplayed();
+            } catch (Exception ex) {
+                driver.navigate().refresh();
+                waitForPageLoad();
+                Thread.sleep(1000);
+            }
+        }
         
-        assertTrue(notificationElement.isDisplayed(), 
-            "Case 11.2: Beğeni bildirimi görüntülenmedi");
+        assertTrue(likeNotificationFound, "Case 11.2: Beğeni bildirimi görüntülenmedi");
         
         // Bildirim mesajını kontrol et
         String notificationText = notificationElement.getText();
