@@ -184,34 +184,19 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             waitForPageLoad();
             Thread.sleep(3000);
 
-            // 7. Veritabanından güncellenmiş story'yi kontrol et
-            try (java.sql.Connection conn = getTestDatabaseConnection()) {
-                String sql = "SELECT baslik, icerik FROM stories WHERE id = ?";
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setLong(1, storyId);
-                    try (java.sql.ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            String dbTitle = rs.getString("baslik");
-                            String dbContent = rs.getString("icerik");
-                            
-                            assertTrue(
-                                dbTitle != null && dbTitle.contains("Güncellenmiş"),
-                                "Case 14: Başlık veritabanında güncellenmedi. Beklenen: " + updatedTitle + ", Bulunan: " + dbTitle
-                            );
-                            
-                            assertTrue(
-                                dbContent != null && dbContent.contains("Güncellenmiş içerik"),
-                                "Case 14: İçerik veritabanında güncellenmedi. İçerik: " + (dbContent != null ? dbContent.substring(0, Math.min(200, dbContent.length())) : "null")
-                            );
-                        } else {
-                            fail("Case 14: Story veritabanında bulunamadı");
-                        }
-                    }
-                }
-            } catch (java.sql.SQLException e) {
-                System.err.println("Case 14: Veritabanı kontrolü hatası: " + e.getMessage());
-                fail("Case 14: Veritabanı kontrolü başarısız");
-            }
+            // 7. API üzerinden güncellenmiş story'yi kontrol et
+            String apiTitle = getStoryTitleViaApi(storyId);
+            String apiContent = getStoryContentViaApi(storyId);
+            
+            assertTrue(
+                apiTitle != null && apiTitle.contains("Güncellenmiş"),
+                "Case 14: Başlık API'de güncellenmedi. Beklenen: " + updatedTitle + ", Bulunan: " + apiTitle
+            );
+            
+            assertTrue(
+                apiContent != null && apiContent.contains("Güncellenmiş içerik"),
+                "Case 14: İçerik API'de güncellenmedi. İçerik: " + (apiContent != null ? apiContent.substring(0, Math.min(200, apiContent.length())) : "null")
+            );
 
             System.out.println("Case 14: Yazar yazı düzenleme ve güncelleme testi başarıyla tamamlandı");
 
@@ -525,26 +510,14 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             waitForPageLoad();
             Thread.sleep(3000);
 
-            // 10. Veritabanından kontrol et - kod bloğu silinmiş olmalı
-            try (java.sql.Connection conn = getTestDatabaseConnection()) {
-                String sql = "SELECT icerik FROM stories WHERE id = ?";
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setLong(1, storyId);
-                    try (java.sql.ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            String dbContent = rs.getString("icerik");
-                            assertTrue(
-                                dbContent == null || !dbContent.contains("[CODE:"),
-                                "Case 14a: Kod bloğu veritabanından silinmedi. İçerik: " + 
-                                (dbContent != null ? dbContent.substring(0, Math.min(200, dbContent.length())) : "null")
-                            );
-                            System.out.println("Case 14a: Veritabanı kontrolü başarılı - kod bloğu silinmiş");
-                        }
-                    }
-                }
-            } catch (java.sql.SQLException e) {
-                System.err.println("Case 14a: Veritabanı kontrolü hatası: " + e.getMessage());
-            }
+            // 10. API üzerinden kontrol et - kod bloğu silinmiş olmalı
+            String apiContentAfterDelete = getStoryContentViaApi(storyId);
+            assertTrue(
+                apiContentAfterDelete == null || !apiContentAfterDelete.contains("[CODE:"),
+                "Case 14a: Kod bloğu API'de silinmedi. İçerik: " + 
+                (apiContentAfterDelete != null ? apiContentAfterDelete.substring(0, Math.min(200, apiContentAfterDelete.length())) : "null")
+            );
+            System.out.println("Case 14a: API kontrolü başarılı - kod bloğu silinmiş");
 
             System.out.println("Case 14a: Kod bloğu ekleme ve silme testi başarıyla tamamlandı");
 
@@ -723,24 +696,12 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             // 6. Kaydet ve yayınla
             publishStory();
 
-            // 7. Veritabanından kontrol et
-            try (java.sql.Connection conn = getTestDatabaseConnection()) {
-                String sql = "SELECT icerik FROM stories WHERE id = ?";
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setLong(1, storyId);
-                    try (java.sql.ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            String dbContent = rs.getString("icerik");
-                            assertTrue(
-                                dbContent != null && (dbContent.contains("Düzenlenmiş") || dbContent.contains("İkinci") || dbContent.contains("-") || dbContent.contains("1.")),
-                                "Case 14b: Liste bloğu veritabanına kaydedilmedi"
-                            );
-                        }
-                    }
-                }
-            } catch (java.sql.SQLException e) {
-                System.err.println("Case 14b: Veritabanı kontrolü hatası: " + e.getMessage());
-            }
+            // 7. API üzerinden kontrol et
+            String apiContentAfterList = getStoryContentViaApi(storyId);
+            assertTrue(
+                apiContentAfterList != null && (apiContentAfterList.contains("Düzenlenmiş") || apiContentAfterList.contains("İkinci") || apiContentAfterList.contains("-") || apiContentAfterList.contains("1.")),
+                "Case 14b: Liste bloğu API'ye kaydedilmedi"
+            );
 
             System.out.println("Case 14b: Liste bloğu ekleme ve düzenleme testi başarıyla tamamlandı");
 

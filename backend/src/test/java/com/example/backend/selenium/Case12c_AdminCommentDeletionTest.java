@@ -97,7 +97,7 @@ public class Case12c_AdminCommentDeletionTest extends BaseSeleniumTest {
             // Yorum alanını bul ve yorum yap
             WebElement commentInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector("textarea[placeholder*='yorum'], textarea[placeholder*='Yorum'], textarea")
+                    By.cssSelector("textarea.comment-textarea, textarea[placeholder*='yorum'], textarea[placeholder*='Yorum'], textarea")
                 )
             );
             commentInput.sendKeys(commentText);

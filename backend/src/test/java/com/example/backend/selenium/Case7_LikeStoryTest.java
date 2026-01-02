@@ -103,25 +103,10 @@ public class Case7_LikeStoryTest extends BaseSeleniumTest {
             likeButton.click();
             Thread.sleep(3000); // Beğeninin kaydedilmesi için bekle
             
-            // Beğeninin veritabanına kaydedildiğini doğrula
-            boolean likeExists = false;
-            try (java.sql.Connection conn = getTestDatabaseConnection()) {
-                String sql = "SELECT COUNT(*) FROM likes WHERE kullanici_id = ? AND story_id = ? AND is_active = true";
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setLong(1, userId);
-                    stmt.setLong(2, storyId);
-                    try (java.sql.ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            likeExists = rs.getInt(1) > 0;
-                        }
-                    }
-                }
-            } catch (java.sql.SQLException e) {
-                System.err.println("Case 7: Beğeni kontrolü hatası: " + e.getMessage());
-            }
-            
-            assertTrue(likeExists, "Case 7: Beğeni veritabanına kaydedilmedi. User ID: " + userId + ", Story ID: " + storyId);
-            System.out.println("Case 7: Beğeni işlemi başarıyla tamamlandı ve veritabanına kaydedildi");
+            Long likeCountAfter = getLikeCountViaApi(storyId);
+            assertNotNull(likeCountAfter, "Case 7: Beğeni sayısı API'den alınamadı");
+            assertTrue(likeCountAfter > 0, "Case 7: Beğeni kaydedilmedi (API beğeni sayısı 0)");
+            System.out.println("Case 7: Beğeni işlemi başarıyla tamamlandı, API beğeni sayısı: " + likeCountAfter);
             
         } catch (AssertionError e) {
             // Assertion hataları zaten fail ediyor
@@ -215,27 +200,15 @@ public class Case7_LikeStoryTest extends BaseSeleniumTest {
             assertTrue(buttonClassBefore == null || !buttonClassBefore.contains("active"),
                 "Case 7 Negative: İlk beğeniden önce buton active olmamalı");
             
+            Long initialLikeCount = getLikeCountViaApi(storyId);
+            assertNotNull(initialLikeCount, "Case 7 Negative: Başlangıç beğeni sayısı alınamadı");
+            
             likeButton.click();
             Thread.sleep(3000); // Beğeninin kaydedilmesi için bekle
             
-            // Beğeninin veritabanına kaydedildiğini doğrula
-            boolean likeExists = false;
-            try (java.sql.Connection conn = getTestDatabaseConnection()) {
-                String sql = "SELECT COUNT(*) FROM likes WHERE kullanici_id = ? AND story_id = ? AND is_active = true";
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setLong(1, userId);
-                    stmt.setLong(2, storyId);
-                    try (java.sql.ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            likeExists = rs.getInt(1) > 0;
-                        }
-                    }
-                }
-            } catch (java.sql.SQLException e) {
-                System.err.println("Case 7 Negative: Beğeni kontrolü hatası: " + e.getMessage());
-            }
-            
-            assertTrue(likeExists, "Case 7 Negative: İlk beğeni veritabanına kaydedilmedi");
+            Long likeCountAfterFirst = getLikeCountViaApi(storyId);
+            assertNotNull(likeCountAfterFirst, "Case 7 Negative: Beğeni sonrası beğeni sayısı alınamadı");
+            assertTrue(likeCountAfterFirst >= initialLikeCount + 1, "Case 7 Negative: İlk beğeni kaydedilmedi (API)");
             
             // Buton artık active olmalı
             WebElement likeButtonAfter = wait.until(
@@ -251,24 +224,9 @@ public class Case7_LikeStoryTest extends BaseSeleniumTest {
             likeButtonAfter.click();
             Thread.sleep(3000); // Beğeninin kaldırılması için bekle
             
-            // Beğeninin veritabanından kaldırıldığını doğrula
-            boolean likeStillExists = false;
-            try (java.sql.Connection conn = getTestDatabaseConnection()) {
-                String sql = "SELECT COUNT(*) FROM likes WHERE kullanici_id = ? AND story_id = ? AND is_active = true";
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setLong(1, userId);
-                    stmt.setLong(2, storyId);
-                    try (java.sql.ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            likeStillExists = rs.getInt(1) > 0;
-                        }
-                    }
-                }
-            } catch (java.sql.SQLException e) {
-                System.err.println("Case 7 Negative: Beğeni kontrolü hatası: " + e.getMessage());
-            }
-            
-            assertTrue(!likeStillExists, "Case 7 Negative: İkinci tıklamadan sonra beğeni veritabanından kaldırılmalı");
+            Long likeCountAfterSecond = getLikeCountViaApi(storyId);
+            assertNotNull(likeCountAfterSecond, "Case 7 Negative: Beğeni kaldırma sonrası beğeni sayısı alınamadı");
+            assertTrue(likeCountAfterSecond <= initialLikeCount, "Case 7 Negative: Beğeni kaldırılmadı (API)");
             
             // Buton artık active olmamalı
             WebElement likeButtonFinal = wait.until(

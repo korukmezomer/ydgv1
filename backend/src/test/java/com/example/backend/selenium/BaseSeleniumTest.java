@@ -49,8 +49,9 @@ public abstract class BaseSeleniumTest {
         System.getenv("BACKEND_URL") != null ? System.getenv("BACKEND_URL") : "http://localhost:8080");
     protected static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(15); // Optimize edilmiş timeout
     
-    // Veritabanı bağlantı bilgileri (normal veritabanı kullanılıyor, test veritabanı kullanılmıyor)
-    // Önce system property, sonra environment variable, son olarak default değer
+    // Jenkins ortamında DB'ye erişim yok; DB erişimini kapatmak için USE_DB=false
+    private static final boolean USE_DB = Boolean.parseBoolean(System.getProperty("test.use.db", "false"));
+    // Veritabanı bağlantı bilgileri (local geliştirme için, USE_DB=true ise kullanılır)
     private static final String TEST_DB_URL = System.getProperty("test.db.url", 
         System.getenv("TEST_DB_URL") != null ? System.getenv("TEST_DB_URL") : "jdbc:postgresql://localhost:5433/yazilimdogrulama");
     private static final String TEST_DB_USER = System.getProperty("test.db.user",
@@ -67,6 +68,10 @@ public abstract class BaseSeleniumTest {
     @BeforeAll
     static void initializeDatabase() {
         if (!databaseInitialized) {
+            if (!USE_DB) {
+                databaseInitialized = true;
+                return;
+            }
             synchronized (BaseSeleniumTest.class) {
                 if (!databaseInitialized) {
                     ConfigurableApplicationContext springContext = null;
@@ -1510,6 +1515,35 @@ public abstract class BaseSeleniumTest {
     }
     
     /**
+     * Story slug'ını backend API üzerinden ID ile al
+     */
+    private String getStorySlugViaApi(Long storyId) {
+        try {
+            String url = BACKEND_URL + "/api/haberler/" + storyId;
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build();
+            
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode node = mapper.readTree(response.body());
+                if (node.has("slug")) {
+                    return node.get("slug").asText();
+                }
+            } else {
+                System.out.println("API slug isteği (id) başarısız: " + response.statusCode() + " - " + response.body());
+            }
+        } catch (Exception e) {
+            System.err.println("API'den story slug alınamadı: " + e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
      * Story ID'yi slug'dan al (veritabanından)
      */
     protected Long getStoryIdFromSlug(String slug) {
@@ -1517,49 +1551,52 @@ public abstract class BaseSeleniumTest {
             return null;
         }
         
-        // Slug'dan ID almayı dene
-        try (Connection conn = getTestDatabaseConnection()) {
-            String sql = "SELECT id FROM stories WHERE slug = ?";
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, slug);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        Long id = rs.getLong("id");
-                        System.out.println("Story ID slug'dan alındı: " + id + " (slug: " + slug + ")");
-                        return id;
-                    }
-                }
-            }
-            
-            // Slug bulunamazsa, slug'ın son kısmını dene (URL'den gelen slug formatı farklı olabilir)
-            String slugPart = slug;
-            if (slug.contains("/")) {
-                slugPart = slug.substring(slug.lastIndexOf("/") + 1);
-            }
-            if (!slugPart.equals(slug)) {
-                sql = "SELECT id FROM stories WHERE slug = ? OR slug LIKE ?";
-                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setString(1, slugPart);
-                    stmt.setString(2, "%" + slugPart);
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            Long id = rs.getLong("id");
-                            System.out.println("Story ID slug'dan alındı (partial match): " + id + " (slug: " + slugPart + ")");
-                            return id;
-                        }
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Story ID slug'dan alınamadı: " + e.getMessage());
-        }
-        
-        // DB'den alınamazsa API'den almayı dene (Jenkins ortamında DB bağlantısı farklı olabilir)
+        // Önce API'den dene (Jenkins'te DB yok)
         Long apiId = getStoryIdViaApiBySlug(slug);
         if (apiId != null) {
             System.out.println("Story ID API üzerinden alındı: " + apiId + " (slug: " + slug + ")");
             return apiId;
         }
+        
+        if (USE_DB) {
+            // Slug'dan ID almayı dene (yalnızca local geliştirme için)
+            try (Connection conn = getTestDatabaseConnection()) {
+                String sql = "SELECT id FROM stories WHERE slug = ?";
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setString(1, slug);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            Long id = rs.getLong("id");
+                            System.out.println("Story ID slug'dan alındı: " + id + " (slug: " + slug + ")");
+                            return id;
+                        }
+                    }
+                }
+                
+                // Slug bulunamazsa, slug'ın son kısmını dene (URL format farkı için)
+                String slugPart = slug;
+                if (slug.contains("/")) {
+                    slugPart = slug.substring(slug.lastIndexOf("/") + 1);
+                }
+                if (!slugPart.equals(slug)) {
+                    sql = "SELECT id FROM stories WHERE slug = ? OR slug LIKE ?";
+                    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                        stmt.setString(1, slugPart);
+                        stmt.setString(2, "%" + slugPart);
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            if (rs.next()) {
+                                Long id = rs.getLong("id");
+                                System.out.println("Story ID slug'dan alındı (partial match): " + id + " (slug: " + slugPart + ")");
+                                return id;
+                            }
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("Story ID slug'dan alınamadı (DB): " + e.getMessage());
+            }
+        }
+        
         return null;
     }
     
@@ -1567,18 +1604,158 @@ public abstract class BaseSeleniumTest {
      * Email'den kullanıcı ID'sini al
      */
     protected Long getUserIdByEmail(String email) {
-        try (Connection conn = getTestDatabaseConnection()) {
-            String sql = "SELECT id FROM kullanicilar WHERE email = ?";
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, email);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        return rs.getLong("id");
+        Long apiUserId = getUserIdViaApi(email);
+        if (apiUserId != null) {
+            System.out.println("Kullanıcı ID API üzerinden alındı: " + apiUserId + " (email: " + email + ")");
+            return apiUserId;
+        }
+        
+        if (USE_DB) {
+            try (Connection conn = getTestDatabaseConnection()) {
+                String sql = "SELECT id FROM kullanicilar WHERE email = ?";
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setString(1, email);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            return rs.getLong("id");
+                        }
                     }
                 }
+            } catch (SQLException e) {
+                System.err.println("Kullanıcı ID alınamadı (DB): " + e.getMessage());
             }
-        } catch (SQLException e) {
-            System.err.println("Kullanıcı ID alınamadı: " + e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
+     * Kullanıcı ID'yi backend API üzerinden email ile al
+     */
+    private Long getUserIdViaApi(String email) {
+        try {
+            String encoded = URLEncoder.encode(email, StandardCharsets.UTF_8);
+            String url = BACKEND_URL + "/api/kullanicilar/email/" + encoded;
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build();
+            
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode node = mapper.readTree(response.body());
+                if (node.has("id")) {
+                    return node.get("id").asLong();
+                }
+            } else {
+                System.out.println("API user isteği başarısız: " + response.statusCode() + " - " + response.body());
+            }
+        } catch (Exception e) {
+            System.err.println("API'den kullanıcı ID alınamadı: " + e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
+     * Kullanıcının en son story'sini backend API üzerinden al
+     */
+    private Long getLatestStoryIdViaApi(Long userId) {
+        try {
+            String url = BACKEND_URL + "/api/haberler/kullanici/" + userId + "?size=1";
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build();
+            
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode node = mapper.readTree(response.body());
+                JsonNode content = node.get("content");
+                if (content != null && content.isArray() && content.size() > 0) {
+                    JsonNode first = content.get(0);
+                    if (first.has("id")) {
+                        return first.get("id").asLong();
+                    }
+                }
+            } else {
+                System.out.println("API story listesi isteği başarısız: " + response.statusCode() + " - " + response.body());
+            }
+        } catch (Exception e) {
+            System.err.println("API'den en son story ID alınamadı: " + e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
+     * Beğeni sayısını backend API üzerinden al
+     */
+    protected Long getLikeCountViaApi(Long storyId) {
+        try {
+            String url = BACKEND_URL + "/api/begeniler/haber/" + storyId + "/sayi";
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build();
+            
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                return Long.parseLong(response.body());
+            } else {
+                System.out.println("API beğeni sayısı isteği başarısız: " + response.statusCode() + " - " + response.body());
+            }
+        } catch (Exception e) {
+            System.err.println("API'den beğeni sayısı alınamadı: " + e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
+     * Story detayını backend API üzerinden al (başlık/içerik kontrolü için)
+     */
+    protected JsonNode getStoryViaApi(Long storyId) {
+        try {
+            String url = BACKEND_URL + "/api/haberler/" + storyId;
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build();
+            
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                ObjectMapper mapper = new ObjectMapper();
+                return mapper.readTree(response.body());
+            } else {
+                System.out.println("API story detay isteği başarısız: " + response.statusCode() + " - " + response.body());
+            }
+        } catch (Exception e) {
+            System.err.println("API'den story alınamadı: " + e.getMessage());
+        }
+        return null;
+    }
+    
+    protected String getStoryTitleViaApi(Long storyId) {
+        JsonNode node = getStoryViaApi(storyId);
+        if (node != null) {
+            if (node.has("baslik")) return node.get("baslik").asText();
+            if (node.has("title")) return node.get("title").asText();
+        }
+        return null;
+    }
+    
+    protected String getStoryContentViaApi(Long storyId) {
+        JsonNode node = getStoryViaApi(storyId);
+        if (node != null) {
+            if (node.has("icerik")) return node.get("icerik").asText();
+            if (node.has("content")) return node.get("content").asText();
         }
         return null;
     }
@@ -1650,22 +1827,33 @@ public abstract class BaseSeleniumTest {
      * Kullanıcının en son oluşturduğu story ID'sini al
      */
     protected Long getLatestStoryIdByUserEmail(String userEmail) {
-        try (Connection conn = getTestDatabaseConnection()) {
-            String sql = "SELECT s.id FROM stories s " +
-                         "JOIN kullanicilar k ON s.kullanici_id = k.id " +
-                         "WHERE k.email = ? " +
-                         "ORDER BY s.created_at DESC " +
-                         "LIMIT 1";
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, userEmail);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        return rs.getLong("id");
+        Long userId = getUserIdByEmail(userEmail);
+        if (userId != null) {
+            Long apiStoryId = getLatestStoryIdViaApi(userId);
+            if (apiStoryId != null) {
+                System.out.println("En son story ID API üzerinden alındı: " + apiStoryId + " (userId: " + userId + ")");
+                return apiStoryId;
+            }
+        }
+        
+        if (USE_DB) {
+            try (Connection conn = getTestDatabaseConnection()) {
+                String sql = "SELECT s.id FROM stories s " +
+                             "JOIN kullanicilar k ON s.kullanici_id = k.id " +
+                             "WHERE k.email = ? " +
+                             "ORDER BY s.created_at DESC " +
+                             "LIMIT 1";
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setString(1, userEmail);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            return rs.getLong("id");
+                        }
                     }
                 }
+            } catch (SQLException e) {
+                System.err.println("Kullanıcının en son story ID'si alınamadı (DB): " + e.getMessage());
             }
-        } catch (SQLException e) {
-            System.err.println("Kullanıcının en son story ID'si alınamadı: " + e.getMessage());
         }
         return null;
     }
@@ -1815,7 +2003,7 @@ public abstract class BaseSeleniumTest {
      * @return Story ID veya null
      */
     protected Long getStoryIdByTitle(String title, String userEmail) {
-        // Önce URL'den ID'yi almaya çalış
+        // Öncelik: URL -> API -> (opsiyonel) DB
         try {
             String currentUrl = driver.getCurrentUrl();
             java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("/(?:haberler|yazar/haber-duzenle)/(\\d+)");
@@ -1826,40 +2014,40 @@ public abstract class BaseSeleniumTest {
                 return idFromUrl;
             }
         } catch (Exception e) {
-            // URL'den alınamazsa devam et
+            // URL'den alınamazsa devam
         }
         
-        // Veritabanından almayı dene
-        try (Connection conn = getTestDatabaseConnection()) {
-            String sql = "SELECT id FROM stories WHERE baslik = ? ORDER BY created_at DESC LIMIT 1";
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, title);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        Long id = rs.getLong("id");
-                        System.out.println("Story ID veritabanından alındı: " + id);
-                        return id;
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Story ID başlıktan alınamadı: " + e.getMessage());
-        }
-        
-        // Son çare: Kullanıcının en son story'sini al (eğer email biliniyorsa)
-        if (userEmail != null) {
-            Long latestId = getLatestStoryIdByUserEmail(userEmail);
-            if (latestId != null) {
-                System.out.println("Story ID kullanıcının en son story'sinden alındı: " + latestId);
-                return latestId;
-            }
-        }
-        
-        // Son fallback: Backend API üzerinden ara
         Long apiId = getStoryIdViaApiByTitle(title);
         if (apiId != null) {
             System.out.println("Story ID API aramasından alındı: " + apiId + " (title: " + title + ")");
             return apiId;
+        }
+        
+        // Kullanıcının en son story'sini API ile dene
+        if (userEmail != null) {
+            Long latestId = getLatestStoryIdByUserEmail(userEmail);
+            if (latestId != null) {
+                System.out.println("Story ID kullanıcının en son story'sinden (API/DB fallback) alındı: " + latestId);
+                return latestId;
+            }
+        }
+        
+        if (USE_DB) {
+            try (Connection conn = getTestDatabaseConnection()) {
+                String sql = "SELECT id FROM stories WHERE baslik = ? ORDER BY created_at DESC LIMIT 1";
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setString(1, title);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            Long id = rs.getLong("id");
+                            System.out.println("Story ID veritabanından alındı: " + id);
+                            return id;
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("Story ID başlıktan alınamadı (DB): " + e.getMessage());
+            }
         }
         
         return null;
@@ -1869,6 +2057,10 @@ public abstract class BaseSeleniumTest {
      * Veritabanı üzerinden story onayla
      */
     protected void approveStoryViaBackend(Long storyId, Long adminId) {
+        if (!USE_DB) {
+            System.out.println("approveStoryViaBackend atlandı (USE_DB=false)");
+            return;
+        }
         try (Connection conn = getTestDatabaseConnection()) {
             String sql = "UPDATE stories SET durum = 'YAYINLANDI', yayinlanma_tarihi = ? WHERE id = ?";
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -1999,18 +2191,22 @@ public abstract class BaseSeleniumTest {
             // Story slug'ını al (yayınlandıktan sonra URL'den veya veritabanından)
             String storySlug = null;
             if (storyId != null) {
-                try (Connection conn = getTestDatabaseConnection()) {
-                    String sql = "SELECT slug FROM stories WHERE id = ?";
-                    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                        stmt.setLong(1, storyId);
-                        try (ResultSet rs = stmt.executeQuery()) {
-                            if (rs.next()) {
-                                storySlug = rs.getString("slug");
+                storySlug = getStorySlugViaApi(storyId);
+                
+                if (storySlug == null && USE_DB) {
+                    try (Connection conn = getTestDatabaseConnection()) {
+                        String sql = "SELECT slug FROM stories WHERE id = ?";
+                        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                            stmt.setLong(1, storyId);
+                            try (ResultSet rs = stmt.executeQuery()) {
+                                if (rs.next()) {
+                                    storySlug = rs.getString("slug");
+                                }
                             }
                         }
+                    } catch (SQLException e) {
+                        System.err.println("Story slug veritabanından alınamadı: " + e.getMessage());
                     }
-                } catch (SQLException e) {
-                    System.err.println("Story slug veritabanından alınamadı: " + e.getMessage());
                 }
             }
             
