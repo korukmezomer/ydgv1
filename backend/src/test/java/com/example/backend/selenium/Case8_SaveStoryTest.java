@@ -196,6 +196,22 @@ public class Case8_SaveStoryTest extends BaseSeleniumTest {
             // Story ID'sini al
             Long storyId = getStoryIdFromSlug(storySlug);
             if (storyId == null) {
+                // Son çare: Veritabanından slug ile almayı dene
+                try (java.sql.Connection conn = getTestDatabaseConnection()) {
+                    String sql = "SELECT id FROM stories WHERE slug = ?";
+                    try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
+                        stmt.setString(1, storySlug);
+                        try (java.sql.ResultSet rs = stmt.executeQuery()) {
+                            if (rs.next()) {
+                                storyId = rs.getLong("id");
+                            }
+                        }
+                    }
+                } catch (java.sql.SQLException e) {
+                    System.err.println("Case 8 Negative: Story ID slug'dan alınamadı: " + e.getMessage());
+                }
+            }
+            if (storyId == null) {
                 fail("Case 8 Negative: Story ID alınamadı");
                 return;
             }

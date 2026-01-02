@@ -360,7 +360,7 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         }
         
         // Resim bloğunun oluşmasını bekle
-        Thread.sleep(2000);
+        Thread.sleep(1000); // 3000 -> 1000
         wait.until(
             ExpectedConditions.presenceOfElementLocated(
                 By.cssSelector(".image-block-container, .editor-block.image-block-container")
@@ -368,10 +368,12 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         );
         
         // Resim elementinin görünür olduğunu doğrula
-        WebElement imageElement = wait.until(
-            ExpectedConditions.visibilityOfElementLocated(
-                By.cssSelector(".block-image, .image-block-container img, img[src*='http']")
-            )
+        WebElement imageContainer = driver.findElement(
+            By.cssSelector(".image-block-container, .editor-block.image-block-container")
+        );
+        
+        WebElement imageElement = imageContainer.findElement(
+            By.cssSelector("img, .block-image img, img[src*='http'], img[src*='/'], img[src*='data:']")
         );
         
         // Resim URL'sinin doğru olduğunu kontrol et

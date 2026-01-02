@@ -59,8 +59,8 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
                 return;
             }
 
-            // Story ID'yi al
-            Long storyId = getStoryIdByTitle(originalTitle);
+            // Story ID'yi al (retry logic ile)
+            Long storyId = getStoryIdByTitle(originalTitle, writerEmail);
             if (storyId == null) {
                 // Son çare: Kullanıcının en son story'sini al
                 storyId = getLatestStoryIdByUserEmail(writerEmail);
@@ -253,7 +253,8 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
                 return;
             }
 
-            Long storyId = getStoryIdByTitle(storyTitle);
+            // Story ID'yi al (retry logic ile)
+            Long storyId = getStoryIdByTitle(storyTitle, writerEmail);
             if (storyId == null) {
                 storyId = getLatestStoryIdByUserEmail(writerEmail);
             }
@@ -585,7 +586,8 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
                 return;
             }
 
-            Long storyId = getStoryIdByTitle(storyTitle);
+            // Story ID'yi al (retry logic ile)
+            Long storyId = getStoryIdByTitle(storyTitle, writerEmail);
             if (storyId == null) {
                 storyId = getLatestStoryIdByUserEmail(writerEmail);
             }

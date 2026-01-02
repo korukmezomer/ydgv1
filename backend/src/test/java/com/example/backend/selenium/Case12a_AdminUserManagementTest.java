@@ -81,29 +81,57 @@ public class Case12a_AdminUserManagementTest extends BaseSeleniumTest {
             // 4. Test kullanıcısını listede bul ve aktif/pasif yap
             try {
                 // Kullanıcılar sayfasında kullanıcı listesi yüklenene kadar bekle
-                Thread.sleep(2000);
+                Thread.sleep(3000);
+                
+                // Sayfayı yenile (kullanıcının görünmesi için)
+                driver.navigate().refresh();
+                Thread.sleep(3000);
+                waitForPageLoad();
                 
                 // Kullanıcıyı bul (pagination ile tüm sayfaları kontrol et)
                 WebElement userRow = null;
                 int maxPages = 10; // Maksimum sayfa sayısı
                 int currentPage = 0;
                 
+                // İlk sayfaya dön (eğer başka bir sayfadaysak)
+                try {
+                    // İlk sayfaya dönmek için "İlk" veya "1" butonunu bul
+                    for (int i = 0; i < maxPages; i++) {
+                        try {
+                            WebElement firstButton = driver.findElement(
+                                By.xpath("//button[contains(text(), 'İlk')] | //button[contains(text(), '1') and not(contains(@class, 'active'))]")
+                            );
+                            if (firstButton.isEnabled() && firstButton.isDisplayed()) {
+                                firstButton.click();
+                                Thread.sleep(2000);
+                            } else {
+                                break;
+                            }
+                        } catch (Exception e) {
+                            break; // İlk sayfada olabiliriz
+                        }
+                    }
+                } catch (Exception e) {
+                    // İlk sayfada olabiliriz
+                }
+                
                 while (userRow == null && currentPage < maxPages) {
                     try {
-                        // Kullanıcıyı mevcut sayfada bul
+                        // Kullanıcıyı mevcut sayfada bul (daha esnek selector)
                         userRow = driver.findElement(
-                            By.xpath("//tr[.//td[contains(text(), '" + testUserEmail + "')] or .//td[contains(text(), '" + testUserUsername + "')]]")
+                            By.xpath("//tr[.//td[contains(text(), '" + testUserEmail + "')] | .//td[contains(text(), '" + testUserUsername + "')]]")
                         );
                         break; // Kullanıcı bulundu
                     } catch (org.openqa.selenium.NoSuchElementException e) {
                         // Kullanıcı bu sayfada yok, sonraki sayfaya geç
                         try {
                             WebElement nextButton = driver.findElement(
-                                By.xpath("//button[contains(text(), 'Sonraki')] | //button[contains(@disabled, 'false') and contains(text(), 'Sonraki')]")
+                                By.xpath("//button[contains(text(), 'Sonraki') and not(@disabled)] | //button[contains(@class, 'next') and not(@disabled)]")
                             );
-                            if (nextButton.isEnabled()) {
+                            if (nextButton.isEnabled() && nextButton.isDisplayed()) {
                                 nextButton.click();
-                                Thread.sleep(2000);
+                                Thread.sleep(3000); // Sayfa yüklenmesi için daha fazla bekle
+                                waitForPageLoad();
                                 currentPage++;
                             } else {
                                 // Son sayfaya ulaşıldı, kullanıcı bulunamadı
@@ -218,29 +246,56 @@ public class Case12a_AdminUserManagementTest extends BaseSeleniumTest {
             // 4. Test kullanıcısını listede bul ve sil
             try {
                 // Kullanıcılar sayfasında kullanıcı listesi yüklenene kadar bekle
-                Thread.sleep(2000);
+                Thread.sleep(3000);
+                
+                // Sayfayı yenile (kullanıcının görünmesi için)
+                driver.navigate().refresh();
+                Thread.sleep(3000);
+                waitForPageLoad();
                 
                 // Kullanıcıyı bul (pagination ile tüm sayfaları kontrol et)
                 WebElement userRow = null;
                 int maxPages = 10; // Maksimum sayfa sayısı
                 int currentPage = 0;
                 
+                // İlk sayfaya dön (eğer başka bir sayfadaysak)
+                try {
+                    for (int i = 0; i < maxPages; i++) {
+                        try {
+                            WebElement firstButton = driver.findElement(
+                                By.xpath("//button[contains(text(), 'İlk')] | //button[contains(text(), '1') and not(contains(@class, 'active'))]")
+                            );
+                            if (firstButton.isEnabled() && firstButton.isDisplayed()) {
+                                firstButton.click();
+                                Thread.sleep(2000);
+                            } else {
+                                break;
+                            }
+                        } catch (Exception e) {
+                            break; // İlk sayfada olabiliriz
+                        }
+                    }
+                } catch (Exception e) {
+                    // İlk sayfada olabiliriz
+                }
+                
                 while (userRow == null && currentPage < maxPages) {
                     try {
-                        // Kullanıcıyı mevcut sayfada bul
+                        // Kullanıcıyı mevcut sayfada bul (daha esnek selector)
                         userRow = driver.findElement(
-                            By.xpath("//tr[.//td[contains(text(), '" + testUserEmail + "')] or .//td[contains(text(), '" + testUserUsername + "')]]")
+                            By.xpath("//tr[.//td[contains(text(), '" + testUserEmail + "')] | .//td[contains(text(), '" + testUserUsername + "')]]")
                         );
                         break; // Kullanıcı bulundu
                     } catch (org.openqa.selenium.NoSuchElementException e) {
                         // Kullanıcı bu sayfada yok, sonraki sayfaya geç
                         try {
                             WebElement nextButton = driver.findElement(
-                                By.xpath("//button[contains(text(), 'Sonraki')] | //button[contains(@disabled, 'false') and contains(text(), 'Sonraki')]")
+                                By.xpath("//button[contains(text(), 'Sonraki') and not(@disabled)] | //button[contains(@class, 'next') and not(@disabled)]")
                             );
-                            if (nextButton.isEnabled()) {
+                            if (nextButton.isEnabled() && nextButton.isDisplayed()) {
                                 nextButton.click();
-                                Thread.sleep(2000);
+                                Thread.sleep(3000); // Sayfa yüklenmesi için daha fazla bekle
+                                waitForPageLoad();
                                 currentPage++;
                             } else {
                                 // Son sayfaya ulaşıldı, kullanıcı bulunamadı

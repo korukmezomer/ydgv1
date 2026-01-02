@@ -50,7 +50,7 @@ public class Case12b_AdminStoryDeletionTest extends BaseSeleniumTest {
             
             try {
                 driver.get(BASE_URL + "/logout");
-                Thread.sleep(2000);
+                Thread.sleep(500); // 2000 -> 500
             } catch (Exception e) {
                 // Logout sayfası yoksa devam et
             }
@@ -67,11 +67,10 @@ public class Case12b_AdminStoryDeletionTest extends BaseSeleniumTest {
             // 3. Admin dashboard'a git (onay bekleyen story'ler burada görünür)
             driver.get(BASE_URL + "/admin/dashboard");
             waitForPageLoad();
-            Thread.sleep(3000);
+            Thread.sleep(1000); // 3000 -> 1000
             
             // 4. Story'yi bul ve reddet
             try {
-                // Story'yi bul (admin-haber-item içinde)
                 WebElement storyRow = wait.until(
                     ExpectedConditions.presenceOfElementLocated(
                         By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
@@ -94,7 +93,7 @@ public class Case12b_AdminStoryDeletionTest extends BaseSeleniumTest {
                 rejectButton.click();
                 
                 // Red sebebi prompt'unu handle et (JavaScript prompt)
-                Thread.sleep(2000);
+                Thread.sleep(500); // 2000 -> 500
                 
                 // Alert'i bekle ve handle et (reddedildi mesajı için)
                 try {
@@ -105,11 +104,11 @@ public class Case12b_AdminStoryDeletionTest extends BaseSeleniumTest {
                     System.out.println("Case 12b: Alert beklenmedi: " + e.getMessage());
                 }
                 
-                Thread.sleep(3000);
+                Thread.sleep(1000); // 3000 -> 1000
                 
                 // Story'nin reddedildiğini kontrol et (artık onay bekleyen listede olmamalı)
                 driver.navigate().refresh();
-                Thread.sleep(3000);
+                Thread.sleep(1000); // 3000 -> 1000
                 
                 try {
                     driver.findElement(

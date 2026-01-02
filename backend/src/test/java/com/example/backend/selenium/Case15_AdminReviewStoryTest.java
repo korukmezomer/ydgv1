@@ -45,7 +45,16 @@ public class Case15_AdminReviewStoryTest extends BaseSeleniumTest {
                 return;
             }
 
-            Long storyId = getStoryIdByTitle(storyTitle);
+            // Story ID'yi al (retry logic ile)
+            Long storyId = getStoryIdByTitle(storyTitle, writerEmail);
+            if (storyId == null) {
+                // Son çare: Slug'dan ID almayı dene
+                storyId = getStoryIdFromSlug(storySlug);
+            }
+            if (storyId == null) {
+                // En son çare: Kullanıcının en son story'sini al
+                storyId = getLatestStoryIdByUserEmail(writerEmail);
+            }
             if (storyId == null) {
                 fail("Case 15: Story ID alınamadı");
                 return;

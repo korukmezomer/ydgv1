@@ -57,7 +57,7 @@ public class Case12f_AdminEditorPickTest extends BaseSeleniumTest {
             
             try {
                 driver.get(BASE_URL + "/logout");
-                Thread.sleep(2000);
+                Thread.sleep(500); // 2000 -> 500
             } catch (Exception e) {
                 // Logout sayfası yoksa devam et
             }
@@ -85,10 +85,9 @@ public class Case12f_AdminEditorPickTest extends BaseSeleniumTest {
             );
             editorPicksLink.click();
             waitForPageLoad();
-            Thread.sleep(3000);
+            Thread.sleep(1000); // 3000 -> 1000
             
             // 4. Story'yi bul ve editor seçimi yap
-            // Story'yi bul (admin-editor-pick-item içinde)
             WebElement storyItem = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
                     By.xpath("//div[contains(@class, 'admin-editor-pick-item')]//*[contains(text(), '" + storyTitle + "')]")
@@ -107,7 +106,7 @@ public class Case12f_AdminEditorPickTest extends BaseSeleniumTest {
             
             // Editor seçimi yap
             editorPickButton.click();
-            Thread.sleep(3000);
+            Thread.sleep(1000); // 3000 -> 1000
             
             // Butonun durumunun değiştiğini kontrol et (yeniden bul)
             storyContainer = driver.findElement(

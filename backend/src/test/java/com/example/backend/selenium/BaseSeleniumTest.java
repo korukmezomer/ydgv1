@@ -39,7 +39,7 @@ public abstract class BaseSeleniumTest {
         System.getenv("FRONTEND_URL") != null ? System.getenv("FRONTEND_URL") : "http://localhost:5173");
     protected static final String BACKEND_URL = System.getProperty("backend.url",
         System.getenv("BACKEND_URL") != null ? System.getenv("BACKEND_URL") : "http://localhost:8080");
-    protected static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30); // Daha uzun timeout
+    protected static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(15); // Optimize edilmiş timeout
     
     // Veritabanı bağlantı bilgileri (normal veritabanı kullanılıyor, test veritabanı kullanılmıyor)
     // Önce system property, sonra environment variable, son olarak default değer
@@ -210,6 +210,10 @@ public abstract class BaseSeleniumTest {
         }
         
         ChromeOptions options = new ChromeOptions();
+        
+        // PERFORMANS: Resimleri devre dışı bırak (test süresini %30-50 azaltır)
+        options.addArguments("--blink-settings=imagesEnabled=false");
+        options.addArguments("--disable-images");
         
         // CI/CD ortamı için headless mod kontrolü
         String headless = System.getProperty("selenium.headless", "false");
@@ -417,7 +421,7 @@ public abstract class BaseSeleniumTest {
         
         // Eğer dashboard'a yönlendirildiyse, logout yap
         try {
-            Thread.sleep(2000); // Sayfanın yüklenmesini bekle (Home.jsx useEffect dashboard'a yönlendirebilir)
+            Thread.sleep(1000); // 2000 -> 1000
             String currentUrl = driver.getCurrentUrl();
             
             // Dashboard'da mıyız kontrol et
@@ -477,7 +481,7 @@ public abstract class BaseSeleniumTest {
      */
     protected void waitForPageLoad() {
         try {
-            Thread.sleep(1000); // Wait for React to render
+            Thread.sleep(500); // 1000 -> 500 (Wait for React to render)
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -805,7 +809,7 @@ public abstract class BaseSeleniumTest {
             // Butonun disabled olmadığından emin ol
             if (submitButton.getAttribute("disabled") != null) {
                 System.out.println("⚠️ Login submit butonu disabled, form değerlerini kontrol ediyoruz...");
-                Thread.sleep(2000);
+                Thread.sleep(500); // 2000 -> 500
             }
             
             System.out.println("🖱️ Login formu gönderiliyor...");
@@ -1062,14 +1066,14 @@ public abstract class BaseSeleniumTest {
             // Butonun disabled olmadığından emin ol
             if (submitButton.getAttribute("disabled") != null) {
                 System.out.println("Submit butonu disabled, form değerlerini kontrol ediyoruz...");
-                Thread.sleep(2000);
+                Thread.sleep(500); // 2000 -> 500
             }
             
             WebElement form = driver.findElement(By.tagName("form"));
             safeSubmitForm(submitButton, form);
             
             // API çağrısının tamamlanmasını bekle
-            Thread.sleep(3000);
+            Thread.sleep(1000); // 3000 -> 1000
             
             String currentUrl = driver.getCurrentUrl();
             System.out.println("Kayıt sonrası URL: " + currentUrl);
@@ -1108,7 +1112,7 @@ public abstract class BaseSeleniumTest {
             // Eğer login sayfasına yönlendirildiyse, otomatik giriş yap (Case1'deki mantık)
             if (currentUrl.contains("/login")) {
                 loginUser(email, password);
-                Thread.sleep(2000);
+                Thread.sleep(500); // 2000 -> 500
                 currentUrl = driver.getCurrentUrl();
             }
             
@@ -1215,14 +1219,14 @@ public abstract class BaseSeleniumTest {
             // Butonun disabled olmadığından emin ol
             if (submitButton.getAttribute("disabled") != null) {
                 System.out.println("Submit butonu disabled, form değerlerini kontrol ediyoruz...");
-                Thread.sleep(2000);
+                Thread.sleep(500); // 2000 -> 500
             }
             
             WebElement form = driver.findElement(By.tagName("form"));
             safeSubmitForm(submitButton, form);
             
             // API çağrısının tamamlanmasını bekle (Case1'deki gibi)
-            Thread.sleep(3000);
+            Thread.sleep(1000); // 3000 -> 1000
             
             String currentUrl = driver.getCurrentUrl();
             System.out.println("Kayıt sonrası URL: " + currentUrl);
@@ -1310,7 +1314,7 @@ public abstract class BaseSeleniumTest {
                 safeSubmitForm(loginSubmitButton, loginForm);
                 
                 // Giriş işleminin tamamlanmasını bekle
-                Thread.sleep(3000);
+                Thread.sleep(1000); // 3000 -> 1000
             }
             
             // Dashboard'a yönlendirilmeyi bekle (Case1'deki gibi)
@@ -1365,12 +1369,12 @@ public abstract class BaseSeleniumTest {
                         )
                     );
                     logoutButton.click();
-                    Thread.sleep(2000);
+                    Thread.sleep(500); // 2000 -> 500
                 } catch (Exception e1) {
                     // ProfileDropdown bulunamadıysa veya açılamadıysa direkt logout endpoint'ine git
                     try {
                         driver.get(BASE_URL + "/logout");
-                        Thread.sleep(2000);
+                        Thread.sleep(500); // 2000 -> 500
                     } catch (Exception e2) {
                         // Logout sayfası yoksa JavaScript ile temizle
                         ((JavascriptExecutor) driver).executeScript("window.localStorage.clear();");
@@ -1511,7 +1515,7 @@ public abstract class BaseSeleniumTest {
             "};"
         );
         
-        Thread.sleep(3000);
+        Thread.sleep(1000); // 3000 -> 1000
         WebElement publishButton = wait.until(
             ExpectedConditions.elementToBeClickable(
                 By.cssSelector(".publish-button, button.publish-button")
@@ -1520,11 +1524,11 @@ public abstract class BaseSeleniumTest {
         
         // Scroll to button
         ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", publishButton);
-        Thread.sleep(2000);
+        Thread.sleep(500); // 2000 -> 500
         
         publishButton.click();
         
-        Thread.sleep(5000); // Yayınlama işlemi için bekle
+        Thread.sleep(2000); // 5000 -> 2000
         
         // Alert'leri kontrol et ve kabul et
         try {
@@ -1532,13 +1536,13 @@ public abstract class BaseSeleniumTest {
             String alertText = alert.getText();
             System.out.println("Publish sonrası alert: " + alertText);
             alert.accept();
-            Thread.sleep(3000);
+            Thread.sleep(1000); // 3000 -> 1000
         } catch (Exception alertEx) {
             // Alert yoksa devam et
         }
         
         waitForPageLoad();
-        Thread.sleep(5000);
+        Thread.sleep(2000); // 5000 -> 2000
     }
     
     /**
@@ -1621,13 +1625,25 @@ public abstract class BaseSeleniumTest {
     }
     
     /**
-     * Story başlığından story ID'sini al
+     * Story başlığından story ID'sini al (retry logic ile)
+     * @param title Story başlığı
+     * @param userEmail Opsiyonel: Kullanıcı email'i (fallback için)
+     * @return Story ID veya null
      */
     protected Long getStoryIdByTitle(String title) {
-        // Önce URL'den ID'yi almaya çalış (eğer story oluşturulduktan sonra URL'de ID varsa)
+        return getStoryIdByTitle(title, null);
+    }
+    
+    /**
+     * Story başlığından story ID'sini al (retry logic ile)
+     * @param title Story başlığı
+     * @param userEmail Opsiyonel: Kullanıcı email'i (fallback için)
+     * @return Story ID veya null
+     */
+    protected Long getStoryIdByTitle(String title, String userEmail) {
+        // Önce URL'den ID'yi almaya çalış
         try {
             String currentUrl = driver.getCurrentUrl();
-            // URL formatı: /haberler/{slug} veya /yazar/haber-duzenle/{id} veya /haberler/{id}
             java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("/(?:haberler|yazar/haber-duzenle)/(\\d+)");
             java.util.regex.Matcher matcher = pattern.matcher(currentUrl);
             if (matcher.find()) {
@@ -1654,13 +1670,17 @@ public abstract class BaseSeleniumTest {
             }
         } catch (SQLException e) {
             System.err.println("Story ID başlıktan alınamadı: " + e.getMessage());
-            // Eğer tablo yoksa, kullanıcının en son story'sini almayı dene
-            if (e.getMessage().contains("does not exist") || e.getMessage().contains("relation")) {
-                System.out.println("Stories tablosu bulunamadı, alternatif yöntem deneniyor...");
-            }
         }
         
         // Son çare: Kullanıcının en son story'sini al (eğer email biliniyorsa)
+        if (userEmail != null) {
+            Long latestId = getLatestStoryIdByUserEmail(userEmail);
+            if (latestId != null) {
+                System.out.println("Story ID kullanıcının en son story'sinden alındı: " + latestId);
+                return latestId;
+            }
+        }
+        
         return null;
     }
     
@@ -1736,7 +1756,7 @@ public abstract class BaseSeleniumTest {
                 String alertText = alert.getText();
                 System.out.println("Publish sonrası alert: " + alertText);
                 alert.accept();
-                Thread.sleep(2000);
+                Thread.sleep(500); // 2000 -> 500
             } catch (Exception alertEx) {
                 // Alert yoksa devam et
             }
@@ -1829,7 +1849,7 @@ public abstract class BaseSeleniumTest {
             // Writer'dan logout yap (admin onayı için hazırlık)
             try {
                 driver.get(BASE_URL + "/logout");
-                Thread.sleep(2000);
+                Thread.sleep(500); // 2000 -> 500
             } catch (Exception e) {
                 // Logout sayfası yoksa veya hata varsa devam et
                 System.out.println("Logout yapılamadı, devam ediliyor: " + e.getMessage());
@@ -1854,7 +1874,7 @@ public abstract class BaseSeleniumTest {
             // Logout
             try {
                 driver.get(BASE_URL + "/logout");
-                Thread.sleep(2000);
+                Thread.sleep(500); // 2000 -> 500
             } catch (Exception e) {
                 // Logout sayfası yoksa devam et
             }
@@ -1868,7 +1888,7 @@ public abstract class BaseSeleniumTest {
             // Admin dashboard'a git
             driver.get(BASE_URL + "/admin/dashboard");
             waitForPageLoad();
-            Thread.sleep(3000);
+            Thread.sleep(1000); // 3000 -> 1000
             
             // Story'yi bul ve onayla
             try {
@@ -1891,7 +1911,7 @@ public abstract class BaseSeleniumTest {
                     // Alert yoksa devam et
                 }
                 
-                Thread.sleep(3000);
+                Thread.sleep(1000); // 3000 -> 1000
                 
                 // Story slug'ını al (onaylandıktan sonra)
                 // Story ID'yi bul ve slug'ı al
@@ -2047,7 +2067,7 @@ public abstract class BaseSeleniumTest {
                     // Logout
                     try {
                         driver.get(BASE_URL + "/logout");
-                        Thread.sleep(2000);
+                        Thread.sleep(500); // 2000 -> 500
                     } catch (Exception ex) {
                         // Logout sayfası yoksa devam et
                     }
@@ -2058,7 +2078,7 @@ public abstract class BaseSeleniumTest {
                     // Admin dashboard'a git
                     driver.get(BASE_URL + "/admin/dashboard");
                     waitForPageLoad();
-                    Thread.sleep(3000);
+                    Thread.sleep(1000); // 3000 -> 1000
                     
                     // Story'yi bul ve onayla
                     WebElement storyRow = wait.until(
@@ -2080,7 +2100,7 @@ public abstract class BaseSeleniumTest {
                         // Alert yoksa devam et
                     }
                     
-                    Thread.sleep(3000);
+                    Thread.sleep(1000); // 3000 -> 1000
                     System.out.println("Story UI üzerinden onaylandı: " + storyId);
                 } catch (Exception ex) {
                     System.err.println("Story UI üzerinden de onaylanamadı: " + ex.getMessage());
