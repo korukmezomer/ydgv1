@@ -1,5 +1,6 @@
 package com.example.backend.infrastructure.util;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -8,6 +9,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class SecurityUtilTest {
+
+    @AfterEach
+    void clearContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void getCurrentUserEmail_shouldReturnNullWhenAuthenticationIsNull() {
@@ -65,6 +71,17 @@ class SecurityUtilTest {
         String result = SecurityUtil.getCurrentUserEmail();
         
         assertNull(result);
+    }
+
+    @Test
+    void getCurrentUserEmail_shouldReturnPrincipalString_directContext() {
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getPrincipal()).thenReturn("direct@example.com");
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        String result = SecurityUtil.getCurrentUserEmail();
+
+        assertEquals("direct@example.com", result);
     }
 }
 
