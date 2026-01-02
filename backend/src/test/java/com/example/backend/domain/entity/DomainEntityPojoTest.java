@@ -38,6 +38,8 @@ class DomainEntityPojoTest {
         assertEquals("user@example.com", user.getEmail());
         assertEquals("user1", user.getUsername());
         assertTrue(user.getRoles().contains(role));
+        user.setIsActive(false);
+        assertFalse(user.getIsActive());
         assertNotNull(user.toString());
         assertEquals(user, user); // equals path
     }
@@ -63,15 +65,48 @@ class DomainEntityPojoTest {
         story.setPublishedAt(LocalDateTime.now());
         story.setIsEditorPick(true);
         story.setMetaDescription("meta");
+        Category category = new Category();
+        category.setId(50L);
+        category.setName("cat");
+        story.setCategory(category);
         Tag tag = new Tag();
         tag.setId(99L);
         story.getTags().add(tag);
 
+        // Koleksiyon setter'ları
+        Set<StoryVersion> versions = new HashSet<>();
+        StoryVersion version = new StoryVersion();
+        versions.add(version);
+        story.setVersions(versions);
+
+        Set<Comment> comments = new HashSet<>();
+        comments.add(new Comment());
+        story.setComments(comments);
+
+        Set<Like> likes = new HashSet<>();
+        likes.add(new Like());
+        story.setLikes(likes);
+
+        Set<SavedStory> savedStories = new HashSet<>();
+        savedStories.add(new SavedStory());
+        story.setSavedStories(savedStories);
+
+        Set<AnalyticsRecord> analytics = new HashSet<>();
+        analytics.add(new AnalyticsRecord());
+        story.setAnalytics(analytics);
+
+        // Getter/setter doğrulamaları
         assertEquals("Title", story.getTitle());
         assertEquals(Story.StoryStatus.YAYINLANDI, story.getStatus());
         assertEquals(owner, story.getUser());
         assertTrue(story.getTags().contains(tag));
+        assertEquals(category, story.getCategory());
         assertEquals("meta", story.getMetaDescription());
+        assertEquals(versions, story.getVersions());
+        assertEquals(comments, story.getComments());
+        assertEquals(likes, story.getLikes());
+        assertEquals(savedStories, story.getSavedStories());
+        assertEquals(analytics, story.getAnalytics());
         assertNotNull(story.toString());
     }
 
@@ -207,8 +242,14 @@ class DomainEntityPojoTest {
         report.setReason(Report.ReportReason.SPAM);
         report.setStatus(Report.ReportStatus.BEKLIYOR);
         report.setDescription("d");
+        report.setRelatedStoryId(11L);
+        report.setRelatedCommentId(12L);
+        report.setRelatedUserId(13L);
         assertEquals(Report.ReportReason.SPAM, report.getReason());
         assertEquals("d", report.getDescription());
+        assertEquals(11L, report.getRelatedStoryId());
+        assertEquals(12L, report.getRelatedCommentId());
+        assertEquals(13L, report.getRelatedUserId());
 
         Newsletter newsletter = new Newsletter();
         newsletter.setId(19L);

@@ -423,7 +423,7 @@ public class Case12a_AdminUserManagementTest extends BaseSeleniumTest {
             Boolean isActive = deletedUserId != null ? getUserActiveStatusViaApi(deletedUserId) : null;
             if (deletedUserId == null || isActive == null) {
                 fail("Case 12a Negative: Kullanıcı API'den doğrulanamadı (ID veya aktif durumu yok)");
-            } else {
+                } else {
                 assertFalse(isActive, "Case 12a Negative: Kullanıcı hala aktif (silinmedi, isActive = true)");
             }
             

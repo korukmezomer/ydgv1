@@ -129,7 +129,7 @@ public class Case11_NotificationTest extends BaseSeleniumTest {
             )
         );
         try {
-            submitCommentButton.click();
+        submitCommentButton.click();
         } catch (Exception clickEx) {
             ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", submitCommentButton);
         }
@@ -202,8 +202,8 @@ public class Case11_NotificationTest extends BaseSeleniumTest {
                 notificationElement = new org.openqa.selenium.support.ui.WebDriverWait(driver, java.time.Duration.ofSeconds(30)).until(
                     ExpectedConditions.visibilityOfElementLocated(
                         By.xpath("//*[contains(text(), 'yorum') or contains(text(), 'Yorum')] | //*[contains(text(), '" + commenterUsername + "')] | //*[contains(@class, 'notification')]")
-                    )
-                );
+            )
+        );
                 notificationFound = notificationElement != null && notificationElement.isDisplayed();
             } catch (Exception ignored) {}
         }
@@ -336,8 +336,8 @@ public class Case11_NotificationTest extends BaseSeleniumTest {
                 notificationElement = new org.openqa.selenium.support.ui.WebDriverWait(driver, java.time.Duration.ofSeconds(60)).until(
                     ExpectedConditions.visibilityOfElementLocated(
                         By.xpath("//*[contains(text(), 'beğen') or contains(text(), 'Beğen')] | //*[contains(text(), '" + likerUsername + "')] | //*[contains(@class, 'notification')] | //*[contains(@class, 'notification-item')]")
-                    )
-                );
+            )
+        );
                 likeNotificationFound = notificationElement != null && notificationElement.isDisplayed();
             } catch (Exception ex) {
                 driver.navigate().refresh();

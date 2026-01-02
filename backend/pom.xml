@@ -203,6 +203,22 @@
                             <goal>report-integration</goal>
                         </goals>
                     </execution>
+                    <!-- Merge multiple exec files -->
+                    <execution>
+                        <id>merge</id>
+                        <goals>
+                            <goal>merge</goal>
+                        </goals>
+                        <configuration>
+                            <destFile>${project.build.directory}/jacoco.exec</destFile>
+                            <fileSet>
+                                <directory>${project.build.directory}</directory>
+                                <includes>
+                                    <include>jacoco-*.exec</include>
+                                </includes>
+                            </fileSet>
+                        </configuration>
+                    </execution>
                     <!-- Check coverage thresholds - %100 coverage required -->
                     <execution>
                         <id>check</id>

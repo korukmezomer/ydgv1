@@ -2882,13 +2882,13 @@ public abstract class BaseSeleniumTest {
                 Thread.sleep(1000);
             try { driver.switchTo().alert().accept(); } catch (Exception ignored) {}
             Thread.sleep(1000);
-            
+                
             // Slug'ı API veya title'dan türet
                 Long storyId = getStoryIdByTitle(storyTitle, null);
                 if (storyId != null) {
                 String slug = getStorySlugViaApi(storyId);
                 if (slug != null) return slug;
-            }
+                                    }
                 return storyTitle.toLowerCase()
                     .replaceAll("[^a-z0-9\\s-]", "")
                     .replaceAll("\\s+", "-")
