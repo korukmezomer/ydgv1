@@ -165,6 +165,22 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isUnauthorized()); // 401 Unauthorized (doğru HTTP status code)
     }
 
+    @Test
+    void testUserRegistrationMissingEmail_shouldReturnBadRequest() throws Exception {
+        UserRegistrationRequest request = new UserRegistrationRequest();
+        request.setEmail(""); // invalid
+        request.setPassword("password123");
+        request.setFirstName("Test");
+        request.setLastName("User");
+        request.setUsername("nouseremail");
+        request.setRoleName("USER");
+
+        mockMvc.perform(post("/api/auth/kayit")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
     private void createRoleIfNotExists(String roleName) {
         if (!roleRepository.existsByName(roleName)) {
             Role role = new Role();

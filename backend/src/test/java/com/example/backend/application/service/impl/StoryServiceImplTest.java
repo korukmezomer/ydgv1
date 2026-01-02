@@ -77,6 +77,37 @@ class StoryServiceImplTest {
     }
 
     @Test
+    void create_shouldThrowWhenUserNotFound() {
+        Long userId = 999L;
+        StoryCreateRequest request = new StoryCreateRequest();
+        request.setBaslik("Test");
+        request.setIcerik("Content");
+
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> storyService.create(userId, request));
+        verify(storyRepository, never()).save(any());
+    }
+
+    @Test
+    void create_shouldThrowWhenCategoryNotFound() {
+        Long userId = 1L;
+        Long categoryId = 99L;
+        User user = new User();
+        user.setId(userId);
+        StoryCreateRequest request = new StoryCreateRequest();
+        request.setBaslik("Test");
+        request.setIcerik("Content");
+        request.setKategoriId(categoryId);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> storyService.create(userId, request));
+        verify(storyRepository, never()).save(any());
+    }
+
+    @Test
     void approve_shouldPublishStoryAndNotifyFollowers() {
         Long storyId = 1L;
         Long adminId = 2L;
@@ -204,6 +235,16 @@ class StoryServiceImplTest {
     }
 
     @Test
+    void approve_shouldThrowWhenStoryNotFound() {
+        Long storyId = 999L;
+        Long adminId = 1L;
+        when(storyRepository.findById(storyId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> storyService.approve(storyId, adminId));
+        verify(storyRepository, never()).save(any());
+    }
+
+    @Test
     void findBySlug_shouldReturnStoryResponse() {
         String slug = "test-story";
         User user = new User();
@@ -264,6 +305,16 @@ class StoryServiceImplTest {
         when(storyRepository.findById(storyId)).thenReturn(Optional.of(story));
 
         assertThrows(RuntimeException.class, () -> storyService.publish(storyId, otherUserId));
+    }
+
+    @Test
+    void publish_shouldThrowWhenStoryNotFound() {
+        Long storyId = 999L;
+        Long userId = 1L;
+        when(storyRepository.findById(storyId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> storyService.publish(storyId, userId));
+        verify(storyRepository, never()).save(any());
     }
 
     @Test
