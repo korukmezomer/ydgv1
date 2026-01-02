@@ -211,6 +211,29 @@ public abstract class BaseSeleniumTest {
         
         ChromeOptions options = new ChromeOptions();
         
+        // Şifre yöneticisini tamamen devre dışı bırak (test sırasında pop-up'ları önlemek için)
+        options.addArguments("--disable-password-manager");
+        options.addArguments("--disable-password-manager-reauthentication");
+        options.addArguments("--disable-features=PasswordManager,PasswordCheck");
+        options.addArguments("--disable-save-password-bubble");
+        options.addArguments("--disable-infobars");
+        options.addArguments("--disable-notifications");
+        options.addArguments("--disable-popup-blocking");
+        
+        // Chrome preferences ile şifre yöneticisini tamamen devre dışı bırak
+        java.util.Map<String, Object> prefs = new java.util.HashMap<>();
+        prefs.put("credentials_enable_service", false);
+        prefs.put("profile.password_manager_enabled", false);
+        prefs.put("profile.default_content_setting_values.notifications", 2);
+        prefs.put("profile.password_manager_leak_detection", false);
+        prefs.put("profile.default_content_settings.popups", 0);
+        prefs.put("profile.content_settings.exceptions.automatic_downloads", new java.util.HashMap<>());
+        options.setExperimentalOption("prefs", prefs);
+        
+        // Chrome'un otomatik şifre önerilerini devre dışı bırak
+        options.setExperimentalOption("excludeSwitches", java.util.Arrays.asList("enable-automation", "enable-logging"));
+        options.setExperimentalOption("useAutomationExtension", false);
+        
         // PERFORMANS: Resimleri devre dışı bırak (test süresini %30-50 azaltır)
         options.addArguments("--blink-settings=imagesEnabled=false");
         options.addArguments("--disable-images");
@@ -391,6 +414,9 @@ public abstract class BaseSeleniumTest {
         }
         wait = new WebDriverWait(driver, DEFAULT_TIMEOUT);
         
+        // Chrome şifre yöneticisi uyarılarını otomatik kapat
+        dismissPasswordManagerAlerts();
+        
         // Frontend erişilebilirlik kontrolü (sadece bir kez)
         if (!frontendChecked) {
             synchronized (BaseSeleniumTest.class) {
@@ -492,11 +518,84 @@ public abstract class BaseSeleniumTest {
     /**
      * Helper method to wait for page to load
      */
+    /**
+     * Chrome şifre yöneticisi uyarılarını otomatik kapat
+     */
+    protected void dismissPasswordManagerAlerts() {
+        try {
+            // Önce alert'leri kontrol et
+            for (int i = 0; i < 5; i++) {
+                try {
+                    org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                    String alertText = alert.getText();
+                    if (alertText != null && (alertText.contains("şifre") || alertText.contains("password") || 
+                        alertText.contains("Şifre") || alertText.contains("Password"))) {
+                        alert.accept();
+                        System.out.println("🔒 Şifre yöneticisi uyarısı kapatıldı");
+                        Thread.sleep(500);
+                    } else {
+                        alert.accept();
+                        Thread.sleep(500);
+                    }
+                } catch (org.openqa.selenium.NoAlertPresentException e) {
+                    break;
+                }
+            }
+            
+            // JavaScript ile Chrome'un şifre yöneticisi pop-up'ını kapat
+            try {
+                ((JavascriptExecutor) driver).executeScript(
+                    "if (window.chrome && window.chrome.runtime) {" +
+                    "  try { window.chrome.runtime.onConnect.removeListener(); } catch(e) {}" +
+                    "}" +
+                    "var alerts = document.querySelectorAll('[role=\"alert\"], [role=\"dialog\"], .password-manager-alert, [class*=\"password\"], [class*=\"Password\"]');" +
+                    "alerts.forEach(function(alert) { " +
+                    "  var text = alert.textContent || alert.innerText || ''; " +
+                    "  if (text.includes('şifre') || text.includes('password') || text.includes('Şifre') || text.includes('Password')) { " +
+                    "    var button = alert.querySelector('button, [role=\"button\"]'); " +
+                    "    if (button) button.click(); " +
+                    "    else alert.remove(); " +
+                    "  } " +
+                    "});"
+                );
+            } catch (Exception e) {
+                // JavaScript hatası - devam et
+            }
+            
+            // XPath ile şifre uyarısı butonlarını bul ve tıkla
+            try {
+                java.util.List<WebElement> passwordButtons = driver.findElements(
+                    By.xpath("//button[contains(text(), 'Tamam') or contains(text(), 'OK') or contains(text(), 'Kapat') or contains(text(), 'Close')]")
+                );
+                for (WebElement button : passwordButtons) {
+                    try {
+                        String buttonText = button.getText().toLowerCase();
+                        if (buttonText.contains("tamam") || buttonText.contains("ok") || 
+                            buttonText.contains("kapat") || buttonText.contains("close")) {
+                            safeClick(button);
+                            Thread.sleep(500);
+                        }
+                    } catch (Exception e) {
+                        // Buton tıklanamıyor, devam et
+                    }
+                }
+            } catch (Exception e) {
+                // XPath hatası - devam et
+            }
+        } catch (Exception e) {
+            // Genel hata - sessizce devam et
+        }
+    }
+    
     protected void waitForPageLoad() {
         try {
             Thread.sleep(500); // 1000 -> 500 (Wait for React to render)
+            // Sayfa yüklendikten sonra şifre yöneticisi uyarılarını kapat
+            dismissPasswordManagerAlerts();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            // Hata olsa bile devam et
         }
     }
     
@@ -2164,13 +2263,10 @@ public abstract class BaseSeleniumTest {
      */
     protected WebElement findTagInAllPages(String tagName) {
         try {
-            // Eğer zaten etiketler sayfasındaysak, sayfayı yeniden yükleme
-            String currentUrl = driver.getCurrentUrl();
-            if (!currentUrl.contains("/admin/etiketler")) {
-                driver.get(BASE_URL + "/admin/etiketler");
-                waitForPageLoad();
-                Thread.sleep(2000);
-            }
+            // Sayfayı yenile ve etiketler sayfasına git
+            driver.get(BASE_URL + "/admin/etiketler");
+            waitForPageLoad();
+            Thread.sleep(3000);
             
             // Sayfa yüklemesini bekle
             wait.until(
@@ -2186,6 +2282,8 @@ public abstract class BaseSeleniumTest {
             int maxPages = 10; // Maksimum 10 sayfa kontrol et (optimizasyon)
             
             while (currentPage < maxPages) {
+                System.out.println("Etiket aranıyor (sayfa " + (currentPage + 1) + "): " + tagName);
+                
                 try {
                     // Önce td elementini bul, sonra parent tr'yi al
                     WebElement tagTd = wait.until(
@@ -2200,13 +2298,28 @@ public abstract class BaseSeleniumTest {
                 } catch (org.openqa.selenium.TimeoutException e) {
                     // Etiket bu sayfada bulunamadı, sonraki sayfaya geç
                     try {
-                        // Pagination butonlarını kontrol et
-                        WebElement nextButton = driver.findElement(
-                            By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki')]")
-                        );
+                        // Pagination butonlarını kontrol et - birden fazla selector dene
+                        WebElement nextButton = null;
+                        try {
+                            nextButton = driver.findElement(
+                                By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki')]")
+                            );
+                        } catch (Exception ex1) {
+                            try {
+                                nextButton = driver.findElement(
+                                    By.cssSelector(".admin-pagination button:not([disabled])")
+                                );
+                            } catch (Exception ex2) {
+                                // Pagination butonu bulunamadı
+                                throw new org.openqa.selenium.NoSuchElementException("Pagination butonu bulunamadı");
+                            }
+                        }
                         
-                        // Buton disabled mı kontrol et
-                        if (nextButton.getAttribute("disabled") != null) {
+                        // Buton disabled mı kontrol et - hem attribute hem de class kontrolü
+                        String disabledAttr = nextButton.getAttribute("disabled");
+                        boolean isDisabled = disabledAttr != null && !disabledAttr.isEmpty();
+                        
+                        if (isDisabled) {
                             // Son sayfaya ulaşıldı
                             System.out.println("Son sayfaya ulaşıldı, etiket bulunamadı: " + tagName);
                             break;
@@ -2215,18 +2328,28 @@ public abstract class BaseSeleniumTest {
                         // Sonraki sayfaya git
                         System.out.println("Sonraki sayfaya geçiliyor... (sayfa " + (currentPage + 2) + ")");
                         safeClick(nextButton);
+                        
+                        // Loading'in bitmesini bekle
                         wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
                         Thread.sleep(2000);
+                        
+                        // Tablonun yüklendiğini bekle
+                        wait.until(
+                            ExpectedConditions.presenceOfElementLocated(By.cssSelector(".admin-table tbody"))
+                        );
+                        Thread.sleep(1000);
+                        
                         currentPage++;
                     } catch (org.openqa.selenium.NoSuchElementException ex) {
                         // Pagination butonu yok, son sayfadayız
-                        System.out.println("Pagination butonu yok, son sayfadayız");
+                        System.out.println("Pagination butonu yok veya son sayfadayız");
                         break;
                     }
                 }
             }
         } catch (Exception e) {
-            System.out.println("Etiket tüm sayfalarda arandı ama bulunamadı: " + tagName + " - " + e.getMessage());
+            System.out.println("Etiket tüm sayfalarda arandı ama bulunamadı: " + tagName + " - Hata: " + e.getMessage());
+            e.printStackTrace();
         }
         return null;
     }

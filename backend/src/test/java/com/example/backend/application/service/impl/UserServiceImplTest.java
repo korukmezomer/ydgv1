@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
@@ -261,19 +262,22 @@ class UserServiceImplTest {
     @Test
     void findAll_shouldReturnPageOfUsers() {
         Pageable pageable = PageRequest.of(0, 10);
+        // UserServiceImpl artık ID'ye göre DESC sıralı Pageable kullanıyor
+        Pageable sortedPageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "id"));
+        
         User user = new User();
         user.setId(1L);
         user.setEmail("test@example.com");
         user.setUsername("testuser");
 
         Page<User> userPage = new PageImpl<>(List.of(user));
-        when(userRepository.findAll(pageable)).thenReturn(userPage);
+        when(userRepository.findAll(sortedPageable)).thenReturn(userPage);
 
         Page<UserResponse> response = userService.findAll(pageable);
 
         assertNotNull(response);
         assertEquals(1, response.getContent().size());
-        verify(userRepository, times(1)).findAll(pageable);
+        verify(userRepository, times(1)).findAll(sortedPageable);
     }
 
     @Test

@@ -110,36 +110,74 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
             wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
             Thread.sleep(2000); // React render için ekstra süre
             
-            // 3. Yeni etiket ekle butonunu bul ve tıkla - birden fazla selector dene
+            // 3. Yeni etiket ekle butonunu bul ve tıkla - retry mekanizması ile
             WebElement addButton = null;
-            try {
-                // Önce header içindeki primary butonu bul (daha spesifik)
-                addButton = wait.until(ExpectedConditions.elementToBeClickable(
-                    By.cssSelector(".admin-dashboard-header button.admin-btn-primary")
-                ));
-            } catch (Exception e1) {
+            WebElement modalOverlay = null;
+            for (int retry = 0; retry < 3; retry++) {
                 try {
-                    // Sonra XPath ile "+ Yeni Etiket" text'ini içeren butonu ara
-                    addButton = wait.until(ExpectedConditions.elementToBeClickable(
-                        By.xpath("//button[contains(text(), '+ Yeni Etiket')]")
-                    ));
-                } catch (Exception e2) {
-                    // Son olarak sadece "Yeni Etiket" text'ini içeren butonu ara
-                    addButton = wait.until(ExpectedConditions.elementToBeClickable(
-                    By.xpath("//button[contains(text(), 'Yeni Etiket')]")
-                    ));
+                    // Loading'in bitmesini bekle
+                    wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+                    Thread.sleep(1000);
+                    
+                    // Butonu bul - birden fazla selector dene
+                    try {
+                        addButton = wait.until(ExpectedConditions.elementToBeClickable(
+                            By.cssSelector(".admin-dashboard-header button.admin-btn-primary")
+                        ));
+                    } catch (Exception e1) {
+                        try {
+                            addButton = wait.until(ExpectedConditions.elementToBeClickable(
+                                By.xpath("//button[contains(text(), '+ Yeni Etiket')]")
+                            ));
+                        } catch (Exception e2) {
+                            addButton = wait.until(ExpectedConditions.elementToBeClickable(
+                                By.xpath("//button[contains(text(), 'Yeni Etiket')]")
+                            ));
+                        }
+                    }
+                    
+                    // Butonun görünür olduğundan emin ol
+                    ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", addButton);
+                    Thread.sleep(500);
+                    
+                    // Alert'leri kapat (varsa)
+                    for (int i = 0; i < 3; i++) {
+                        try {
+                            org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                            alert.accept();
+                            Thread.sleep(500);
+                        } catch (Exception e) {
+                            break;
+                        }
+                    }
+                    
+                    // Butonu tıkla
+                    safeClick(addButton);
+                    Thread.sleep(1000);
+                    
+                    // Modal'ın açılmasını bekle
+                    modalOverlay = wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-modal-overlay")));
+                    Thread.sleep(1000);
+                    break; // Başarılı, döngüden çık
+                } catch (Exception e) {
+                    System.out.println("Case 12e: Modal açma denemesi " + (retry + 1) + "/3 başarısız: " + e.getMessage());
+                    if (retry < 2) {
+                        // Sayfayı yenile ve tekrar dene
+                        driver.navigate().refresh();
+                        Thread.sleep(3000);
+                        waitForPageLoad();
+                        wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+                        Thread.sleep(2000);
+                    } else {
+                        throw e; // Son deneme de başarısız, hatayı fırlat
+                    }
                 }
             }
-            // Güvenilir tıklama kullan (overlay sorunlarını çözer)
-            safeClick(addButton);
             
-            // Modal'ın açılmasını bekle (overlay görünür olmalı)
-            wait.until(
-                ExpectedConditions.visibilityOfElementLocated(
-                    By.cssSelector(".admin-modal-overlay")
-                )
-            );
-            Thread.sleep(1000);
+            if (modalOverlay == null) {
+                fail("Case 12e: Modal açılamadı (3 deneme sonrası)");
+                return;
+            }
             
             // 4. Modal'da etiket formunu doldur
             String tagName = "Test Etiket " + System.currentTimeMillis();
@@ -161,7 +199,28 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
                 )
             );
             safeClick(saveButton);
-            Thread.sleep(3000);
+            Thread.sleep(2000);
+            
+            // Alert kontrolü (varsa kapat)
+            try {
+                org.openqa.selenium.Alert alert = wait.until(ExpectedConditions.alertIsPresent());
+                System.out.println("Case 12e: Alert bulundu: " + alert.getText());
+                alert.accept();
+                Thread.sleep(1000);
+            } catch (Exception e) {
+                // Alert yoksa devam et
+            }
+            
+            // Modal'ın kapanmasını bekle
+            try {
+                wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-modal-overlay")));
+            } catch (Exception e) {
+                // Modal zaten kapalı olabilir
+            }
+            
+            // Loading'in bitmesini bekle
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(3000); // Sayfa güncellemesi için ekstra bekleme
             
             // 6. Etiketin eklendiğini kontrol et - tüm sayfalarda ara
             WebElement tagRow = findTagInAllPages(tagName);
@@ -315,7 +374,28 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
                 )
             );
             safeClick(saveButton);
-            Thread.sleep(3000);
+            Thread.sleep(2000);
+            
+            // Alert kontrolü (varsa kapat)
+            try {
+                org.openqa.selenium.Alert alert = wait.until(ExpectedConditions.alertIsPresent());
+                System.out.println("Case 12e Negative: Alert bulundu: " + alert.getText());
+                alert.accept();
+                Thread.sleep(1000);
+            } catch (Exception e) {
+                // Alert yoksa devam et
+            }
+            
+            // Modal'ın kapanmasını bekle
+            try {
+                wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-modal-overlay")));
+            } catch (Exception e) {
+                // Modal zaten kapalı olabilir
+            }
+            
+            // Loading'in bitmesini bekle
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(3000); // Sayfa güncellemesi için ekstra bekleme
             
             // 4. Etiketi bul ve sil - tüm sayfalarda ara
             WebElement tagRow = findTagInAllPages(tagName);
@@ -553,36 +633,74 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
             
             String originalTagName = "Düzenlenecek Etiket " + System.currentTimeMillis();
             
-            // Yeni etiket butonunu bul - birden fazla selector dene
+            // Modal'ı açmak için retry mekanizması ile buton tıklama
             WebElement addButton = null;
-            try {
-                // Önce header içindeki primary butonu bul (daha spesifik)
-                addButton = wait.until(ExpectedConditions.elementToBeClickable(
-                    By.cssSelector(".admin-dashboard-header button.admin-btn-primary")
-                ));
-            } catch (Exception e1) {
+            WebElement modalOverlay = null;
+            for (int retry = 0; retry < 3; retry++) {
                 try {
-                    // Sonra XPath ile "+ Yeni Etiket" text'ini içeren butonu ara
-                    addButton = wait.until(ExpectedConditions.elementToBeClickable(
-                        By.xpath("//button[contains(text(), '+ Yeni Etiket')]")
-                    ));
-                } catch (Exception e2) {
-                    // Son olarak sadece "Yeni Etiket" text'ini içeren butonu ara
-                    addButton = wait.until(ExpectedConditions.elementToBeClickable(
-                    By.xpath("//button[contains(text(), 'Yeni Etiket')]")
-                    ));
+                    // Loading'in bitmesini bekle
+                    wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+                    Thread.sleep(1000);
+                    
+                    // Butonu bul - birden fazla selector dene
+                    try {
+                        addButton = wait.until(ExpectedConditions.elementToBeClickable(
+                            By.cssSelector(".admin-dashboard-header button.admin-btn-primary")
+                        ));
+                    } catch (Exception e1) {
+                        try {
+                            addButton = wait.until(ExpectedConditions.elementToBeClickable(
+                                By.xpath("//button[contains(text(), '+ Yeni Etiket')]")
+                            ));
+                        } catch (Exception e2) {
+                            addButton = wait.until(ExpectedConditions.elementToBeClickable(
+                                By.xpath("//button[contains(text(), 'Yeni Etiket')]")
+                            ));
+                        }
+                    }
+                    
+                    // Butonun görünür olduğundan emin ol
+                    ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", addButton);
+                    Thread.sleep(500);
+                    
+                    // Alert'leri kapat (varsa)
+                    for (int i = 0; i < 3; i++) {
+                        try {
+                            org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                            alert.accept();
+                            Thread.sleep(500);
+                        } catch (Exception e) {
+                            break;
+                        }
+                    }
+                    
+                    // Butonu tıkla
+                    safeClick(addButton);
+                    Thread.sleep(1000);
+                    
+                    // Modal'ın açılmasını bekle
+                    modalOverlay = wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-modal-overlay")));
+                    Thread.sleep(1000);
+                    break; // Başarılı, döngüden çık
+                } catch (Exception e) {
+                    System.out.println("Case 12e Update: Modal açma denemesi " + (retry + 1) + "/3 başarısız: " + e.getMessage());
+                    if (retry < 2) {
+                        // Sayfayı yenile ve tekrar dene
+                        driver.navigate().refresh();
+                        Thread.sleep(3000);
+                        waitForPageLoad();
+                        wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+                        Thread.sleep(2000);
+                    } else {
+                        throw e; // Son deneme de başarısız, hatayı fırlat
+                    }
                 }
             }
-            // Güvenilir tıklama kullan (overlay sorunlarını çözer)
-            safeClick(addButton);
             
-            // Modal'ın açılmasını bekle
-            wait.until(
-                ExpectedConditions.visibilityOfElementLocated(
-                    By.cssSelector(".admin-modal-overlay")
-                )
-            );
-            Thread.sleep(1000);
+            if (modalOverlay == null) {
+                fail("Case 12e Update: Modal açılamadı (3 deneme sonrası)");
+                return;
+            }
             
             WebElement nameInput = wait.until(
                 ExpectedConditions.visibilityOfElementLocated(
@@ -600,7 +718,28 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
                 )
             );
             safeClick(saveButton);
-            Thread.sleep(3000);
+            Thread.sleep(2000);
+            
+            // Alert kontrolü (varsa kapat)
+            try {
+                org.openqa.selenium.Alert alert = wait.until(ExpectedConditions.alertIsPresent());
+                System.out.println("Case 12e: Alert bulundu: " + alert.getText());
+                alert.accept();
+                Thread.sleep(1000);
+            } catch (Exception e) {
+                // Alert yoksa devam et
+            }
+            
+            // Modal'ın kapanmasını bekle
+            try {
+                wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-modal-overlay")));
+            } catch (Exception e) {
+                // Modal zaten kapalı olabilir
+            }
+            
+            // Loading'in bitmesini bekle
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(3000); // Sayfa güncellemesi için ekstra bekleme
             
             // 4. Etiketi bul ve düzenle - tüm sayfalarda ara
             WebElement tagRow = findTagInAllPages(originalTagName);
@@ -610,22 +749,75 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
                 return;
             }
             
-            // Düzenle butonunu bul ve tıkla
-            WebElement editButton = tagRow.findElement(
-                By.xpath(".//button[contains(text(), 'Düzenle')]")
-            );
-            safeClick(editButton);
-            Thread.sleep(2000);
+            // Düzenle butonunu bul ve tıkla - retry mekanizması ile
+            WebElement editButton = null;
+            WebElement editModalOverlay = null;
+            for (int retry = 0; retry < 3; retry++) {
+                try {
+                    // Loading'in bitmesini bekle
+                    wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+                    Thread.sleep(1000);
+                    
+                    // Etiket satırını tekrar bul (sayfa yenilendiyse)
+                    if (retry > 0) {
+                        tagRow = findTagInAllPages(originalTagName);
+                        if (tagRow == null) {
+                            fail("Case 12e Update: Etiket bulunamadı (retry " + (retry + 1) + ")");
+                            return;
+                        }
+                    }
+                    
+                    // Düzenle butonunu bul
+                    editButton = tagRow.findElement(
+                        By.xpath(".//button[contains(text(), 'Düzenle')]")
+                    );
+                    
+                    // Butonun görünür olduğundan emin ol
+                    ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", editButton);
+                    Thread.sleep(500);
+                    
+                    // Alert'leri kapat (varsa)
+                    for (int i = 0; i < 3; i++) {
+                        try {
+                            org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                            alert.accept();
+                            Thread.sleep(500);
+                        } catch (Exception e) {
+                            break;
+                        }
+                    }
+                    
+                    // Butonu tıkla
+                    safeClick(editButton);
+                    Thread.sleep(1000);
+                    
+                    // Modal'ın açılmasını bekle
+                    editModalOverlay = wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-modal-overlay")));
+                    Thread.sleep(1000);
+                    break; // Başarılı, döngüden çık
+                } catch (Exception e) {
+                    System.out.println("Case 12e Update: Düzenle modal açma denemesi " + (retry + 1) + "/3 başarısız: " + e.getMessage());
+                    if (retry < 2) {
+                        // Sayfayı yenile ve tekrar dene
+                        driver.navigate().refresh();
+                        Thread.sleep(3000);
+                        waitForPageLoad();
+                        wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+                        Thread.sleep(2000);
+                    } else {
+                        throw e; // Son deneme de başarısız, hatayı fırlat
+                    }
+                }
+            }
+            
+            if (editModalOverlay == null) {
+                fail("Case 12e Update: Düzenle modal açılamadı (3 deneme sonrası)");
+                return;
+            }
             
             // 5. Modal'da etiket bilgilerini güncelle
             String updatedTagName = "Güncellenmiş Etiket " + System.currentTimeMillis();
             
-            // Modal'ın açılmasını bekle (düzenleme modal'ı)
-            wait.until(
-                ExpectedConditions.visibilityOfElementLocated(
-                    By.cssSelector(".admin-modal-overlay")
-                )
-            );
             Thread.sleep(1000);
             
             // Etiket adını güncelle
