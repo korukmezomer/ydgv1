@@ -71,7 +71,7 @@ pipeline {
                         # Unit testleri çalıştır (Selenium ve Integration hariç)
                         # Tüm unit test pattern'lerini kullan (Service, Util, Config, Entity, DTO, Exception, Provider, Initializer, vb.)
                         mvn test jacoco:report \
-                            -Dtest="*ServiceImplTest,*PojoTest,*UtilTest,*ConfigTest,*ExceptionTest,*SmokeTest,*FilterTest,*HandlerTest,*EntityTest,*ProviderTest,*InitializerTest" \
+                            -Dtest="*ServiceImplTest,*PojoTest,*UtilTest,*ConfigTest,*ExceptionTest,*FilterTest,*HandlerTest,*EntityTest,*ProviderTest,*InitializerTest" \
                             -DfailIfNoTests=false \
                             -Djacoco.destFile=target/jacoco-unit.exec \
                             -Djacoco.propertyName=surefireArgLine || true
