@@ -67,16 +67,13 @@ public class Case15_AdminReviewStoryTest extends BaseSeleniumTest {
             loginUser(adminCreds.getEmail(), adminCreds.getPassword());
 
             // 3. Admin dashboard'a git
-            driver.get(BASE_URL + "/admin/dashboard");
-            waitForPageLoad();
-            Thread.sleep(3000);
-
-            // 4. Story'yi bul (onay bekleyen haberler listesinde)
-            WebElement storyRow = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
-                )
-            ).findElement(By.xpath("./ancestor::div[contains(@class, 'admin-haber-item')]"));
+            // 3. Admin dashboard'da story'yi bul (tüm sayfalarda tara)
+            WebElement storyText = findStoryInAllPages(storyTitle);
+            if (storyText == null) {
+                fail("Case 15: Admin dashboard'da story bulunamadı: " + storyTitle);
+                return;
+            }
+            WebElement storyRow = storyText.findElement(By.xpath("./ancestor::div[contains(@class, 'admin-haber-item')]"));
 
             // 5. Story'nin başlığını kontrol et
             WebElement storyTitleElement = storyRow.findElement(
@@ -116,6 +113,7 @@ public class Case15_AdminReviewStoryTest extends BaseSeleniumTest {
                 "Case 15: İncele butonu bulunamadı"
             );
 
+            ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block:'center'});", reviewButton);
             safeClick(reviewButton);
             waitForPageLoad();
             Thread.sleep(3000);

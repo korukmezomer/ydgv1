@@ -51,6 +51,7 @@ public class Case12f_AdminEditorPickTest extends BaseSeleniumTest {
                 fail("Case 12f: Story onaylanamadı");
                 return;
             }
+            Thread.sleep(1500); // onay sonrası listeye düşmesi için kısa bekleme
             
             // 2. ADMIN olarak giriş yap (BaseSeleniumTest'teki loginUser helper metodunu kullan)
             AdminCredentials adminCreds = ensureAdminUserExists();

@@ -2380,12 +2380,8 @@ public abstract class BaseSeleniumTest {
      */
     protected WebElement findStoryInAllPages(String storyTitle) {
         try {
-            // Admin dashboard'a git
             driver.get(BASE_URL + "/admin/dashboard");
             waitForPageLoad();
-            Thread.sleep(500);
-            
-            // Sayfa yüklemesini bekle
             wait.until(
                 ExpectedConditions.or(
                     ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-container")),
@@ -2393,61 +2389,41 @@ public abstract class BaseSeleniumTest {
                 )
             );
             wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
-            Thread.sleep(1000);
+            Thread.sleep(500);
             
-            // En yeni story'ler en başta olduğu için ilk sayfada bulunmalı
-            // İlk sayfada direkt ara (en yeni önce sıralı olduğu için)
-            try {
-                WebElement storyElement = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(
-                        By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')] | //*[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
-                    )
-                );
-                System.out.println("Story ilk sayfada bulundu: " + storyTitle);
-                return storyElement;
-            } catch (org.openqa.selenium.TimeoutException e) {
-                // İlk sayfada bulunamadı, sadece bir sonraki sayfayı kontrol et
-                System.out.println("Story ilk sayfada bulunamadı, bir sonraki sayfayı kontrol ediliyor: " + storyTitle);
+            int currentPage = 1;
+            int maxPages = 50; // güvenlik için üst sınır
+            while (currentPage <= maxPages) {
                 try {
-                    // Pagination butonlarını kontrol et
-                    WebElement nextButton = driver.findElement(
-                        By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki') or contains(text(), 'Next')]")
+                    WebElement storyElement = wait.until(
+                        ExpectedConditions.presenceOfElementLocated(
+                            By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')] | //*[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
+                        )
                     );
-                    
-                    // Buton disabled mı kontrol et
-                    if (nextButton.getAttribute("disabled") != null) {
-                        // Son sayfaya ulaşıldı
-                        System.out.println("Story bulunamadı (son sayfaya ulaşıldı): " + storyTitle);
-                        return null;
-                    }
-                    
-                    // Sonraki sayfaya git
-                    safeClick(nextButton);
-                    waitForPageLoad();
-                    Thread.sleep(500);
-                    
-                    // İkinci sayfada ara
+                    System.out.println("Story bulundu (sayfa " + currentPage + "): " + storyTitle);
+                    return storyElement;
+                } catch (org.openqa.selenium.TimeoutException e) {
+                    // bu sayfada yok, sonraki sayfayı dene
                     try {
-                        WebElement storyElement = wait.until(
-                            ExpectedConditions.presenceOfElementLocated(
-                                By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')] | //*[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
-                            )
+                        WebElement nextButton = driver.findElement(
+                            By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki') or contains(text(), 'Next')]")
                         );
-                        System.out.println("Story ikinci sayfada bulundu: " + storyTitle);
-                        return storyElement;
-                    } catch (org.openqa.selenium.TimeoutException e2) {
-                        System.out.println("Story ikinci sayfada da bulunamadı: " + storyTitle);
+                        if (nextButton.getAttribute("disabled") != null) {
+                            System.out.println("Story bulunamadı, son sayfaya ulaşıldı: " + storyTitle);
+                            return null;
+                        }
+                        safeClick(nextButton);
+                        wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+                        Thread.sleep(500);
+                        currentPage++;
+                    } catch (org.openqa.selenium.NoSuchElementException ex) {
+                        System.out.println("Story bulunamadı, pagination yok: " + storyTitle);
                         return null;
                     }
-                } catch (org.openqa.selenium.NoSuchElementException ex) {
-                    // Pagination butonu yok, son sayfadayız
-                    System.out.println("Story bulunamadı (pagination yok): " + storyTitle);
-                    return null;
                 }
             }
         } catch (Exception e) {
             System.out.println("Story aranırken hata oluştu: " + storyTitle + " - " + e.getMessage());
-            e.printStackTrace();
         }
         return null;
     }
@@ -2829,58 +2805,43 @@ public abstract class BaseSeleniumTest {
      */
     protected String approveStoryAsAdmin(String storyTitle) {
         try {
-            // 1) API ile onaylamayı dene
-            Long storyId = getStoryIdByTitle(storyTitle, null);
-            if (storyId != null && approveStoryViaApi(storyId)) {
-                String slug = getStorySlugViaApi(storyId);
-                if (slug != null) return slug;
-            }
-            
-            // 2) UI fallback
             try { driver.get(BASE_URL + "/logout"); Thread.sleep(500); } catch (Exception ignored) {}
             AdminCredentials adminCreds = ensureAdminUserExists();
             loginUser(adminCreds.getEmail(), adminCreds.getPassword());
             
             WebElement storyTextElement = findStoryInAllPages(storyTitle);
-            if (storyTextElement != null) {
-                WebElement storyRow = storyTextElement.findElement(By.xpath("./ancestor::div[contains(@class, 'admin-haber-item')]"));
-                WebElement approveButton = storyRow.findElement(
-                    By.xpath(".//button[contains(text(), 'Onayla') or contains(text(), 'onayla') or contains(@class, 'approve')]")
-                );
-                approveButton.click();
-                
-                Thread.sleep(1000);
-                try { driver.switchTo().alert().accept(); } catch (Exception ignored) {}
-                Thread.sleep(1000);
-                
-                storyId = getStoryIdByTitle(storyTitle, null);
-                if (storyId != null) {
-                    String slug = getStorySlugViaApi(storyId);
-                    if (slug != null) return slug;
-                }
-                
-                return storyTitle.toLowerCase()
-                    .replaceAll("[^a-z0-9\\s-]", "")
-                    .replaceAll("\\s+", "-")
-                    .replaceAll("-+", "-");
-            } else {
-                System.out.println("Story UI'da bulunamadı, API ile deneniyor: " + storyTitle);
-                storyId = getStoryIdByTitle(storyTitle, null);
-                if (storyId != null && approveStoryViaApi(storyId)) {
-                    String slug = getStorySlugViaApi(storyId);
-                    if (slug != null) return slug;
-                return storyTitle.toLowerCase()
-                    .replaceAll("[^a-z0-9\\s-]", "")
-                    .replaceAll("\\s+", "-")
-                    .replaceAll("-+", "-");
+            if (storyTextElement == null) {
+                System.out.println("Story UI'da bulunamadı: " + storyTitle);
+                return null;
             }
+            
+            WebElement storyRow = storyTextElement.findElement(By.xpath("./ancestor::div[contains(@class, 'admin-haber-item')]"));
+            WebElement approveButton = storyRow.findElement(
+                By.xpath(".//button[contains(text(), 'Onayla') or contains(text(), 'onayla') or contains(@class, 'approve')]")
+            );
+            
+            // Scroll & güvenli tıklama
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", approveButton);
+            safeClick(approveButton);
+            
+            Thread.sleep(1000);
+            try { driver.switchTo().alert().accept(); } catch (Exception ignored) {}
+            Thread.sleep(1000);
+            
+            // Slug'ı API veya title'dan türet
+            Long storyId = getStoryIdByTitle(storyTitle, null);
+            if (storyId != null) {
+                String slug = getStorySlugViaApi(storyId);
+                if (slug != null) return slug;
             }
+            return storyTitle.toLowerCase()
+                .replaceAll("[^a-z0-9\\s-]", "")
+                .replaceAll("\\s+", "-")
+                .replaceAll("-+", "-");
         } catch (Exception e) {
             System.err.println("Admin onaylama hatası: " + e.getMessage());
-            e.printStackTrace();
             return null;
         }
-        return null;
     }
     
     /**

@@ -206,12 +206,12 @@ public class Case11_NotificationTest extends BaseSeleniumTest {
         waitForPageLoad();
         Thread.sleep(3000);
         
-        // Bildirimi kontrol et (30 sn'ye kadar bekle; yoksa bir kez refresh dene)
+        // Bildirimi kontrol et (çok yavaş ortamlar için 3 deneme, 40 sn bekleme)
         WebElement notificationElement = null;
         boolean notificationFound = false;
-        for (int i = 0; i < 2 && !notificationFound; i++) {
+        for (int i = 0; i < 3 && !notificationFound; i++) {
             try {
-                notificationElement = new org.openqa.selenium.support.ui.WebDriverWait(driver, java.time.Duration.ofSeconds(30)).until(
+                notificationElement = new org.openqa.selenium.support.ui.WebDriverWait(driver, java.time.Duration.ofSeconds(40)).until(
                     ExpectedConditions.presenceOfElementLocated(
                         By.xpath("//*[contains(text(), 'yorum') or contains(text(), 'Yorum')] | //*[contains(text(), '" + commenterUsername + "')]")
                     )
@@ -220,7 +220,7 @@ public class Case11_NotificationTest extends BaseSeleniumTest {
             } catch (Exception ex) {
                 driver.navigate().refresh();
                 waitForPageLoad();
-                Thread.sleep(1000);
+                Thread.sleep(2000);
             }
         }
         

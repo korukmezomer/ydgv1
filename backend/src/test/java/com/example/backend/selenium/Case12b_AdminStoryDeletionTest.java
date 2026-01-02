@@ -80,43 +80,8 @@ public class Case12b_AdminStoryDeletionTest extends BaseSeleniumTest {
             wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
             Thread.sleep(2000);
             
-            // 4. Story'yi bul (ilk iki sayfada ara - en yeni en başta olduğu için)
-            System.out.println("Story aranıyor: " + storyTitle);
-            
-            WebElement storyElement = null;
-            try {
-                // İlk sayfada ara
-                storyElement = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(
-                        By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
-                    )
-                );
-                System.out.println("Story ilk sayfada bulundu: " + storyTitle);
-            } catch (org.openqa.selenium.TimeoutException e) {
-                // İlk sayfada bulunamadı, ikinci sayfayı kontrol et
-                System.out.println("Story ilk sayfada bulunamadı, ikinci sayfa kontrol ediliyor...");
-                try {
-                    WebElement nextButton = driver.findElement(
-                        By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki') or contains(text(), 'Next')]")
-                    );
-                    if (nextButton.getAttribute("disabled") == null) {
-                        safeClick(nextButton);
-                        Thread.sleep(2000);
-                        wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
-                        Thread.sleep(2000);
-                        
-                        storyElement = wait.until(
-                            ExpectedConditions.presenceOfElementLocated(
-                                By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
-                            )
-                        );
-                        System.out.println("Story ikinci sayfada bulundu: " + storyTitle);
-                    }
-                } catch (Exception ex) {
-                    System.out.println("Story bulunamadı: " + storyTitle);
-                }
-            }
-            
+            // 4. Story'yi tüm sayfalarda ara (UI)
+            WebElement storyElement = findStoryInAllPages(storyTitle);
             if (storyElement == null) {
                 fail("Case 12b: Story admin dashboard'da bulunamadı: " + storyTitle);
                 return;
@@ -131,7 +96,7 @@ public class Case12b_AdminStoryDeletionTest extends BaseSeleniumTest {
                     storyItem.findElement(By.xpath(".//button[contains(text(), 'Reddet')]"))
                 )
             );
-            
+            ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block:'center'});", rejectButton);
             System.out.println("Reddet butonu bulundu, tıklanıyor...");
             
             // Prompt'u override et (butona tıklamadan önce)
