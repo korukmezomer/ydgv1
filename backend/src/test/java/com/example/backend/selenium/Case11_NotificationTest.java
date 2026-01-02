@@ -69,129 +69,53 @@ public class Case11_NotificationTest extends BaseSeleniumTest {
         safeSubmitForm(submitButton, form);
         Thread.sleep(3000);
         
-        // Story oluştur
-        driver.get(BASE_URL + "/reader/new-story");
-        waitForPageLoad();
-        Thread.sleep(2000);
-        
-        // Başlık ve içerik gir
-        WebElement titleInput = wait.until(
-            ExpectedConditions.presenceOfElementLocated(
-                By.cssSelector("input.story-title-input, input[placeholder*='Başlık']")
-            )
-        );
-        String storyTitle = "Bildirim Test Story " + System.currentTimeMillis();
-        titleInput.sendKeys(storyTitle);
-        
-        Thread.sleep(1000);
-        
-        WebElement contentTextarea = wait.until(
-            ExpectedConditions.presenceOfElementLocated(
-                By.cssSelector("textarea.block-textarea")
-            )
-        );
-        contentTextarea.sendKeys("Bu bir bildirim test story'sidir.");
-        
-        Thread.sleep(1000);
-        
-        // Yayınla
-        WebElement publishButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".publish-button, button.publish-button")
-            )
-        );
-        publishButton.click();
-        Thread.sleep(5000);
-        
-        // Story slug'ını al (URL'den veya dashboard'dan)
-        String currentUrl = driver.getCurrentUrl();
-        String storySlug = null;
-        if (currentUrl.contains("/haberler/")) {
-            storySlug = currentUrl.substring(currentUrl.indexOf("/haberler/") + "/haberler/".length());
-        } else {
-            // Dashboard'da story listesinden slug al
-            // Veya story ID'yi al ve API'den slug çek
+            // Story oluştur
+            driver.get(BASE_URL + "/reader/new-story");
+            waitForPageLoad();
             Thread.sleep(2000);
-            // Story'nin oluşturulduğunu varsayalım, slug'ı backend'den almak için story ID gerekir
-            // Şimdilik story'nin yayınlanmasını bekleyelim
-        }
-        
-        // Story oluşturuldu, şimdi admin onayı gerekiyor
-        // 1.5. Admin olarak giriş yap ve story'yi onayla
-        AdminCredentials adminCreds = ensureAdminUserExists();
-        
-        try {
-            driver.get(BASE_URL + "/logout");
-            Thread.sleep(2000);
-        } catch (Exception e) {
-            // Logout sayfası yoksa devam et
-        }
-        
-        driver.get(BASE_URL + "/login");
-        waitForPageLoad();
-        
-        WebElement adminEmailInput = wait.until(
-            ExpectedConditions.presenceOfElementLocated(By.id("email"))
-        );
-        adminEmailInput.sendKeys(adminCreds.getEmail());
-        driver.findElement(By.id("password")).sendKeys(adminCreds.getPassword());
-        
-        WebElement adminLoginForm = driver.findElement(By.cssSelector("form"));
-        WebElement adminLoginSubmitButton = adminLoginForm.findElement(By.cssSelector("button[type='submit']"));
-        safeSubmitForm(adminLoginSubmitButton, adminLoginForm);
-        Thread.sleep(3000);
-        
-        // Admin dashboard'a git
-        driver.get(BASE_URL + "/admin/dashboard");
-        waitForPageLoad();
-        Thread.sleep(3000);
-        
-        // Onay bekleyen story'yi bul ve onayla
-        try {
-            // Story başlığını bul
-            WebElement storyRow = wait.until(
+            
+            // Başlık ve içerik gir
+            WebElement titleInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
-                    By.xpath("//*[contains(text(), '" + storyTitle + "')]")
+                    By.cssSelector("input.story-title-input, input[placeholder*='Başlık']")
                 )
             );
+            String storyTitle = "Bildirim Test Story " + System.currentTimeMillis();
+            titleInput.sendKeys(storyTitle);
             
-            // Onayla butonunu bul ve tıkla
-            WebElement approveButton = storyRow.findElement(
-                By.xpath(".//button[contains(text(), 'Onayla') or contains(text(), 'onayla')]")
-            );
-            approveButton.click();
-            
-            // Confirm dialog'u kabul et
             Thread.sleep(1000);
-            try {
-                driver.switchTo().alert().accept();
-            } catch (Exception e) {
-                // Alert yoksa devam et
-            }
             
-            Thread.sleep(3000);
+            WebElement contentTextarea = wait.until(
+                ExpectedConditions.presenceOfElementLocated(
+                    By.cssSelector("textarea.block-textarea")
+                )
+            );
+            contentTextarea.sendKeys("Bu bir bildirim test story'sidir.");
             
-            // Story onaylandı, şimdi slug'ı al
-            // Story detay sayfasına git veya dashboard'dan slug al
-            // Şimdilik story slug'ını story title'dan oluştur
-            if (storySlug == null) {
-                storySlug = storyTitle.toLowerCase()
-                    .replaceAll("[^a-z0-9\\s-]", "")
-                    .replaceAll("\\s+", "-")
-                    .replaceAll("-+", "-");
-            }
+            Thread.sleep(1000);
             
-        } catch (Exception e) {
-            System.out.println("Case 11.1: Story onaylama - " + e.getMessage());
-            // Story onaylanamadı, slug'ı title'dan oluştur
-            if (storySlug == null) {
-                storySlug = storyTitle.toLowerCase()
-                    .replaceAll("[^a-z0-9\\s-]", "")
-                    .replaceAll("\\s+", "-")
-                    .replaceAll("-+", "-");
+            // Yayınla
+            WebElement publishButton = wait.until(
+                ExpectedConditions.elementToBeClickable(
+                    By.cssSelector(".publish-button, button.publish-button")
+                )
+            );
+            publishButton.click();
+            Thread.sleep(5000);
+            
+            // Story slug'ı ve ID'yi API'den al
+            Long storyId = getStoryIdByTitle(storyTitle, writerEmail);
+            String storySlug = null;
+            if (storyId != null) {
+                storySlug = getStorySlugViaApi(storyId);
             }
-        }
         
+        // Story oluşturuldu, şimdi admin onayı gerekiyor
+        assertNotNull(storyId, "Story ID alınamadı");
+        assertTrue(approveStoryViaApi(storyId), "Story API ile onaylanamadı");
+        if (storySlug == null) {
+            storySlug = getStorySlugViaApi(storyId);
+        }
         assertNotNull(storySlug, "Story slug alınamadı");
         
         // 2. Farklı bir kullanıcı (USER) oluştur ve yorum yap
@@ -385,82 +309,18 @@ public class Case11_NotificationTest extends BaseSeleniumTest {
         publishButton.click();
         Thread.sleep(5000);
         
-        // Story slug'ını al
-        String currentUrl = driver.getCurrentUrl();
+        Long storyId = getStoryIdByTitle(storyTitle, writerEmail);
         String storySlug = null;
-        if (currentUrl.contains("/haberler/")) {
-            storySlug = currentUrl.substring(currentUrl.indexOf("/haberler/") + "/haberler/".length());
+        if (storyId != null) {
+            storySlug = getStorySlugViaApi(storyId);
         }
         
         // Story oluşturuldu, şimdi admin onayı gerekiyor
-        // Admin olarak giriş yap ve story'yi onayla
-        AdminCredentials adminCreds = ensureAdminUserExists();
-        
-        try {
-            driver.get(BASE_URL + "/logout");
-            Thread.sleep(2000);
-        } catch (Exception e) {
-            // Logout sayfası yoksa devam et
+        assertNotNull(storyId, "Story ID alınamadı");
+        assertTrue(approveStoryViaApi(storyId), "Story API ile onaylanamadı");
+        if (storySlug == null) {
+            storySlug = getStorySlugViaApi(storyId);
         }
-        
-        driver.get(BASE_URL + "/login");
-        waitForPageLoad();
-        
-        WebElement adminEmailInput = wait.until(
-            ExpectedConditions.presenceOfElementLocated(By.id("email"))
-        );
-        adminEmailInput.sendKeys(adminCreds.getEmail());
-        driver.findElement(By.id("password")).sendKeys(adminCreds.getPassword());
-        
-        WebElement adminLoginForm = driver.findElement(By.cssSelector("form"));
-        WebElement adminLoginSubmitButton = adminLoginForm.findElement(By.cssSelector("button[type='submit']"));
-        safeSubmitForm(adminLoginSubmitButton, adminLoginForm);
-        Thread.sleep(3000);
-        
-        // Admin dashboard'a git
-        driver.get(BASE_URL + "/admin/dashboard");
-        waitForPageLoad();
-        Thread.sleep(3000);
-        
-        // Onay bekleyen story'yi bul ve onayla
-        try {
-            WebElement storyRow = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.xpath("//*[contains(text(), '" + storyTitle + "')]")
-                )
-            );
-            
-            WebElement approveButton = storyRow.findElement(
-                By.xpath(".//button[contains(text(), 'Onayla') or contains(text(), 'onayla')]")
-            );
-            approveButton.click();
-            
-            Thread.sleep(1000);
-            try {
-                driver.switchTo().alert().accept();
-            } catch (Exception e) {
-                // Alert yoksa devam et
-            }
-            
-            Thread.sleep(3000);
-            
-            if (storySlug == null) {
-                storySlug = storyTitle.toLowerCase()
-                    .replaceAll("[^a-z0-9\\s-]", "")
-                    .replaceAll("\\s+", "-")
-                    .replaceAll("-+", "-");
-            }
-            
-        } catch (Exception e) {
-            System.out.println("Case 11.2: Story onaylama - " + e.getMessage());
-            if (storySlug == null) {
-                storySlug = storyTitle.toLowerCase()
-                    .replaceAll("[^a-z0-9\\s-]", "")
-                    .replaceAll("\\s+", "-")
-                    .replaceAll("-+", "-");
-            }
-        }
-        
         assertNotNull(storySlug, "Story slug alınamadı");
         
         // 2. Farklı bir kullanıcı (USER) oluştur ve beğen

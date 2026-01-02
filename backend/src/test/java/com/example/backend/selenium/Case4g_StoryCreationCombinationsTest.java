@@ -2,6 +2,9 @@ package com.example.backend.selenium;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
@@ -26,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * 4. Başlık + Kod + Resim + Yazı
  */
 @DisplayName("Case 4g: Story Oluşturma - Blok Kombinasyonları")
+@TestMethodOrder(OrderAnnotation.class)
 public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
     
     /**
@@ -33,6 +37,7 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
      */
     @Test
     @DisplayName("Case 4g.1: Kod + Yazı + Link kombinasyonu")
+    @Order(1)
     public void case4g_1_CodeTextLink() {
         try {
             // 1. WRITER olarak kayıt ol
@@ -85,6 +90,7 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
      */
     @Test
     @DisplayName("Case 4g.2: Resim + Yazı + Kod kombinasyonu")
+    @Order(2)
     public void case4g_2_ImageTextCode() {
         try {
             // 1. WRITER olarak kayıt ol
@@ -145,6 +151,7 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
      */
     @Test
     @DisplayName("Case 4g.3: Video + Kod + Liste kombinasyonu")
+    @Order(3)
     public void case4g_3_VideoCodeList() {
         try {
             // 1. WRITER olarak kayıt ol
@@ -194,6 +201,7 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
      */
     @Test
     @DisplayName("Case 4g.4: Başlık + Kod + Resim + Yazı kombinasyonu")
+    @Order(4)
     public void case4g_4_HeadingCodeImageText() {
         try {
             // 1. WRITER olarak kayıt ol
@@ -359,21 +367,12 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
             // Loading overlay yoksa devam et
         }
         
-        // Resim bloğunun oluşmasını bekle
-        Thread.sleep(1000); // 3000 -> 1000
-        wait.until(
-            ExpectedConditions.presenceOfElementLocated(
-                By.cssSelector(".image-block-container, .editor-block.image-block-container")
+        // Resim bloğunun oluşmasını ve görünür olmasını bekle
+        Thread.sleep(1000); // kısa bekleme
+        WebElement imageElement = wait.until(
+            ExpectedConditions.visibilityOfElementLocated(
+                By.cssSelector(".image-block-container img.block-image, .editor-block.image-block-container img")
             )
-        );
-        
-        // Resim elementinin görünür olduğunu doğrula
-        WebElement imageContainer = driver.findElement(
-            By.cssSelector(".image-block-container, .editor-block.image-block-container")
-        );
-        
-        WebElement imageElement = imageContainer.findElement(
-            By.cssSelector("img, .block-image img, img[src*='http'], img[src*='/'], img[src*='data:']")
         );
         
         // Resim URL'sinin doğru olduğunu kontrol et
@@ -384,7 +383,7 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         );
         
         assertTrue(imageElement.isDisplayed(), "Resim görünür değil");
-        Thread.sleep(1000);
+        Thread.sleep(500);
     }
     
     private void addVideoBlock(WebElement textBlock, String videoUrl) throws Exception {

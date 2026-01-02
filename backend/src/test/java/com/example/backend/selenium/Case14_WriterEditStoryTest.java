@@ -187,16 +187,16 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
             // 7. API üzerinden güncellenmiş story'yi kontrol et
             String apiTitle = getStoryTitleViaApi(storyId);
             String apiContent = getStoryContentViaApi(storyId);
-            
-            assertTrue(
+                            
+                            assertTrue(
                 apiTitle != null && apiTitle.contains("Güncellenmiş"),
                 "Case 14: Başlık API'de güncellenmedi. Beklenen: " + updatedTitle + ", Bulunan: " + apiTitle
-            );
-            
-            assertTrue(
+                            );
+                            
+                            assertTrue(
                 apiContent != null && apiContent.contains("Güncellenmiş içerik"),
                 "Case 14: İçerik API'de güncellenmedi. İçerik: " + (apiContent != null ? apiContent.substring(0, Math.min(200, apiContent.length())) : "null")
-            );
+                            );
 
             System.out.println("Case 14: Yazar yazı düzenleme ve güncelleme testi başarıyla tamamlandı");
 
@@ -512,11 +512,11 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
 
             // 10. API üzerinden kontrol et - kod bloğu silinmiş olmalı
             String apiContentAfterDelete = getStoryContentViaApi(storyId);
-            assertTrue(
+                            assertTrue(
                 apiContentAfterDelete == null || !apiContentAfterDelete.contains("[CODE:"),
                 "Case 14a: Kod bloğu API'de silinmedi. İçerik: " + 
                 (apiContentAfterDelete != null ? apiContentAfterDelete.substring(0, Math.min(200, apiContentAfterDelete.length())) : "null")
-            );
+                            );
             System.out.println("Case 14a: API kontrolü başarılı - kod bloğu silinmiş");
 
             System.out.println("Case 14a: Kod bloğu ekleme ve silme testi başarıyla tamamlandı");
@@ -698,10 +698,10 @@ public class Case14_WriterEditStoryTest extends BaseSeleniumTest {
 
             // 7. API üzerinden kontrol et
             String apiContentAfterList = getStoryContentViaApi(storyId);
-            assertTrue(
+                            assertTrue(
                 apiContentAfterList != null && (apiContentAfterList.contains("Düzenlenmiş") || apiContentAfterList.contains("İkinci") || apiContentAfterList.contains("-") || apiContentAfterList.contains("1.")),
                 "Case 14b: Liste bloğu API'ye kaydedilmedi"
-            );
+                            );
 
             System.out.println("Case 14b: Liste bloğu ekleme ve düzenleme testi başarıyla tamamlandı");
 

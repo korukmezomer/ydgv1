@@ -1,9 +1,8 @@
 package com.example.backend.selenium;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
@@ -40,8 +39,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public abstract class BaseSeleniumTest {
     
-    protected WebDriver driver;
-    protected WebDriverWait wait;
+    protected static WebDriver driver;
+    protected static WebDriverWait wait;
     // URL'leri environment variable veya system property'den al, yoksa localhost kullan
     protected static final String BASE_URL = System.getProperty("frontend.url", 
         System.getenv("FRONTEND_URL") != null ? System.getenv("FRONTEND_URL") : "http://localhost:5173");
@@ -145,8 +144,11 @@ public abstract class BaseSeleniumTest {
         }
     }
     
-    @BeforeEach
-    public void setUp() {
+    @BeforeAll
+    public static void setUpOnce() {
+        if (driver != null) {
+            return;
+        }
         // Setup ChromeDriver using WebDriverManager
         // ARM64 için doğru driver'ı indirmesini sağla
         String osArch = System.getProperty("os.arch", "");
@@ -223,6 +225,7 @@ public abstract class BaseSeleniumTest {
         }
         
         ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless=new", "--disable-dev-shm-usage", "--no-sandbox", "--window-size=1280,720");
         
         // Şifre yöneticisini tamamen devre dışı bırak (test sırasında pop-up'ları önlemek için)
         options.addArguments("--disable-password-manager");
@@ -493,17 +496,19 @@ public abstract class BaseSeleniumTest {
         }
     }
     
-    @AfterEach
-    public void tearDown() {
+    @AfterAll
+    public static void tearDownOnce() {
         if (driver != null) {
             driver.quit();
+            driver = null;
+            wait = null;
         }
     }
     
     /**
      * Frontend erişilebilirliğini kontrol et (sadece bir kez çalışır)
      */
-    private void checkFrontendAccess() {
+    private static void checkFrontendAccess() {
         try {
             System.out.println("🔍 Frontend erişilebilirlik kontrolü: " + BASE_URL);
             driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(10));
@@ -534,7 +539,7 @@ public abstract class BaseSeleniumTest {
     /**
      * Chrome şifre yöneticisi uyarılarını otomatik kapat
      */
-    protected void dismissPasswordManagerAlerts() {
+    protected static void dismissPasswordManagerAlerts() {
         try {
             // Önce alert'leri kontrol et
             for (int i = 0; i < 5; i++) {
@@ -600,7 +605,7 @@ public abstract class BaseSeleniumTest {
         }
     }
     
-    protected void waitForPageLoad() {
+    protected static void waitForPageLoad() {
         try {
             Thread.sleep(500); // 1000 -> 500 (Wait for React to render)
             // Sayfa yüklendikten sonra şifre yöneticisi uyarılarını kapat
@@ -616,7 +621,7 @@ public abstract class BaseSeleniumTest {
      * Güvenilir buton tıklama metodu
      * Önce normal click dener, başarısız olursa JavaScript executor kullanır
      */
-    protected void safeClick(WebElement element) {
+    protected static void safeClick(WebElement element) {
         try {
             // Önce butonun görünür ve tıklanabilir olduğundan emin ol
             wait.until(ExpectedConditions.elementToBeClickable(element));
@@ -1054,7 +1059,7 @@ public abstract class BaseSeleniumTest {
      */
     protected void handlePostRegistrationRedirect() {
         try {
-            Thread.sleep(2000); // Sayfanın yüklenmesini bekle
+            Thread.sleep(500); // Kısa bekleme
             String currentUrl = driver.getCurrentUrl();
             if (currentUrl.contains("/dashboard") || currentUrl.contains("/reader/dashboard") || 
                 currentUrl.contains("/yazar/dashboard") || currentUrl.contains("/admin/dashboard")) {
@@ -1406,7 +1411,7 @@ public abstract class BaseSeleniumTest {
      * Logout yap (dashboard'dan çıkış)
      * Medium temasında logout ProfileDropdown içinde
      */
-    protected void logout() {
+    protected static void logout() {
         try {
             String currentUrl = driver.getCurrentUrl();
             
@@ -1517,7 +1522,7 @@ public abstract class BaseSeleniumTest {
     /**
      * Story slug'ını backend API üzerinden ID ile al
      */
-    private String getStorySlugViaApi(Long storyId) {
+    protected String getStorySlugViaApi(Long storyId) {
         try {
             String url = BACKEND_URL + "/api/haberler/" + storyId;
             HttpRequest request = HttpRequest.newBuilder()
@@ -1544,6 +1549,70 @@ public abstract class BaseSeleniumTest {
     }
     
     /**
+     * Admin token'ı API üzerinden al
+     */
+    private String getAdminToken() {
+        try {
+            AdminCredentials adminCreds = ensureAdminUserExists();
+            String url = BACKEND_URL + "/api/auth/giris";
+            String payload = String.format("{\"email\":\"%s\",\"password\":\"%s\"}", adminCreds.getEmail(), adminCreds.getPassword());
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(10))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(payload))
+                .build();
+            
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode node = mapper.readTree(response.body());
+                if (node.has("token")) {
+                    return node.get("token").asText();
+                }
+            } else {
+                System.out.println("API admin login isteği başarısız: " + response.statusCode() + " - " + response.body());
+            }
+        } catch (Exception e) {
+            System.err.println("Admin token alınamadı: " + e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
+     * Story'yi API üzerinden onayla
+     */
+    protected boolean approveStoryViaApi(Long storyId) {
+        try {
+            String token = getAdminToken();
+            if (token == null) {
+                System.out.println("Admin token alınamadı, API onayı atlanıyor");
+                return false;
+            }
+            String url = BACKEND_URL + "/api/haberler/" + storyId + "/onayla";
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(10))
+                .header("Authorization", "Bearer " + token)
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+            
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                System.out.println("Story API üzerinden onaylandı: " + storyId);
+                return true;
+            } else {
+                System.out.println("Story API onayı başarısız: " + response.statusCode() + " - " + response.body());
+            }
+        } catch (Exception e) {
+            System.err.println("Story API üzerinden onaylanamadı: " + e.getMessage());
+        }
+        return false;
+    }
+    
+    /**
      * Story ID'yi slug'dan al (veritabanından)
      */
     protected Long getStoryIdFromSlug(String slug) {
@@ -1560,41 +1629,41 @@ public abstract class BaseSeleniumTest {
         
         if (USE_DB) {
             // Slug'dan ID almayı dene (yalnızca local geliştirme için)
-            try (Connection conn = getTestDatabaseConnection()) {
-                String sql = "SELECT id FROM stories WHERE slug = ?";
+        try (Connection conn = getTestDatabaseConnection()) {
+            String sql = "SELECT id FROM stories WHERE slug = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, slug);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        Long id = rs.getLong("id");
+                        System.out.println("Story ID slug'dan alındı: " + id + " (slug: " + slug + ")");
+                        return id;
+                    }
+                }
+            }
+            
+                // Slug bulunamazsa, slug'ın son kısmını dene (URL format farkı için)
+            String slugPart = slug;
+            if (slug.contains("/")) {
+                slugPart = slug.substring(slug.lastIndexOf("/") + 1);
+            }
+            if (!slugPart.equals(slug)) {
+                sql = "SELECT id FROM stories WHERE slug = ? OR slug LIKE ?";
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setString(1, slug);
+                    stmt.setString(1, slugPart);
+                    stmt.setString(2, "%" + slugPart);
                     try (ResultSet rs = stmt.executeQuery()) {
                         if (rs.next()) {
                             Long id = rs.getLong("id");
-                            System.out.println("Story ID slug'dan alındı: " + id + " (slug: " + slug + ")");
+                            System.out.println("Story ID slug'dan alındı (partial match): " + id + " (slug: " + slugPart + ")");
                             return id;
                         }
                     }
                 }
-                
-                // Slug bulunamazsa, slug'ın son kısmını dene (URL format farkı için)
-                String slugPart = slug;
-                if (slug.contains("/")) {
-                    slugPart = slug.substring(slug.lastIndexOf("/") + 1);
-                }
-                if (!slugPart.equals(slug)) {
-                    sql = "SELECT id FROM stories WHERE slug = ? OR slug LIKE ?";
-                    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                        stmt.setString(1, slugPart);
-                        stmt.setString(2, "%" + slugPart);
-                        try (ResultSet rs = stmt.executeQuery()) {
-                            if (rs.next()) {
-                                Long id = rs.getLong("id");
-                                System.out.println("Story ID slug'dan alındı (partial match): " + id + " (slug: " + slugPart + ")");
-                                return id;
-                            }
-                        }
-                    }
-                }
-            } catch (SQLException e) {
-                System.err.println("Story ID slug'dan alınamadı (DB): " + e.getMessage());
             }
+        } catch (SQLException e) {
+                System.err.println("Story ID slug'dan alınamadı (DB): " + e.getMessage());
+        }
         }
         
         return null;
@@ -1611,17 +1680,17 @@ public abstract class BaseSeleniumTest {
         }
         
         if (USE_DB) {
-            try (Connection conn = getTestDatabaseConnection()) {
-                String sql = "SELECT id FROM kullanicilar WHERE email = ?";
-                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setString(1, email);
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            return rs.getLong("id");
-                        }
+        try (Connection conn = getTestDatabaseConnection()) {
+            String sql = "SELECT id FROM kullanicilar WHERE email = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, email);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getLong("id");
                     }
                 }
-            } catch (SQLException e) {
+            }
+        } catch (SQLException e) {
                 System.err.println("Kullanıcı ID alınamadı (DB): " + e.getMessage());
             }
         }
@@ -1837,21 +1906,21 @@ public abstract class BaseSeleniumTest {
         }
         
         if (USE_DB) {
-            try (Connection conn = getTestDatabaseConnection()) {
-                String sql = "SELECT s.id FROM stories s " +
-                             "JOIN kullanicilar k ON s.kullanici_id = k.id " +
-                             "WHERE k.email = ? " +
-                             "ORDER BY s.created_at DESC " +
-                             "LIMIT 1";
-                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setString(1, userEmail);
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            return rs.getLong("id");
-                        }
+        try (Connection conn = getTestDatabaseConnection()) {
+            String sql = "SELECT s.id FROM stories s " +
+                         "JOIN kullanicilar k ON s.kullanici_id = k.id " +
+                         "WHERE k.email = ? " +
+                         "ORDER BY s.created_at DESC " +
+                         "LIMIT 1";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, userEmail);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getLong("id");
                     }
                 }
-            } catch (SQLException e) {
+            }
+        } catch (SQLException e) {
                 System.err.println("Kullanıcının en son story ID'si alınamadı (DB): " + e.getMessage());
             }
         }
@@ -1890,7 +1959,7 @@ public abstract class BaseSeleniumTest {
         
         publishButton.click();
         
-        Thread.sleep(2000); // 5000 -> 2000
+        Thread.sleep(500); // kısaltıldı
         
         // Alert'leri kontrol et ve kabul et
         try {
@@ -1904,7 +1973,7 @@ public abstract class BaseSeleniumTest {
         }
         
         waitForPageLoad();
-        Thread.sleep(2000); // 5000 -> 2000
+        Thread.sleep(500); // kısaltıldı
     }
     
     /**
@@ -1983,7 +2052,7 @@ public abstract class BaseSeleniumTest {
             )
         );
         confirmButton.click();
-        Thread.sleep(2000);
+        Thread.sleep(500);
     }
     
     /**
@@ -2033,19 +2102,19 @@ public abstract class BaseSeleniumTest {
         }
         
         if (USE_DB) {
-            try (Connection conn = getTestDatabaseConnection()) {
-                String sql = "SELECT id FROM stories WHERE baslik = ? ORDER BY created_at DESC LIMIT 1";
-                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setString(1, title);
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            Long id = rs.getLong("id");
-                            System.out.println("Story ID veritabanından alındı: " + id);
-                            return id;
-                        }
+        try (Connection conn = getTestDatabaseConnection()) {
+            String sql = "SELECT id FROM stories WHERE baslik = ? ORDER BY created_at DESC LIMIT 1";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, title);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        Long id = rs.getLong("id");
+                        System.out.println("Story ID veritabanından alındı: " + id);
+                        return id;
                     }
                 }
-            } catch (SQLException e) {
+            }
+        } catch (SQLException e) {
                 System.err.println("Story ID başlıktan alınamadı (DB): " + e.getMessage());
             }
         }
@@ -2094,7 +2163,7 @@ public abstract class BaseSeleniumTest {
             // Story oluştur
             driver.get(BASE_URL + "/reader/new-story");
             waitForPageLoad();
-            Thread.sleep(2000);
+            Thread.sleep(500);
             
             // Başlık gir
             WebElement titleInput = wait.until(
@@ -2121,7 +2190,7 @@ public abstract class BaseSeleniumTest {
                 )
             );
             publishButton.click();
-            Thread.sleep(2000);
+            Thread.sleep(500);
             
             // Alert'leri kontrol et ve kabul et
             try {
@@ -2168,7 +2237,7 @@ public abstract class BaseSeleniumTest {
                 System.out.println("⚠️ Publish işlemi 10 saniye içinde tamamlanmadı, devam ediliyor...");
             }
             
-            Thread.sleep(2000); // Ek güvenlik için bekle
+            Thread.sleep(500); // Ek güvenlik için bekle
             
             // Story ID'yi al (retry ile
             Long storyId = null;
@@ -2194,18 +2263,18 @@ public abstract class BaseSeleniumTest {
                 storySlug = getStorySlugViaApi(storyId);
                 
                 if (storySlug == null && USE_DB) {
-                    try (Connection conn = getTestDatabaseConnection()) {
-                        String sql = "SELECT slug FROM stories WHERE id = ?";
-                        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                            stmt.setLong(1, storyId);
-                            try (ResultSet rs = stmt.executeQuery()) {
-                                if (rs.next()) {
-                                    storySlug = rs.getString("slug");
-                                }
+                try (Connection conn = getTestDatabaseConnection()) {
+                    String sql = "SELECT slug FROM stories WHERE id = ?";
+                    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                        stmt.setLong(1, storyId);
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            if (rs.next()) {
+                                storySlug = rs.getString("slug");
                             }
                         }
-                    } catch (SQLException e) {
-                        System.err.println("Story slug veritabanından alınamadı: " + e.getMessage());
+                    }
+                } catch (SQLException e) {
+                    System.err.println("Story slug veritabanından alınamadı: " + e.getMessage());
                     }
                 }
             }
@@ -2251,7 +2320,7 @@ public abstract class BaseSeleniumTest {
             // Admin dashboard'a git
             driver.get(BASE_URL + "/admin/dashboard");
             waitForPageLoad();
-            Thread.sleep(2000);
+            Thread.sleep(500);
             
             // Sayfa yüklemesini bekle
             wait.until(
@@ -2292,7 +2361,7 @@ public abstract class BaseSeleniumTest {
                     // Sonraki sayfaya git
                     safeClick(nextButton);
                     waitForPageLoad();
-                    Thread.sleep(2000);
+                    Thread.sleep(500);
                     
                     // İkinci sayfada ara
                     try {
@@ -2351,7 +2420,7 @@ public abstract class BaseSeleniumTest {
                 )
             );
             wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
-            Thread.sleep(2000);
+            Thread.sleep(500);
             
             // Arama çubuğunu bul
             System.out.println("Kullanıcı arama çubuğu ile aranıyor (kullanıcı adı): " + username);
@@ -2557,7 +2626,7 @@ public abstract class BaseSeleniumTest {
                 )
             );
             wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
-            Thread.sleep(2000);
+            Thread.sleep(500);
             
             int currentPage = 0;
             int maxPages = 10; // Maksimum 10 sayfa kontrol et (optimizasyon)
@@ -2612,7 +2681,7 @@ public abstract class BaseSeleniumTest {
                         
                         // Loading'in bitmesini bekle
                         wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
-                        Thread.sleep(2000);
+                        Thread.sleep(500);
                         
                         // Tablonun yüklendiğini bekle
                         wait.until(
@@ -2697,128 +2766,58 @@ public abstract class BaseSeleniumTest {
      */
     protected String approveStoryAsAdmin(String storyTitle) {
         try {
-            // Logout
-            try {
-                driver.get(BASE_URL + "/logout");
-                Thread.sleep(500); // 2000 -> 500
-            } catch (Exception e) {
-                // Logout sayfası yoksa devam et
+            // 1) API ile onaylamayı dene
+            Long storyId = getStoryIdByTitle(storyTitle, null);
+            if (storyId != null && approveStoryViaApi(storyId)) {
+                String slug = getStorySlugViaApi(storyId);
+                if (slug != null) return slug;
             }
             
-            // Admin credentials al
+            // 2) UI fallback
+            try { driver.get(BASE_URL + "/logout"); Thread.sleep(500); } catch (Exception ignored) {}
             AdminCredentials adminCreds = ensureAdminUserExists();
-            
-            // Admin olarak giriş yap
             loginUser(adminCreds.getEmail(), adminCreds.getPassword());
             
-            // Story'yi tüm sayfalarda ara
             WebElement storyTextElement = findStoryInAllPages(storyTitle);
-            
             if (storyTextElement != null) {
-                // Story bulundu, onayla
-                
-                // Story item container'ını bul (parent'a çık)
                 WebElement storyRow = storyTextElement.findElement(By.xpath("./ancestor::div[contains(@class, 'admin-haber-item')]"));
-                
-                // Onayla butonunu bul ve tıkla
                 WebElement approveButton = storyRow.findElement(
-                    By.xpath(".//button[contains(text(), 'Onayla') or contains(text(), 'onayla')]")
+                    By.xpath(".//button[contains(text(), 'Onayla') or contains(text(), 'onayla') or contains(@class, 'approve')]")
                 );
                 approveButton.click();
                 
                 Thread.sleep(1000);
-                try {
-                    driver.switchTo().alert().accept();
-                } catch (Exception e) {
-                    // Alert yoksa devam et
-                }
+                try { driver.switchTo().alert().accept(); } catch (Exception ignored) {}
+                Thread.sleep(1000);
                 
-                Thread.sleep(1000); // 3000 -> 1000
-                
-                // Story slug'ını al (onaylandıktan sonra)
-                // Story ID'yi bul ve slug'ı al
-                Long storyId = getStoryIdByTitle(storyTitle, null);
+                storyId = getStoryIdByTitle(storyTitle, null);
                 if (storyId != null) {
-                    try (Connection conn = getTestDatabaseConnection()) {
-                        String sql = "SELECT slug FROM stories WHERE id = ?";
-                        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                            stmt.setLong(1, storyId);
-                            try (ResultSet rs = stmt.executeQuery()) {
-                                if (rs.next()) {
-                                    return rs.getString("slug");
-                                }
-                            }
-                        }
-                    } catch (SQLException e) {
-                        System.err.println("Story slug veritabanından alınamadı: " + e.getMessage());
-                    }
+                    String slug = getStorySlugViaApi(storyId);
+                    if (slug != null) return slug;
                 }
                 
-                // Slug bulunamazsa title'dan oluştur
-                String storySlug = storyTitle.toLowerCase()
+                return storyTitle.toLowerCase()
                     .replaceAll("[^a-z0-9\\s-]", "")
                     .replaceAll("\\s+", "-")
                     .replaceAll("-+", "-");
-                return storySlug;
             } else {
-                // Story UI'da bulunamadı (pagination nedeniyle ilk 50'de olmayabilir)
-                // Direkt veritabanından onayla
-                System.out.println("Story admin dashboard'da bulunamadı, veritabanından onaylanıyor: " + storyTitle);
-                Long storyId = getStoryIdByTitle(storyTitle, null);
-                if (storyId == null) {
-                    // Son çare: En son oluşturulan story'yi al
-                    try (Connection conn = getTestDatabaseConnection()) {
-                        String sql = "SELECT id FROM stories WHERE baslik = ? ORDER BY created_at DESC LIMIT 1";
-                        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                            stmt.setString(1, storyTitle);
-                            try (ResultSet rs = stmt.executeQuery()) {
-                                if (rs.next()) {
-                                    storyId = rs.getLong("id");
-                                }
-                            }
-                        }
-                    } catch (SQLException ex) {
-                        System.err.println("Story ID alınamadı: " + ex.getMessage());
-                    }
-                }
-                
-                if (storyId != null) {
-                    // Admin ID'yi al
-                    Long adminId = getUserIdByEmail(adminCreds.getEmail());
-                    approveStoryViaBackend(storyId, adminId);
-                    System.out.println("Story veritabanından onaylandı: " + storyId);
-                    
-                    // Slug'ı veritabanından al
-                    try (Connection conn = getTestDatabaseConnection()) {
-                        String sql = "SELECT slug FROM stories WHERE id = ?";
-                        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                            stmt.setLong(1, storyId);
-                            try (ResultSet rs = stmt.executeQuery()) {
-                                if (rs.next()) {
-                                    String slug = rs.getString("slug");
-                                    if (slug != null && !slug.isEmpty()) {
-                                        return slug;
-                                    }
-                                }
-                            }
-                        }
-                    } catch (SQLException ex) {
-                        System.err.println("Story slug veritabanından alınamadı: " + ex.getMessage());
-                    }
-                }
-                
-                // Slug bulunamazsa title'dan oluştur
+                System.out.println("Story UI'da bulunamadı, API ile deneniyor: " + storyTitle);
+                storyId = getStoryIdByTitle(storyTitle, null);
+                if (storyId != null && approveStoryViaApi(storyId)) {
+                    String slug = getStorySlugViaApi(storyId);
+                    if (slug != null) return slug;
                 return storyTitle.toLowerCase()
                     .replaceAll("[^a-z0-9\\s-]", "")
                     .replaceAll("\\s+", "-")
                     .replaceAll("-+", "-");
             }
-            
+            }
         } catch (Exception e) {
             System.err.println("Admin onaylama hatası: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
+        return null;
     }
     
     /**
@@ -2833,7 +2832,7 @@ public abstract class BaseSeleniumTest {
             // Story oluştur
             driver.get(BASE_URL + "/reader/new-story");
             waitForPageLoad();
-            Thread.sleep(2000);
+            Thread.sleep(500);
             
             // Başlık gir
             WebElement titleInput = wait.until(
