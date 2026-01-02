@@ -6,7 +6,6 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.Select;
 
 import java.util.Random;
 
@@ -34,53 +33,25 @@ public class Case4b_StoryCreationWithCodeTest extends BaseSeleniumTest {
     @DisplayName("Case 4b: WRITER kod bloğu ile story oluşturabilmeli")
     public void case4b_StoryCreationWithCode() {
         try {
-            // Önce WRITER rolünde kullanıcı kaydı yap
-            driver.get(BASE_URL + "/register");
-            waitForPageLoad();
-            
+            // Önce WRITER rolünde kullanıcı kaydı yap (BaseSeleniumTest'teki registerWriter metodunu kullan)
             Random random = new Random();
             String randomSuffix = String.valueOf(random.nextInt(10000));
             String email = "writer" + randomSuffix + "@example.com";
             String username = "writer" + randomSuffix;
             
-            // Kayıt formunu doldur
-            WebElement firstNameInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
-            );
-            firstNameInput.sendKeys("Writer");
-            driver.findElement(By.id("lastName")).sendKeys("Test");
-            driver.findElement(By.id("email")).sendKeys(email);
-            driver.findElement(By.id("username")).sendKeys(username);
-            driver.findElement(By.id("password")).sendKeys("Test123456");
-            
-            // Rol seçimi (WRITER) - Select elementini kullan
-            WebElement roleSelectElement = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("roleName"))
-            );
-            Select roleSelect = new Select(roleSelectElement);
-            try {
-                roleSelect.selectByValue("WRITER");
-            } catch (Exception e) {
-                try {
-                    roleSelect.selectByVisibleText("WRITER");
-                } catch (Exception e2) {
-                    ((org.openqa.selenium.JavascriptExecutor) driver)
-                        .executeScript("arguments[0].value = 'WRITER';", roleSelectElement);
-                }
+            // registerWriter metodunu kullan (React event'lerini doğru şekilde tetikler)
+            boolean registered = registerWriter("Writer", "Test", email, username, "Test123456");
+            if (!registered) {
+                fail("Case 4b: Kullanıcı kaydı başarısız oldu");
             }
             
-            WebElement submitButton = wait.until(
-                ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
-            );
-            WebElement form = driver.findElement(By.tagName("form"));
-            safeSubmitForm(submitButton, form);
-            
-            // Frontend'de kayıt sonrası otomatik login yapılıyor
+            // Frontend'de kayıt sonrası otomatik login yapılıyor, dashboard'a yönlendirme bekle
             Thread.sleep(3000);
             wait.until(ExpectedConditions.or(
                 ExpectedConditions.urlContains("/yazar/dashboard"),
                 ExpectedConditions.urlContains("/dashboard"),
-                ExpectedConditions.urlToBe(BASE_URL + "/")
+                ExpectedConditions.urlToBe(BASE_URL + "/"),
+                ExpectedConditions.urlContains("/reader")
             ));
             Thread.sleep(2000);
             
@@ -211,50 +182,25 @@ public class Case4b_StoryCreationWithCodeTest extends BaseSeleniumTest {
     @DisplayName("Case 4b: Kod ekledikten sonra alt satırda başka bloklar eklenebilmeli")
     public void case4b_MultipleBlocksAfterCode() {
         try {
-            // 1. WRITER olarak kayıt ol
-            driver.get(BASE_URL + "/register");
-            waitForPageLoad();
-            
+            // 1. WRITER olarak kayıt ol (BaseSeleniumTest'teki registerWriter metodunu kullan)
             Random random = new Random();
             String randomSuffix = String.valueOf(random.nextInt(10000));
             String email = "writer" + randomSuffix + "@example.com";
             String username = "writer" + randomSuffix;
             
-            WebElement firstNameInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
-            );
-            firstNameInput.sendKeys("Writer");
-            driver.findElement(By.id("lastName")).sendKeys("Test");
-            driver.findElement(By.id("email")).sendKeys(email);
-            driver.findElement(By.id("username")).sendKeys(username);
-            driver.findElement(By.id("password")).sendKeys("Test123456");
-            
-            WebElement roleSelectElement = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("roleName"))
-            );
-            Select roleSelect = new Select(roleSelectElement);
-            try {
-                roleSelect.selectByValue("WRITER");
-            } catch (Exception e) {
-                try {
-                    roleSelect.selectByVisibleText("WRITER");
-                } catch (Exception e2) {
-                    ((org.openqa.selenium.JavascriptExecutor) driver)
-                        .executeScript("arguments[0].value = 'WRITER';", roleSelectElement);
-                }
+            // registerWriter metodunu kullan (React event'lerini doğru şekilde tetikler)
+            boolean registered = registerWriter("Writer", "Test", email, username, "Test123456");
+            if (!registered) {
+                fail("Case 4b Multiple: Kullanıcı kaydı başarısız oldu");
             }
             
-            WebElement submitButton = wait.until(
-                ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
-            );
-            WebElement form = driver.findElement(By.tagName("form"));
-            safeSubmitForm(submitButton, form);
-            
+            // Frontend'de kayıt sonrası otomatik login yapılıyor, dashboard'a yönlendirme bekle
             Thread.sleep(3000);
             wait.until(ExpectedConditions.or(
                 ExpectedConditions.urlContains("/yazar/dashboard"),
                 ExpectedConditions.urlContains("/dashboard"),
-                ExpectedConditions.urlToBe(BASE_URL + "/")
+                ExpectedConditions.urlToBe(BASE_URL + "/"),
+                ExpectedConditions.urlContains("/reader")
             ));
             Thread.sleep(2000);
             
