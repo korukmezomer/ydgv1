@@ -232,7 +232,7 @@ public class Case11_NotificationTest extends BaseSeleniumTest {
         // Yorum yap
         WebElement commentTextarea = wait.until(
             ExpectedConditions.presenceOfElementLocated(
-                By.cssSelector("textarea[placeholder*='yorum'], textarea[placeholder*='Yorum'], textarea.comment-input")
+                By.cssSelector("textarea.comment-textarea, textarea[placeholder*='yorum'], textarea[placeholder*='Yorum'], textarea.comment-input")
             )
         );
         String commentText = "Bu bir test yorumudur - bildirim testi için.";

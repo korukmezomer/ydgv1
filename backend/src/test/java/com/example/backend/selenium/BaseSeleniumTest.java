@@ -17,6 +17,12 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -25,6 +31,8 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Base class for Selenium tests
@@ -1545,6 +1553,13 @@ public abstract class BaseSeleniumTest {
         } catch (SQLException e) {
             System.err.println("Story ID slug'dan alınamadı: " + e.getMessage());
         }
+        
+        // DB'den alınamazsa API'den almayı dene (Jenkins ortamında DB bağlantısı farklı olabilir)
+        Long apiId = getStoryIdViaApiBySlug(slug);
+        if (apiId != null) {
+            System.out.println("Story ID API üzerinden alındı: " + apiId + " (slug: " + slug + ")");
+            return apiId;
+        }
         return null;
     }
     
@@ -1564,6 +1579,69 @@ public abstract class BaseSeleniumTest {
             }
         } catch (SQLException e) {
             System.err.println("Kullanıcı ID alınamadı: " + e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
+     * Story ID'yi backend API üzerinden slug ile al
+     */
+    private Long getStoryIdViaApiBySlug(String slug) {
+        try {
+            String url = BACKEND_URL + "/api/haberler/slug/" + slug;
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build();
+            
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode node = mapper.readTree(response.body());
+                if (node.has("id")) {
+                    return node.get("id").asLong();
+                }
+            } else {
+                System.out.println("API slug isteği başarısız: " + response.statusCode() + " - " + response.body());
+            }
+        } catch (Exception e) {
+            System.err.println("API'den story ID alınamadı (slug): " + e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
+     * Story ID'yi backend API üzerinden başlıkla arayarak al
+     */
+    private Long getStoryIdViaApiByTitle(String title) {
+        try {
+            String encoded = URLEncoder.encode(title, StandardCharsets.UTF_8);
+            String url = BACKEND_URL + "/api/haberler/arama?q=" + encoded + "&size=1";
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build();
+            
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode node = mapper.readTree(response.body());
+                JsonNode content = node.get("content");
+                if (content != null && content.isArray() && content.size() > 0) {
+                    JsonNode first = content.get(0);
+                    if (first.has("id")) {
+                        return first.get("id").asLong();
+                    }
+                }
+            } else {
+                System.out.println("API başlık arama isteği başarısız: " + response.statusCode() + " - " + response.body());
+            }
+        } catch (Exception e) {
+            System.err.println("API'den story ID alınamadı (title): " + e.getMessage());
         }
         return null;
     }
@@ -1775,6 +1853,13 @@ public abstract class BaseSeleniumTest {
                 System.out.println("Story ID kullanıcının en son story'sinden alındı: " + latestId);
                 return latestId;
             }
+        }
+        
+        // Son fallback: Backend API üzerinden ara
+        Long apiId = getStoryIdViaApiByTitle(title);
+        if (apiId != null) {
+            System.out.println("Story ID API aramasından alındı: " + apiId + " (title: " + title + ")");
+            return apiId;
         }
         
         return null;

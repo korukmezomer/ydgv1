@@ -83,7 +83,7 @@ public class Case5_CommentTest extends BaseSeleniumTest {
             try {
                 WebElement commentInput = wait.until(
                     ExpectedConditions.presenceOfElementLocated(
-                        By.cssSelector("textarea[placeholder*='yorum'], textarea[placeholder*='Yorum'], textarea")
+                        By.cssSelector("textarea.comment-textarea, textarea[placeholder*='yorum'], textarea[placeholder*='Yorum'], textarea")
                     )
                 );
                 
@@ -136,7 +136,7 @@ public class Case5_CommentTest extends BaseSeleniumTest {
             try {
                 WebElement commentInput = wait.until(
                     ExpectedConditions.presenceOfElementLocated(
-                        By.cssSelector("textarea[placeholder*='yorum'], textarea[placeholder*='Yorum'], textarea")
+                        By.cssSelector("textarea.comment-textarea, textarea[placeholder*='yorum'], textarea[placeholder*='Yorum'], textarea")
                     )
                 );
                 
