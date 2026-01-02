@@ -59,7 +59,7 @@ public class Case8_SaveStoryTest extends BaseSeleniumTest {
             
             // 3. Kullanıcı (Saver) oluştur (BaseSeleniumTest'teki registerUser helper metodunu kullan)
             java.util.Random saverRandom = new java.util.Random();
-            String saverRandomSuffix = String.valueOf(saverRandom.nextInt(10000));
+            String saverRandomSuffix = System.currentTimeMillis() + "_" + saverRandom.nextInt(100000);
             String saverEmail = "saver" + saverRandomSuffix + "@example.com";
             String saverUsername = "saver" + saverRandomSuffix;
             
@@ -166,7 +166,7 @@ public class Case8_SaveStoryTest extends BaseSeleniumTest {
             
             // 3. Kullanıcı (Saver) oluştur (BaseSeleniumTest'teki registerUser helper metodunu kullan)
             java.util.Random saverRandom = new java.util.Random();
-            String saverRandomSuffix = String.valueOf(saverRandom.nextInt(10000));
+            String saverRandomSuffix = System.currentTimeMillis() + "_" + saverRandom.nextInt(100000);
             String saverEmail = "saver_neg" + saverRandomSuffix + "@example.com";
             String saverUsername = "saver_neg" + saverRandomSuffix;
             
