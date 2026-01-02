@@ -359,6 +359,7 @@ pipeline {
                         else
                             echo "📦 Exec dosyaları birleştiriliyor..."
                             # pom.xml'de merge execution tanımlı, jacoco:merge@merge çağırarak birleştir
+                            # Exec dosyaları target klasöründe jacoco-*.exec pattern'i ile bulunacak
                             mvn jacoco:merge@merge || {
                                 echo "⚠️ jacoco:merge başarısız, alternatif yöntem deneniyor..."
                                 # Alternatif: İlk exec dosyasını kopyala (en azından bir coverage olur)

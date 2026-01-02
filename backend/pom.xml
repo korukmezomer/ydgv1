@@ -204,6 +204,8 @@
                         </goals>
                     </execution>
                     <!-- Merge multiple exec files -->
+                    <!-- Note: This execution is called manually from Jenkinsfile via jacoco:merge@merge -->
+                    <!-- No phase specified, so it won't run automatically during compile/test -->
                     <execution>
                         <id>merge</id>
                         <goals>
@@ -211,12 +213,14 @@
                         </goals>
                         <configuration>
                             <destFile>${project.build.directory}/jacoco.exec</destFile>
-                            <fileSet>
-                                <directory>${project.build.directory}</directory>
-                                <includes>
-                                    <include>jacoco-*.exec</include>
-                                </includes>
-                            </fileSet>
+                            <fileSets>
+                                <fileSet>
+                                    <directory>${project.build.directory}</directory>
+                                    <includes>
+                                        <include>jacoco-*.exec</include>
+                                    </includes>
+                                </fileSet>
+                            </fileSets>
                         </configuration>
                     </execution>
                     <!-- Check coverage thresholds - %100 coverage required -->
