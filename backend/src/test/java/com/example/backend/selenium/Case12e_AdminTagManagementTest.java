@@ -89,12 +89,15 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
             saveButton.click();
             Thread.sleep(3000);
             
-            // 6. Etiketin eklendiğini kontrol et (tabloda)
-            WebElement tagRow = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.xpath("//tr[.//td[contains(text(), '" + tagName + "')]]")
-                )
-            );
+            // 6. Etiketin eklendiğini kontrol et - tüm sayfalarda ara
+            WebElement tagElement = findTagInAllPages(tagName);
+            
+            if (tagElement == null) {
+                fail("Case 12e: Etiket eklenemedi (listedeki tüm sayfalarda bulunamadı)");
+                return;
+            }
+            
+            WebElement tagRow = tagElement.findElement(By.xpath("./ancestor::tr"));
             
             assertTrue(tagRow.isDisplayed(),
                 "Case 12e: Etiket eklenemedi");
@@ -167,12 +170,15 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
             saveButton.click();
             Thread.sleep(3000);
             
-            // 4. Etiketi bul ve sil
-            WebElement tagRow = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.xpath("//tr[.//td[contains(text(), '" + tagName + "')]]")
-                )
-            );
+            // 4. Etiketi bul ve sil - tüm sayfalarda ara
+            WebElement tagElement = findTagInAllPages(tagName);
+            
+            if (tagElement == null) {
+                fail("Case 12e Negative: Etiket listede bulunamadı: " + tagName);
+                return;
+            }
+            
+            WebElement tagRow = tagElement.findElement(By.xpath("./ancestor::tr"));
             
             // Etiket ID'sini al (veritabanı kontrolü için)
             String tagIdText = tagRow.findElement(By.xpath(".//td[1]")).getText();
@@ -376,12 +382,15 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
             saveButton.click();
             Thread.sleep(3000);
             
-            // 4. Etiketi bul ve düzenle
-            WebElement tagRow = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.xpath("//tr[.//td[contains(text(), '" + originalTagName + "')]]")
-                )
-            );
+            // 4. Etiketi bul ve düzenle - tüm sayfalarda ara
+            WebElement tagElement = findTagInAllPages(originalTagName);
+            
+            if (tagElement == null) {
+                fail("Case 12e: Etiket listede bulunamadı: " + originalTagName);
+                return;
+            }
+            
+            WebElement tagRow = tagElement.findElement(By.xpath("./ancestor::tr"));
             
             // Düzenle butonunu bul ve tıkla
             WebElement editButton = tagRow.findElement(
@@ -413,28 +422,20 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
             updateButton.click();
             Thread.sleep(3000);
             
-            // 7. Etiketin güncellendiğini kontrol et
-            driver.navigate().refresh();
-            Thread.sleep(3000);
+            // 7. Etiketin güncellendiğini kontrol et - tüm sayfalarda ara
+            Thread.sleep(2000);
+            WebElement updatedTagElement = findTagInAllPages(updatedTagName);
             
-            // Güncellenmiş etiket adını kontrol et
-            WebElement updatedTagRow = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.xpath("//tr[.//td[contains(text(), '" + updatedTagName + "')]]")
-                )
-            );
-            
-            assertTrue(updatedTagRow.isDisplayed(),
-                "Case 12e: Etiket güncellenemedi");
+            if (updatedTagElement == null) {
+                fail("Case 12e: Etiket güncellenemedi (güncellenmiş etiket listede bulunamadı)");
+                return;
+            }
             
             // Eski etiket adının artık görünmediğini kontrol et
-            try {
-                driver.findElement(
-                    By.xpath("//tr[.//td[contains(text(), '" + originalTagName + "')]]")
-                );
+            WebElement oldTagElement = findTagInAllPages(originalTagName);
+            if (oldTagElement != null) {
                 fail("Case 12e: Eski etiket adı hala görünüyor");
-            } catch (org.openqa.selenium.NoSuchElementException e) {
-                // Eski etiket adı bulunamadı - bu beklenen davranış
+            } else {
                 assertTrue(true, "Case 12e: Etiket başarıyla güncellendi");
             }
             

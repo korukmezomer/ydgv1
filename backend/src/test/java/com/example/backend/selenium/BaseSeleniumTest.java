@@ -1862,6 +1862,298 @@ public abstract class BaseSeleniumTest {
     }
     
     /**
+     * Admin dashboard'da tüm sayfaları gezip story'yi bul
+     * @param storyTitle Story başlığı
+     * @return Story element'i veya null
+     */
+    protected WebElement findStoryInAllPages(String storyTitle) {
+        try {
+            // İlk sayfayı kontrol et
+            driver.get(BASE_URL + "/admin/dashboard");
+            waitForPageLoad();
+            Thread.sleep(1000);
+            
+            int currentPage = 0;
+            int maxPages = 100; // Maksimum sayfa sayısı (güvenlik için)
+            
+            while (currentPage < maxPages) {
+                try {
+                    // Story'yi bulmayı dene
+                    WebElement storyElement = wait.until(
+                        ExpectedConditions.presenceOfElementLocated(
+                            By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
+                        )
+                    );
+                    return storyElement;
+                } catch (org.openqa.selenium.TimeoutException e) {
+                    // Story bu sayfada bulunamadı, sonraki sayfaya geç
+                    try {
+                        // Pagination butonlarını kontrol et
+                        WebElement nextButton = driver.findElement(
+                            By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki')]")
+                        );
+                        
+                        // Buton disabled mı kontrol et
+                        if (nextButton.getAttribute("disabled") != null) {
+                            // Son sayfaya ulaşıldı
+                            break;
+                        }
+                        
+                        // Sonraki sayfaya git
+                        nextButton.click();
+                        waitForPageLoad();
+                        Thread.sleep(1000);
+                        currentPage++;
+                    } catch (org.openqa.selenium.NoSuchElementException ex) {
+                        // Pagination butonu yok, son sayfadayız
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Story tüm sayfalarda arandı ama bulunamadı: " + storyTitle);
+        }
+        return null;
+    }
+    
+    /**
+     * Admin kullanıcı sayfasında tüm sayfaları gezip kullanıcıyı bul
+     * @param userEmail Kullanıcı email'i
+     * @return Kullanıcı element'i veya null
+     */
+    protected WebElement findUserInAllPages(String userEmail) {
+        try {
+            // İlk sayfayı kontrol et
+            driver.get(BASE_URL + "/admin/users");
+            waitForPageLoad();
+            Thread.sleep(1000);
+            
+            int currentPage = 0;
+            int maxPages = 100; // Maksimum sayfa sayısı (güvenlik için)
+            
+            while (currentPage < maxPages) {
+                try {
+                    // Kullanıcıyı bulmayı dene
+                    WebElement userElement = wait.until(
+                        ExpectedConditions.presenceOfElementLocated(
+                            By.xpath("//table//tr//td[contains(text(), '" + userEmail + "')]")
+                        )
+                    );
+                    return userElement;
+                } catch (org.openqa.selenium.TimeoutException e) {
+                    // Kullanıcı bu sayfada bulunamadı, sonraki sayfaya geç
+                    try {
+                        // Pagination butonlarını kontrol et
+                        WebElement nextButton = driver.findElement(
+                            By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki')]")
+                        );
+                        
+                        // Buton disabled mı kontrol et
+                        if (nextButton.getAttribute("disabled") != null) {
+                            // Son sayfaya ulaşıldı
+                            break;
+                        }
+                        
+                        // Sonraki sayfaya git
+                        nextButton.click();
+                        waitForPageLoad();
+                        Thread.sleep(1000);
+                        currentPage++;
+                    } catch (org.openqa.selenium.NoSuchElementException ex) {
+                        // Pagination butonu yok, son sayfadayız
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Kullanıcı tüm sayfalarda arandı ama bulunamadı: " + userEmail);
+        }
+        return null;
+    }
+    
+    /**
+     * Admin yorumlar sayfasında tüm sayfaları gezip yorumu bul
+     * @param commentText Yorum metni
+     * @param status Yorum durumu (ONAY_BEKLIYOR, ONAYLANDI, REDDEDILDI)
+     * @return Yorum element'i veya null
+     */
+    protected WebElement findCommentInAllPages(String commentText, String status) {
+        try {
+            // İlk sayfayı kontrol et
+            driver.get(BASE_URL + "/admin/comments");
+            waitForPageLoad();
+            Thread.sleep(1000);
+            
+            // Durum seçimini yap
+            if (status != null) {
+                try {
+                    WebElement statusSelect = wait.until(
+                        ExpectedConditions.presenceOfElementLocated(
+                            By.cssSelector("select.admin-select")
+                        )
+                    );
+                    org.openqa.selenium.support.ui.Select select = new org.openqa.selenium.support.ui.Select(statusSelect);
+                    select.selectByValue(status);
+                    Thread.sleep(1000);
+                } catch (Exception e) {
+                    // Status select bulunamadı, devam et
+                }
+            }
+            
+            int currentPage = 0;
+            int maxPages = 100; // Maksimum sayfa sayısı (güvenlik için)
+            
+            while (currentPage < maxPages) {
+                try {
+                    // Yorumu bulmayı dene
+                    WebElement commentElement = wait.until(
+                        ExpectedConditions.presenceOfElementLocated(
+                            By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + commentText + "')]")
+                        )
+                    );
+                    return commentElement;
+                } catch (org.openqa.selenium.TimeoutException e) {
+                    // Yorum bu sayfada bulunamadı, sonraki sayfaya geç
+                    try {
+                        // Pagination butonlarını kontrol et
+                        WebElement nextButton = driver.findElement(
+                            By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki')]")
+                        );
+                        
+                        // Buton disabled mı kontrol et
+                        if (nextButton.getAttribute("disabled") != null) {
+                            // Son sayfaya ulaşıldı
+                            break;
+                        }
+                        
+                        // Sonraki sayfaya git
+                        nextButton.click();
+                        waitForPageLoad();
+                        Thread.sleep(1000);
+                        currentPage++;
+                    } catch (org.openqa.selenium.NoSuchElementException ex) {
+                        // Pagination butonu yok, son sayfadayız
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Yorum tüm sayfalarda arandı ama bulunamadı: " + commentText);
+        }
+        return null;
+    }
+    
+    /**
+     * Admin etiketler sayfasında tüm sayfaları gezip etiketi bul
+     * @param tagName Etiket adı
+     * @return Etiket element'i veya null
+     */
+    protected WebElement findTagInAllPages(String tagName) {
+        try {
+            // İlk sayfayı kontrol et
+            driver.get(BASE_URL + "/admin/etiketler");
+            waitForPageLoad();
+            Thread.sleep(1000);
+            
+            int currentPage = 0;
+            int maxPages = 100; // Maksimum sayfa sayısı (güvenlik için)
+            
+            while (currentPage < maxPages) {
+                try {
+                    // Etiketi bulmayı dene
+                    WebElement tagElement = wait.until(
+                        ExpectedConditions.presenceOfElementLocated(
+                            By.xpath("//tr[.//td[contains(text(), '" + tagName + "')]]")
+                        )
+                    );
+                    return tagElement;
+                } catch (org.openqa.selenium.TimeoutException e) {
+                    // Etiket bu sayfada bulunamadı, sonraki sayfaya geç
+                    try {
+                        // Pagination butonlarını kontrol et
+                        WebElement nextButton = driver.findElement(
+                            By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki')]")
+                        );
+                        
+                        // Buton disabled mı kontrol et
+                        if (nextButton.getAttribute("disabled") != null) {
+                            // Son sayfaya ulaşıldı
+                            break;
+                        }
+                        
+                        // Sonraki sayfaya git
+                        nextButton.click();
+                        waitForPageLoad();
+                        Thread.sleep(1000);
+                        currentPage++;
+                    } catch (org.openqa.selenium.NoSuchElementException ex) {
+                        // Pagination butonu yok, son sayfadayız
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Etiket tüm sayfalarda arandı ama bulunamadı: " + tagName);
+        }
+        return null;
+    }
+    
+    /**
+     * Admin editör seçimleri sayfasında tüm sayfaları gezip story'yi bul
+     * @param storyTitle Story başlığı
+     * @return Story element'i veya null
+     */
+    protected WebElement findStoryInEditorPicksAllPages(String storyTitle) {
+        try {
+            // İlk sayfayı kontrol et
+            driver.get(BASE_URL + "/admin/editor-secimleri");
+            waitForPageLoad();
+            Thread.sleep(1000);
+            
+            int currentPage = 0;
+            int maxPages = 100; // Maksimum sayfa sayısı (güvenlik için)
+            
+            while (currentPage < maxPages) {
+                try {
+                    // Story'yi bulmayı dene
+                    WebElement storyElement = wait.until(
+                        ExpectedConditions.presenceOfElementLocated(
+                            By.xpath("//div[contains(@class, 'admin-editor-pick-item')]//*[contains(text(), '" + storyTitle + "')]")
+                        )
+                    );
+                    return storyElement;
+                } catch (org.openqa.selenium.TimeoutException e) {
+                    // Story bu sayfada bulunamadı, sonraki sayfaya geç
+                    try {
+                        // Pagination butonlarını kontrol et
+                        WebElement nextButton = driver.findElement(
+                            By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki')]")
+                        );
+                        
+                        // Buton disabled mı kontrol et
+                        if (nextButton.getAttribute("disabled") != null) {
+                            // Son sayfaya ulaşıldı
+                            break;
+                        }
+                        
+                        // Sonraki sayfaya git
+                        nextButton.click();
+                        waitForPageLoad();
+                        Thread.sleep(1000);
+                        currentPage++;
+                    } catch (org.openqa.selenium.NoSuchElementException ex) {
+                        // Pagination butonu yok, son sayfadayız
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Story editör seçimlerinde tüm sayfalarda arandı ama bulunamadı: " + storyTitle);
+        }
+        return null;
+    }
+    
+    /**
      * Admin olarak giriş yap ve story'yi onayla
      * @param storyTitle Story başlığı (onay bekleyen story'yi bulmak için)
      * @return Story slug'ı (onaylandıktan sonra)
@@ -1882,24 +2174,11 @@ public abstract class BaseSeleniumTest {
             // Admin olarak giriş yap
             loginUser(adminCreds.getEmail(), adminCreds.getPassword());
             
-            // Admin dashboard'a git
-            driver.get(BASE_URL + "/admin/dashboard");
-            waitForPageLoad();
-            Thread.sleep(1000); // 3000 -> 1000
+            // Story'yi tüm sayfalarda ara
+            WebElement storyTextElement = findStoryInAllPages(storyTitle);
             
-            // Sayfayı yenile (yeni story'nin görünmesi için)
-            driver.navigate().refresh();
-            waitForPageLoad();
-            Thread.sleep(1000);
-            
-            // Story'yi bul ve onayla
-            try {
-                // Admin dashboard'da story'yi bul (admin-haber-item içinde)
-                WebElement storyTextElement = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(
-                        By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
-                    )
-                );
+            if (storyTextElement != null) {
+                // Story bulundu, onayla
                 
                 // Story item container'ını bul (parent'a çık)
                 WebElement storyRow = storyTextElement.findElement(By.xpath("./ancestor::div[contains(@class, 'admin-haber-item')]"));
@@ -1944,8 +2223,7 @@ public abstract class BaseSeleniumTest {
                     .replaceAll("\\s+", "-")
                     .replaceAll("-+", "-");
                 return storySlug;
-                
-            } catch (Exception e) {
+            } else {
                 // Story UI'da bulunamadı (pagination nedeniyle ilk 50'de olmayabilir)
                 // Direkt veritabanından onayla
                 System.out.println("Story admin dashboard'da bulunamadı, veritabanından onaylanıyor: " + storyTitle);

@@ -64,29 +64,13 @@ public class Case12b_AdminStoryDeletionTest extends BaseSeleniumTest {
                 "Case 12b: Admin olarak giriş yapılamadı. URL: " + currentUrl
             );
             
-            // 3. Admin dashboard'a git (onay bekleyen story'ler burada görünür)
-            driver.get(BASE_URL + "/admin/dashboard");
-            waitForPageLoad();
-            Thread.sleep(1000);
+            // 3. Story'yi tüm sayfalarda ara ve reddet
+            WebElement storyTextElement = findStoryInAllPages(storyTitle);
             
-            // Sayfayı yenile (yeni story'nin görünmesi için)
-            driver.navigate().refresh();
-            waitForPageLoad();
-            Thread.sleep(1000);
-            
-            // 4. Story'yi bul ve reddet
-            try {
-                WebElement storyTextElement = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(
-                        By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
-                    )
-                );
-                
+            if (storyTextElement != null) {
+                // Story bulundu, reddet
                 // Story item container'ını bul (parent'a çık)
-                WebElement storyRow = storyTextElement.findElement(By.xpath("./ancestor::div[contains(@class, 'admin-haber-item')]"));
-                
-                // Story item container'ını bul (parent'a çık)
-                WebElement storyItem = storyRow.findElement(By.xpath("./ancestor::div[contains(@class, 'admin-haber-item')]"));
+                WebElement storyItem = storyTextElement.findElement(By.xpath("./ancestor::div[contains(@class, 'admin-haber-item')]"));
                 
                 // Reddet butonunu bul ve tıkla (admin-haber-actions içinde)
                 WebElement rejectButton = storyItem.findElement(
@@ -131,7 +115,7 @@ public class Case12b_AdminStoryDeletionTest extends BaseSeleniumTest {
                 
                 System.out.println("Case 12b: Story reddetme başarıyla test edildi");
                 
-            } catch (Exception e) {
+            } else {
                 // Story UI'da bulunamadı (pagination nedeniyle ilk 50'de olmayabilir)
                 // Direkt veritabanından reddet
                 System.out.println("Case 12b: Story admin dashboard'da bulunamadı, veritabanından reddediliyor: " + storyTitle);

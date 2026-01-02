@@ -7,17 +7,25 @@ const AdminDashboard = ({ sidebarOpen, setSidebarOpen }) => {
   const navigate = useNavigate();
   const [bekleyenHaberler, setBekleyenHaberler] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [size] = useState(50);
+  const [totalPages, setTotalPages] = useState(0);
 
   useEffect(() => {
-    fetchBekleyenHaberler();
+    fetchBekleyenHaberler(0);
   }, []);
 
-  const fetchBekleyenHaberler = async () => {
+  const fetchBekleyenHaberler = async (pageToLoad = page) => {
     try {
-      const response = await haberAPI.getBekleyen({ page: 0, size: 50 });
-      setBekleyenHaberler(response.data.content || []);
+      setLoading(true);
+      const response = await haberAPI.getBekleyen({ page: pageToLoad, size });
+      const data = response.data;
+      setBekleyenHaberler(data.content || []);
+      setPage(data.page ?? pageToLoad);
+      setTotalPages(data.totalPages ?? 0);
     } catch (error) {
       console.error('Haberler yüklenirken hata:', error);
+      setBekleyenHaberler([]);
     } finally {
       setLoading(false);
     }
@@ -26,7 +34,7 @@ const AdminDashboard = ({ sidebarOpen, setSidebarOpen }) => {
   const handleOnayla = async (id) => {
     try {
       await haberAPI.yayinOnayla(id);
-      fetchBekleyenHaberler();
+      fetchBekleyenHaberler(page);
       alert('Haber onaylandı ve yayınlandı!');
     } catch (error) {
       alert('Haber onaylanırken hata oluştu: ' + (error.response?.data?.message || error.message));
@@ -38,7 +46,7 @@ const AdminDashboard = ({ sidebarOpen, setSidebarOpen }) => {
     if (sebep) {
       try {
         await haberAPI.yayinReddet(id, sebep);
-        fetchBekleyenHaberler();
+        fetchBekleyenHaberler(page);
         alert('Haber reddedildi!');
       } catch (error) {
         alert('Haber reddedilirken hata oluştu: ' + (error.response?.data?.message || error.message));
@@ -96,6 +104,28 @@ const AdminDashboard = ({ sidebarOpen, setSidebarOpen }) => {
                   </div>
                 </div>
               ))}
+              
+              {totalPages > 1 && (
+                <div className="admin-pagination">
+                  <button
+                    className="admin-btn admin-btn-secondary"
+                    disabled={page === 0}
+                    onClick={() => fetchBekleyenHaberler(page - 1)}
+                  >
+                    Önceki 50
+                  </button>
+                  <span>
+                    Sayfa {page + 1} / {totalPages}
+                  </span>
+                  <button
+                    className="admin-btn admin-btn-secondary"
+                    disabled={page + 1 >= totalPages}
+                    onClick={() => fetchBekleyenHaberler(page + 1)}
+                  >
+                    Sonraki 50
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="admin-empty-state">Onay bekleyen haber bulunmamaktadır.</div>

@@ -88,66 +88,16 @@ public class Case12a_AdminUserManagementTest extends BaseSeleniumTest {
                 Thread.sleep(3000);
                 waitForPageLoad();
                 
-                // Kullanıcıyı bul (pagination ile tüm sayfaları kontrol et)
-                WebElement userRow = null;
-                int maxPages = 10; // Maksimum sayfa sayısı
-                int currentPage = 0;
+                // Kullanıcıyı tüm sayfalarda ara
+                WebElement userElement = findUserInAllPages(testUserEmail);
                 
-                // İlk sayfaya dön (eğer başka bir sayfadaysak)
-                try {
-                    // İlk sayfaya dönmek için "İlk" veya "1" butonunu bul
-                    for (int i = 0; i < maxPages; i++) {
-                        try {
-                            WebElement firstButton = driver.findElement(
-                                By.xpath("//button[contains(text(), 'İlk')] | //button[contains(text(), '1') and not(contains(@class, 'active'))]")
-                            );
-                            if (firstButton.isEnabled() && firstButton.isDisplayed()) {
-                                firstButton.click();
-                                Thread.sleep(2000);
-                            } else {
-                                break;
-                            }
-                        } catch (Exception e) {
-                            break; // İlk sayfada olabiliriz
-                        }
-                    }
-                } catch (Exception e) {
-                    // İlk sayfada olabiliriz
-                }
-                
-                while (userRow == null && currentPage < maxPages) {
-                    try {
-                        // Kullanıcıyı mevcut sayfada bul (daha esnek selector)
-                        userRow = driver.findElement(
-                            By.xpath("//tr[.//td[contains(text(), '" + testUserEmail + "')] | .//td[contains(text(), '" + testUserUsername + "')]]")
-                        );
-                        break; // Kullanıcı bulundu
-                    } catch (org.openqa.selenium.NoSuchElementException e) {
-                        // Kullanıcı bu sayfada yok, sonraki sayfaya geç
-                        try {
-                            WebElement nextButton = driver.findElement(
-                                By.xpath("//button[contains(text(), 'Sonraki') and not(@disabled)] | //button[contains(@class, 'next') and not(@disabled)]")
-                            );
-                            if (nextButton.isEnabled() && nextButton.isDisplayed()) {
-                                nextButton.click();
-                                Thread.sleep(3000); // Sayfa yüklenmesi için daha fazla bekle
-                                waitForPageLoad();
-                                currentPage++;
-                            } else {
-                                // Son sayfaya ulaşıldı, kullanıcı bulunamadı
-                                break;
-                            }
-                        } catch (Exception e2) {
-                            // Sonraki butonu bulunamadı veya disabled, kullanıcı bulunamadı
-                            break;
-                        }
-                    }
-                }
-                
-                if (userRow == null) {
+                if (userElement == null) {
                     fail("Case 12a: Test kullanıcısı listede bulunamadı: " + testUserEmail);
                     return;
                 }
+                
+                // Kullanıcı satırını bul (parent tr)
+                WebElement userRow = userElement.findElement(By.xpath("./ancestor::tr"));
                 
                 // Aktif/pasif butonunu bul ve tıkla
                 WebElement toggleButton = userRow.findElement(
@@ -244,153 +194,52 @@ public class Case12a_AdminUserManagementTest extends BaseSeleniumTest {
             Thread.sleep(3000);
             
             // 4. Test kullanıcısını listede bul ve sil
+            // Kullanıcılar sayfasında kullanıcı listesi yüklenene kadar bekle
+            Thread.sleep(3000);
+            
+            // Sayfayı yenile (kullanıcının görünmesi için)
+            driver.navigate().refresh();
+            Thread.sleep(3000);
+            waitForPageLoad();
+            
+            // Kullanıcıyı tüm sayfalarda ara
+            WebElement userElement = findUserInAllPages(testUserEmail);
+            
+            if (userElement == null) {
+                fail("Case 12a Negative: Test kullanıcısı listede bulunamadı: " + testUserEmail);
+                return;
+            }
+            
+            // Kullanıcı satırını bul (parent tr)
+            WebElement userRow = userElement.findElement(By.xpath("./ancestor::tr"));
+            
+            // Sil butonunu bul ve tıkla
+            WebElement deleteButton = userRow.findElement(
+                By.xpath(".//button[contains(text(), 'Sil')]")
+            );
+            deleteButton.click();
+            
+            // Confirm dialog'u kabul et
+            Thread.sleep(1000);
             try {
-                // Kullanıcılar sayfasında kullanıcı listesi yüklenene kadar bekle
-                Thread.sleep(3000);
-                
-                // Sayfayı yenile (kullanıcının görünmesi için)
-                driver.navigate().refresh();
-                Thread.sleep(3000);
-                waitForPageLoad();
-                
-                // Kullanıcıyı bul (pagination ile tüm sayfaları kontrol et)
-                WebElement userRow = null;
-                int maxPages = 10; // Maksimum sayfa sayısı
-                int currentPage = 0;
-                
-                // İlk sayfaya dön (eğer başka bir sayfadaysak)
-                try {
-                    for (int i = 0; i < maxPages; i++) {
-                        try {
-                            WebElement firstButton = driver.findElement(
-                                By.xpath("//button[contains(text(), 'İlk')] | //button[contains(text(), '1') and not(contains(@class, 'active'))]")
-                            );
-                            if (firstButton.isEnabled() && firstButton.isDisplayed()) {
-                                firstButton.click();
-                                Thread.sleep(2000);
-                            } else {
-                                break;
-                            }
-                        } catch (Exception e) {
-                            break; // İlk sayfada olabiliriz
-                        }
-                    }
-                } catch (Exception e) {
-                    // İlk sayfada olabiliriz
-                }
-                
-                while (userRow == null && currentPage < maxPages) {
-                    try {
-                        // Kullanıcıyı mevcut sayfada bul (daha esnek selector)
-                        userRow = driver.findElement(
-                            By.xpath("//tr[.//td[contains(text(), '" + testUserEmail + "')] | .//td[contains(text(), '" + testUserUsername + "')]]")
-                        );
-                        break; // Kullanıcı bulundu
-                    } catch (org.openqa.selenium.NoSuchElementException e) {
-                        // Kullanıcı bu sayfada yok, sonraki sayfaya geç
-                        try {
-                            WebElement nextButton = driver.findElement(
-                                By.xpath("//button[contains(text(), 'Sonraki') and not(@disabled)] | //button[contains(@class, 'next') and not(@disabled)]")
-                            );
-                            if (nextButton.isEnabled() && nextButton.isDisplayed()) {
-                                nextButton.click();
-                                Thread.sleep(3000); // Sayfa yüklenmesi için daha fazla bekle
-                                waitForPageLoad();
-                                currentPage++;
-                            } else {
-                                // Son sayfaya ulaşıldı, kullanıcı bulunamadı
-                                break;
-                            }
-                        } catch (Exception e2) {
-                            // Sonraki butonu bulunamadı veya disabled, kullanıcı bulunamadı
-                            break;
-                        }
-                    }
-                }
-                
-                if (userRow == null) {
-                    fail("Case 12a Negative: Test kullanıcısı listede bulunamadı: " + testUserEmail);
-                    return;
-                }
-                
-                // Sil butonunu bul ve tıkla
-                WebElement deleteButton = userRow.findElement(
-                    By.xpath(".//button[contains(text(), 'Sil')]")
-                );
-                deleteButton.click();
-                
-                // Confirm dialog'u kabul et
-                Thread.sleep(1000);
-                try {
-                    driver.switchTo().alert().accept();
-                } catch (Exception e) {
-                    // Alert yoksa devam et
-                }
-                
-                // Silme işleminin tamamlanmasını bekle (sayfa yenilenene kadar)
-                Thread.sleep(3000);
-                
-                // Sayfayı yenile (silme işleminin tamamlandığından emin olmak için)
-                driver.navigate().refresh();
-                Thread.sleep(3000);
-                
-                // Kullanıcının silindiğini kontrol et (pagination ile tüm sayfaları kontrol et)
-                boolean userFound = false;
-                currentPage = 0;
-                
-                // İlk sayfaya dön
-                try {
-                    // Önceki butonları tıklayarak ilk sayfaya dön
-                    for (int i = 0; i < maxPages; i++) {
-                        try {
-                            WebElement prevButton = driver.findElement(
-                                By.xpath("//button[contains(text(), 'Önceki') and not(@disabled)]")
-                            );
-                            if (prevButton.isEnabled()) {
-                                prevButton.click();
-                                Thread.sleep(1000);
-                            } else {
-                                break; // İlk sayfaya ulaşıldı
-                            }
-                        } catch (Exception e) {
-                            break; // Önceki butonu bulunamadı, muhtemelen ilk sayfadayız
-                        }
-                    }
-                } catch (Exception e) {
-                    // İlk sayfada olabiliriz
-                }
-                
-                Thread.sleep(2000);
-                
-                // Tüm sayfalarda kullanıcıyı ara
-                while (!userFound && currentPage < maxPages) {
-                    try {
-                        driver.findElement(
-                            By.xpath("//tr[.//td[contains(text(), '" + testUserEmail + "')] or .//td[contains(text(), '" + testUserUsername + "')]]")
-                        );
-                        userFound = true; // Kullanıcı bulundu
-                        break;
-                    } catch (org.openqa.selenium.NoSuchElementException e) {
-                        // Kullanıcı bu sayfada yok, sonraki sayfaya geç
-                        try {
-                            WebElement nextButton = driver.findElement(
-                                By.xpath("//button[contains(text(), 'Sonraki') and not(@disabled)]")
-                            );
-                            if (nextButton.isEnabled()) {
-                                nextButton.click();
-                                Thread.sleep(2000);
-                                currentPage++;
-                            } else {
-                                // Son sayfaya ulaşıldı, kullanıcı bulunamadı
-                                break;
-                            }
-                        } catch (Exception e2) {
-                            // Sonraki butonu bulunamadı veya disabled
-                            break;
-                        }
-                    }
-                }
-                
+                driver.switchTo().alert().accept();
+            } catch (Exception e) {
+                // Alert yoksa devam et
+            }
+            
+            // Silme işleminin tamamlanmasını bekle (sayfa yenilenene kadar)
+            Thread.sleep(3000);
+            
+            // Sayfayı yenile (silme işleminin tamamlandığından emin olmak için)
+            driver.navigate().refresh();
+            Thread.sleep(3000);
+            
+            // Kullanıcının silindiğini kontrol et - tüm sayfalarda ara
+            WebElement deletedUser = findUserInAllPages(testUserEmail);
+            
+            if (deletedUser != null) {
+                fail("Case 12a Negative: Kullanıcı silinmedi (hala listede görünüyor)");
+            } else {
                 // Veritabanından kullanıcının silinip silinmediğini kontrol et
                 boolean userExistsInDB = false;
                 try (java.sql.Connection conn = getTestDatabaseConnection()) {
@@ -409,35 +258,13 @@ public class Case12a_AdminUserManagementTest extends BaseSeleniumTest {
                 }
                 
                 if (userExistsInDB) {
-                    // Kullanıcı hala veritabanında, UI'da da kontrol et
-                    if (userFound) {
-                        fail("Case 12a Negative: Kullanıcı silinmedi (hem veritabanında hem UI'da görünüyor)");
-                    } else {
-                        // Veritabanında var ama UI'da görünmüyor - sayfayı yenile ve tekrar kontrol et
-                        driver.navigate().refresh();
-                        Thread.sleep(3000);
-                        
-                        // Tekrar kontrol et
-                        try {
-                            driver.findElement(
-                                By.xpath("//tr[.//td[contains(text(), '" + testUserEmail + "')] or .//td[contains(text(), '" + testUserUsername + "')]]")
-                            );
-                            fail("Case 12a Negative: Kullanıcı silinmedi (veritabanında hala var)");
-                        } catch (org.openqa.selenium.NoSuchElementException e) {
-                            // UI'da görünmüyor ama veritabanında var - bu bir sorun
-                            fail("Case 12a Negative: Kullanıcı veritabanında hala var ama UI'da görünmüyor");
-                        }
-                    }
+                    fail("Case 12a Negative: Kullanıcı veritabanında hala var");
                 } else {
-                    // Kullanıcı veritabanından silinmiş - bu beklenen davranış
-                    assertTrue(true, "Case 12a Negative: Kullanıcı başarıyla silindi (veritabanından doğrulandı)");
+                    assertTrue(true, "Case 12a Negative: Kullanıcı başarıyla silindi");
                 }
-                
-                System.out.println("Case 12a Negative: Kullanıcı silme başarıyla test edildi");
-                
-            } catch (Exception e) {
-                System.out.println("Case 12a Negative: Kullanıcı silme testi - " + e.getMessage());
             }
+            
+            System.out.println("Case 12a Negative: Kullanıcı silme başarıyla test edildi");
             
         } catch (Exception e) {
             System.err.println("Case 12a Negative: Beklenmeyen hata - " + e.getMessage());

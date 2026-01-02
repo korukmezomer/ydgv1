@@ -87,12 +87,13 @@ public class Case12f_AdminEditorPickTest extends BaseSeleniumTest {
             waitForPageLoad();
             Thread.sleep(1000); // 3000 -> 1000
             
-            // 4. Story'yi bul ve editor seçimi yap
-            WebElement storyItem = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.xpath("//div[contains(@class, 'admin-editor-pick-item')]//*[contains(text(), '" + storyTitle + "')]")
-                )
-            );
+            // 4. Story'yi bul ve editor seçimi yap - tüm sayfalarda ara
+            WebElement storyItem = findStoryInEditorPicksAllPages(storyTitle);
+            
+            if (storyItem == null) {
+                fail("Case 12f: Story editör seçimleri sayfasında bulunamadı: " + storyTitle);
+                return;
+            }
             
             // Story item container'ını bul
             WebElement storyContainer = storyItem.findElement(By.xpath("./ancestor::div[contains(@class, 'admin-editor-pick-item')]"));

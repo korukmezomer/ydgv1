@@ -138,23 +138,13 @@ public class Case12c_AdminCommentDeletionTest extends BaseSeleniumTest {
             waitForPageLoad();
             Thread.sleep(3000);
             
-            // 5. "Yayınlananlar" (ONAYLANDI) seçeneğini seç
-            WebElement statusSelect = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector("select.admin-select")
-                )
-            );
-            org.openqa.selenium.support.ui.Select select = new org.openqa.selenium.support.ui.Select(statusSelect);
-            select.selectByValue("ONAYLANDI");
-            Thread.sleep(3000);
+            // 5. Yorumu tüm sayfalarda ara ve sil
+            WebElement commentItem = findCommentInAllPages(commentText, "ONAYLANDI");
             
-            // 6. Yorumu bul ve sil
-            // Yorumu bul (admin-haber-item içinde)
-            WebElement commentItem = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + commentText + "')]")
-                )
-            );
+            if (commentItem == null) {
+                fail("Case 12c: Yorum listede bulunamadı: " + commentText);
+                return;
+            }
             
             // Comment item container'ını bul
             WebElement commentContainer = commentItem.findElement(By.xpath("./ancestor::div[contains(@class, 'admin-haber-item')]"));
@@ -175,18 +165,13 @@ public class Case12c_AdminCommentDeletionTest extends BaseSeleniumTest {
             
             Thread.sleep(3000);
             
-            // Yorumun silindiğini kontrol et (artık listede görünmemeli)
-            driver.navigate().refresh();
-            Thread.sleep(3000);
+            // Yorumun silindiğini kontrol et - tüm sayfalarda ara
+            Thread.sleep(2000);
+            WebElement deletedComment = findCommentInAllPages(commentText, "ONAYLANDI");
             
-            try {
-                driver.findElement(
-                    By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + commentText + "')]")
-                );
-                // Eğer hala görünüyorsa test başarısız
+            if (deletedComment != null) {
                 fail("Case 12c: Yorum silinmedi (hala listede görünüyor)");
-            } catch (org.openqa.selenium.NoSuchElementException e) {
-                // Yorum bulunamadı - bu beklenen davranış (silindi)
+            } else {
                 assertTrue(true, "Case 12c: Yorum başarıyla silindi");
             }
             
