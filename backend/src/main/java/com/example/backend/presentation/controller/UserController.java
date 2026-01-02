@@ -37,6 +37,8 @@ public class UserController {
             @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        // Repository'de zaten ORDER BY u.id DESC var, bu yüzden Sort eklemiyoruz
+        // @Query içinde ORDER BY varsa, Pageable'daki Sort göz ardı edilir
         Pageable pageable = PageRequest.of(page, size);
         Page<UserResponse> kullaniciPage;
         
@@ -55,6 +57,7 @@ public class UserController {
             @RequestParam String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        // Repository'de zaten ORDER BY u.id DESC var, bu yüzden Sort eklemiyoruz
         Pageable pageable = PageRequest.of(page, size);
         Page<UserResponse> kullaniciPage = userService.search(q.trim(), pageable);
         PageResponse<UserResponse> response = toPageResponse(kullaniciPage);

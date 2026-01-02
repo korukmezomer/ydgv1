@@ -1868,50 +1868,74 @@ public abstract class BaseSeleniumTest {
      */
     protected WebElement findStoryInAllPages(String storyTitle) {
         try {
-            // İlk sayfayı kontrol et
+            // Admin dashboard'a git
             driver.get(BASE_URL + "/admin/dashboard");
             waitForPageLoad();
+            Thread.sleep(2000);
+            
+            // Sayfa yüklemesini bekle
+            wait.until(
+                ExpectedConditions.or(
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-container")),
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-haber-item"))
+                )
+            );
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
             Thread.sleep(1000);
             
-            int currentPage = 0;
-            int maxPages = 100; // Maksimum sayfa sayısı (güvenlik için)
-            
-            while (currentPage < maxPages) {
+            // En yeni story'ler en başta olduğu için ilk sayfada bulunmalı
+            // İlk sayfada direkt ara (en yeni önce sıralı olduğu için)
+            try {
+                WebElement storyElement = wait.until(
+                    ExpectedConditions.presenceOfElementLocated(
+                        By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')] | //*[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
+                    )
+                );
+                System.out.println("Story ilk sayfada bulundu: " + storyTitle);
+                return storyElement;
+            } catch (org.openqa.selenium.TimeoutException e) {
+                // İlk sayfada bulunamadı, sadece bir sonraki sayfayı kontrol et
+                System.out.println("Story ilk sayfada bulunamadı, bir sonraki sayfayı kontrol ediliyor: " + storyTitle);
                 try {
-                    // Story'yi bulmayı dene
-                    WebElement storyElement = wait.until(
-                        ExpectedConditions.presenceOfElementLocated(
-                            By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
-                        )
+                    // Pagination butonlarını kontrol et
+                    WebElement nextButton = driver.findElement(
+                        By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki') or contains(text(), 'Next')]")
                     );
-                    return storyElement;
-                } catch (org.openqa.selenium.TimeoutException e) {
-                    // Story bu sayfada bulunamadı, sonraki sayfaya geç
-                    try {
-                        // Pagination butonlarını kontrol et
-                        WebElement nextButton = driver.findElement(
-                            By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki')]")
-                        );
-                        
-                        // Buton disabled mı kontrol et
-                        if (nextButton.getAttribute("disabled") != null) {
-                            // Son sayfaya ulaşıldı
-                            break;
-                        }
-                        
-                        // Sonraki sayfaya git
-                        nextButton.click();
-                        waitForPageLoad();
-                        Thread.sleep(1000);
-                        currentPage++;
-                    } catch (org.openqa.selenium.NoSuchElementException ex) {
-                        // Pagination butonu yok, son sayfadayız
-                        break;
+                    
+                    // Buton disabled mı kontrol et
+                    if (nextButton.getAttribute("disabled") != null) {
+                        // Son sayfaya ulaşıldı
+                        System.out.println("Story bulunamadı (son sayfaya ulaşıldı): " + storyTitle);
+                        return null;
                     }
+                    
+                    // Sonraki sayfaya git
+                    safeClick(nextButton);
+                    waitForPageLoad();
+                    Thread.sleep(2000);
+                    
+                    // İkinci sayfada ara
+                    try {
+                        WebElement storyElement = wait.until(
+                            ExpectedConditions.presenceOfElementLocated(
+                                By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')] | //*[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
+                            )
+                        );
+                        System.out.println("Story ikinci sayfada bulundu: " + storyTitle);
+                        return storyElement;
+                    } catch (org.openqa.selenium.TimeoutException e2) {
+                        System.out.println("Story ikinci sayfada da bulunamadı: " + storyTitle);
+                        return null;
+                    }
+                } catch (org.openqa.selenium.NoSuchElementException ex) {
+                    // Pagination butonu yok, son sayfadayız
+                    System.out.println("Story bulunamadı (pagination yok): " + storyTitle);
+                    return null;
                 }
             }
         } catch (Exception e) {
-            System.out.println("Story tüm sayfalarda arandı ama bulunamadı: " + storyTitle);
+            System.out.println("Story aranırken hata oluştu: " + storyTitle + " - " + e.getMessage());
+            e.printStackTrace();
         }
         return null;
     }
@@ -1922,53 +1946,143 @@ public abstract class BaseSeleniumTest {
      * @return Kullanıcı element'i veya null
      */
     protected WebElement findUserInAllPages(String userEmail) {
+        // Email yerine kullanıcı adı ile arama yapmak için overload edilmiş metodu kullan
+        // Email'den kullanıcı adını çıkar (email formatından)
+        String username = userEmail;
+        if (userEmail.contains("@")) {
+            // Email formatından kullanıcı adını çıkar
+            username = userEmail.substring(0, userEmail.indexOf("@"));
+        }
+        return findUserInAllPagesByUsername(username);
+    }
+    
+    protected WebElement findUserInAllPagesByUsername(String username) {
         try {
-            // İlk sayfayı kontrol et
+            // Kullanıcılar sayfasına git
             driver.get(BASE_URL + "/admin/users");
             waitForPageLoad();
-            Thread.sleep(1000);
+            Thread.sleep(3000);
             
-            int currentPage = 0;
-            int maxPages = 100; // Maksimum sayfa sayısı (güvenlik için)
+            // Sayfa yüklemesini bekle
+            wait.until(
+                ExpectedConditions.or(
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-container")),
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-table"))
+                )
+            );
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(2000);
             
-            while (currentPage < maxPages) {
+            // Arama çubuğunu bul
+            System.out.println("Kullanıcı arama çubuğu ile aranıyor (kullanıcı adı): " + username);
+            
+            WebElement searchInput = wait.until(
+                ExpectedConditions.presenceOfElementLocated(
+                    By.cssSelector("form.admin-search-form input[type='text'], .admin-search-input, input[placeholder*='Email veya ad ile ara']")
+                )
+            );
+            
+            // Arama çubuğunu görünür yap
+            ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", searchInput);
+            Thread.sleep(500);
+            
+            // Arama çubuğunu temizle ve kullanıcı adını gir
+            searchInput.clear();
+            Thread.sleep(300);
+            searchInput.sendKeys(username);
+            Thread.sleep(500);
+            
+            System.out.println("Arama çubuğuna kullanıcı adı girildi: " + username);
+            
+            // Arama butonunu bul ve tıkla (en güvenilir yöntem)
+            WebElement searchButton = null;
+            try {
+                // Önce form'u bul
+                WebElement searchForm = wait.until(
+                    ExpectedConditions.presenceOfElementLocated(
+                        By.cssSelector("form.admin-search-form")
+                    )
+                );
+                
+                // Arama butonunu bul - önce submit butonunu dene
                 try {
-                    // Kullanıcıyı bulmayı dene
-                    WebElement userElement = wait.until(
-                        ExpectedConditions.presenceOfElementLocated(
-                            By.xpath("//table//tr//td[contains(text(), '" + userEmail + "')]")
+                    searchButton = wait.until(
+                        ExpectedConditions.elementToBeClickable(
+                            searchForm.findElement(By.cssSelector("button[type='submit']"))
                         )
                     );
-                    return userElement;
-                } catch (org.openqa.selenium.TimeoutException e) {
-                    // Kullanıcı bu sayfada bulunamadı, sonraki sayfaya geç
-                    try {
-                        // Pagination butonlarını kontrol et
-                        WebElement nextButton = driver.findElement(
-                            By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki')]")
-                        );
-                        
-                        // Buton disabled mı kontrol et
-                        if (nextButton.getAttribute("disabled") != null) {
-                            // Son sayfaya ulaşıldı
-                            break;
-                        }
-                        
-                        // Sonraki sayfaya git
-                        nextButton.click();
-                        waitForPageLoad();
-                        Thread.sleep(1000);
-                        currentPage++;
-                    } catch (org.openqa.selenium.NoSuchElementException ex) {
-                        // Pagination butonu yok, son sayfadayız
-                        break;
-                    }
+                    System.out.println("Submit butonu bulundu, tıklanıyor...");
+                } catch (Exception e1) {
+                    // Submit butonu yoksa, admin-btn-secondary class'ına sahip butonu bul
+                    searchButton = wait.until(
+                        ExpectedConditions.elementToBeClickable(
+                            searchForm.findElement(By.cssSelector("button.admin-btn-secondary"))
+                        )
+                    );
+                    System.out.println("Ara butonu bulundu, tıklanıyor...");
+                }
+                
+                // Butonu JavaScript ile tıkla (daha güvenilir)
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", searchButton);
+                System.out.println("Arama butonu tıklandı");
+                
+            } catch (Exception e1) {
+                System.out.println("Arama butonu bulunamadı, form submit deneniyor...");
+                // Buton bulunamazsa form'u JavaScript ile submit et
+                try {
+                    WebElement searchForm = searchInput.findElement(By.xpath("./ancestor::form"));
+                    ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].submit();", searchForm);
+                    System.out.println("Form JavaScript ile submit edildi");
+                } catch (Exception e2) {
+                    System.out.println("Form submit başarısız, Enter tuşu deneniyor...");
+                    // Son çare: Enter tuşu
+                    searchInput.sendKeys(org.openqa.selenium.Keys.RETURN);
                 }
             }
+            
+            Thread.sleep(1000);
+            System.out.println("Arama yapıldı, sonuçlar bekleniyor...");
+            
+            // Arama sonuçlarının yüklenmesini bekle
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(3000);
+            
+            // Tablo görünür olana kadar bekle
+            wait.until(
+                ExpectedConditions.or(
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-table")),
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-empty-state"))
+                )
+            );
+            Thread.sleep(1000);
+            
+            // Kullanıcıyı bul - kullanıcı adı kolonunda ara
+            WebElement userElement = wait.until(
+                ExpectedConditions.presenceOfElementLocated(
+                    By.xpath("//table//tr//td[contains(text(), '" + username + "')]")
+                )
+            );
+            System.out.println("Kullanıcı bulundu (kullanıcı adı): " + username);
+            return userElement;
+            
+        } catch (org.openqa.selenium.TimeoutException e) {
+            // Kullanıcı bulunamadı - sayfadaki tüm kullanıcı adlarını logla
+            try {
+                java.util.List<WebElement> allUsernames = driver.findElements(By.xpath("//table//tr//td[3]")); // Kullanıcı adı kolonu
+                System.out.println("Sayfadaki kullanıcı adları:");
+                for (WebElement usernameCell : allUsernames) {
+                    System.out.println("  - " + usernameCell.getText());
+                }
+            } catch (Exception ex) {
+                System.out.println("Kullanıcı adları loglanamadı: " + ex.getMessage());
+            }
+            System.out.println("Kullanıcı arama ile bulunamadı (kullanıcı adı): " + username);
+            return null;
         } catch (Exception e) {
-            System.out.println("Kullanıcı tüm sayfalarda arandı ama bulunamadı: " + userEmail);
+            System.out.println("Kullanıcı arama ile bulunamadı (kullanıcı adı): " + username + " - " + e.getMessage());
+            e.printStackTrace();
+            return null;
         }
-        return null;
     }
     
     /**
@@ -2027,7 +2141,7 @@ public abstract class BaseSeleniumTest {
                         }
                         
                         // Sonraki sayfaya git
-                        nextButton.click();
+                        safeClick(nextButton);
                         waitForPageLoad();
                         Thread.sleep(1000);
                         currentPage++;
@@ -2046,27 +2160,43 @@ public abstract class BaseSeleniumTest {
     /**
      * Admin etiketler sayfasında tüm sayfaları gezip etiketi bul
      * @param tagName Etiket adı
-     * @return Etiket element'i veya null
+     * @return Etiket satırı (tr element'i) veya null
      */
     protected WebElement findTagInAllPages(String tagName) {
         try {
-            // İlk sayfayı kontrol et
-            driver.get(BASE_URL + "/admin/etiketler");
-            waitForPageLoad();
-            Thread.sleep(1000);
+            // Eğer zaten etiketler sayfasındaysak, sayfayı yeniden yükleme
+            String currentUrl = driver.getCurrentUrl();
+            if (!currentUrl.contains("/admin/etiketler")) {
+                driver.get(BASE_URL + "/admin/etiketler");
+                waitForPageLoad();
+                Thread.sleep(2000);
+            }
+            
+            // Sayfa yüklemesini bekle
+            wait.until(
+                ExpectedConditions.or(
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-container")),
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-table"))
+                )
+            );
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(2000);
             
             int currentPage = 0;
-            int maxPages = 100; // Maksimum sayfa sayısı (güvenlik için)
+            int maxPages = 10; // Maksimum 10 sayfa kontrol et (optimizasyon)
             
             while (currentPage < maxPages) {
                 try {
-                    // Etiketi bulmayı dene
-                    WebElement tagElement = wait.until(
+                    // Önce td elementini bul, sonra parent tr'yi al
+                    WebElement tagTd = wait.until(
                         ExpectedConditions.presenceOfElementLocated(
-                            By.xpath("//tr[.//td[contains(text(), '" + tagName + "')]]")
+                            By.xpath("//table//tbody//tr//td[contains(text(), '" + tagName + "')]")
                         )
                     );
-                    return tagElement;
+                    // Parent tr elementini al
+                    WebElement tagRow = tagTd.findElement(By.xpath("./parent::tr"));
+                    System.out.println("Etiket bulundu (sayfa " + (currentPage + 1) + "): " + tagName);
+                    return tagRow;
                 } catch (org.openqa.selenium.TimeoutException e) {
                     // Etiket bu sayfada bulunamadı, sonraki sayfaya geç
                     try {
@@ -2078,22 +2208,25 @@ public abstract class BaseSeleniumTest {
                         // Buton disabled mı kontrol et
                         if (nextButton.getAttribute("disabled") != null) {
                             // Son sayfaya ulaşıldı
+                            System.out.println("Son sayfaya ulaşıldı, etiket bulunamadı: " + tagName);
                             break;
                         }
                         
                         // Sonraki sayfaya git
-                        nextButton.click();
-                        waitForPageLoad();
-                        Thread.sleep(1000);
+                        System.out.println("Sonraki sayfaya geçiliyor... (sayfa " + (currentPage + 2) + ")");
+                        safeClick(nextButton);
+                        wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+                        Thread.sleep(2000);
                         currentPage++;
                     } catch (org.openqa.selenium.NoSuchElementException ex) {
                         // Pagination butonu yok, son sayfadayız
+                        System.out.println("Pagination butonu yok, son sayfadayız");
                         break;
                     }
                 }
             }
         } catch (Exception e) {
-            System.out.println("Etiket tüm sayfalarda arandı ama bulunamadı: " + tagName);
+            System.out.println("Etiket tüm sayfalarda arandı ama bulunamadı: " + tagName + " - " + e.getMessage());
         }
         return null;
     }
@@ -2137,7 +2270,7 @@ public abstract class BaseSeleniumTest {
                         }
                         
                         // Sonraki sayfaya git
-                        nextButton.click();
+                        safeClick(nextButton);
                         waitForPageLoad();
                         Thread.sleep(1000);
                         currentPage++;

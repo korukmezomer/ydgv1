@@ -24,12 +24,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.email = :email AND u.isActive = true")
     Optional<User> findActiveByEmail(@Param("email") String email);
     
+    @Query(value = "SELECT * FROM kullanicilar ORDER BY id DESC", 
+           nativeQuery = true,
+           countQuery = "SELECT COUNT(*) FROM kullanicilar")
+    Page<User> findAllOrderedByIdDesc(Pageable pageable);
+    
     @Query("SELECT u FROM User u WHERE " +
-           "(LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(u.username, 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U')) LIKE LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(:search, 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U')) OR " +
+           "(LOWER(u.email) LIKE LOWER(:search) OR " +
+           "LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(u.username, 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U')) LIKE LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(:search, 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U')) OR " +
            "LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(u.firstName, 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U')) LIKE LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(:search, 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U')) OR " +
            "LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(u.lastName, 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U')) LIKE LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(:search, 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U')) OR " +
            "LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(CONCAT(u.firstName, ' ', u.lastName), 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U')) LIKE LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(:search, 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U'))) " +
-           "AND u.isActive = true")
+           "AND u.isActive = true ORDER BY u.id DESC")
     Page<User> search(@Param("search") String search, Pageable pageable);
 }
 

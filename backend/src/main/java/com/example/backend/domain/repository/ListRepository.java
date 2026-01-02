@@ -17,10 +17,10 @@ public interface ListRepository extends JpaRepository<ListEntity, Long> {
     
     boolean existsBySlug(String slug);
     
-    @Query("SELECT l FROM ListEntity l WHERE l.user.id = :userId AND l.isActive = true")
+    @Query("SELECT l FROM ListEntity l WHERE l.user.id = :userId AND l.isActive = true ORDER BY l.id DESC")
     Page<ListEntity> findByUserIdAndIsActiveTrue(@Param("userId") Long userId, Pageable pageable);
     
-    @Query("SELECT l FROM ListEntity l WHERE l.user.id = :userId AND l.isPrivate = false AND l.isActive = true")
+    @Query("SELECT l FROM ListEntity l WHERE l.user.id = :userId AND l.isPrivate = false AND l.isActive = true ORDER BY l.id DESC")
     Page<ListEntity> findByUserIdAndIsPrivateFalseAndIsActiveTrue(@Param("userId") Long userId, Pageable pageable);
 }
 

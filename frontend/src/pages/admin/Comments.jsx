@@ -19,14 +19,29 @@ const AdminComments = ({ sidebarOpen }) => {
   const fetchComments = async (statusToLoad = status, pageToLoad = page) => {
     try {
       setLoading(true);
+      
+      // Önce toplam sayfa sayısını al (eğer bilinmiyorsa)
+      let totalPagesCount = totalPages;
+      if (totalPagesCount === 0) {
+        const firstResponse = await yorumAPI.getByDurum(statusToLoad, {
+          page: 0,
+          size,
+        });
+        totalPagesCount = firstResponse.data.totalPages || 1;
+        setTotalPages(totalPagesCount);
+      }
+      
+      // Sayfa numarasını tersine çevir (son sayfa ilk sayfa olarak görünsün)
+      const backendPage = totalPagesCount > 0 ? Math.max(0, totalPagesCount - 1 - pageToLoad) : 0;
+      
       const response = await yorumAPI.getByDurum(statusToLoad, {
-        page: pageToLoad,
+        page: backendPage,
         size,
       });
       const data = response.data;
+      // Backend'den zaten sıralı geliyor (ORDER BY c.id DESC)
       setComments(data.content || []);
-      setPage(data.page ?? pageToLoad);
-      setTotalPages(data.totalPages ?? 0);
+      setPage(pageToLoad); // Frontend'de gösterilen sayfa numarası
     } catch (error) {
       console.error('Yorumlar yüklenirken hata:', error);
       setComments([]);
@@ -43,6 +58,7 @@ const AdminComments = ({ sidebarOpen }) => {
   const handleStatusChange = (e) => {
     const newStatus = e.target.value;
     setStatus(newStatus);
+    setTotalPages(0); // Status değiştiğinde totalPages'i sıfırla
     fetchComments(newStatus, 0);
   };
 

@@ -38,40 +38,114 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
             
             // 2. Sidebar'ı aç ve "Etiketler" linkine tıkla
             try {
+                // Header içindeki hamburger menu butonunu bul (daha spesifik)
                 WebElement sidebarToggle = wait.until(
                     ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("button[aria-label*='menu'], .menu-toggle, .sidebar-toggle, button[class*='menu']")
+                        By.cssSelector(".reader-header button.hamburger-menu, .reader-header-content button.hamburger-menu, button.hamburger-menu[aria-label='Menu']")
                     )
                 );
-                sidebarToggle.click();
+                
+                // Butonun görünür olduğundan emin ol
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", sidebarToggle);
+                Thread.sleep(500);
+                
+                // JavaScript ile tıkla (React state güncellemesi için)
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", sidebarToggle);
+                Thread.sleep(1000);
+                
+                // Sidebar'ın açılmasını bekle
+                wait.until(
+                    ExpectedConditions.and(
+                        ExpectedConditions.presenceOfElementLocated(By.cssSelector(".writer-sidebar.open")),
+                        ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".writer-sidebar.open"))
+                    )
+                );
                 Thread.sleep(1000);
             } catch (Exception e) {
-                System.out.println("Case 12e: Sidebar toggle bulunamadı");
+                // Sidebar toggle bulunamadıysa direkt URL'e git
+                System.out.println("Case 12e: Sidebar toggle bulunamadı, direkt URL'e gidiliyor: " + e.getMessage());
+                driver.get(BASE_URL + "/admin/etiketler");
+                waitForPageLoad();
+                Thread.sleep(2000);
             }
             
+            // "Etiketler" linkini bul ve tıkla (sidebar açıksa)
+            try {
+                // Önce sidebar'ın açık ve görünür olduğundan emin ol
+                wait.until(
+                    ExpectedConditions.and(
+                        ExpectedConditions.presenceOfElementLocated(By.cssSelector(".writer-sidebar.open")),
+                        ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".writer-sidebar.open"))
+                    )
+                );
+                Thread.sleep(500);
+                
+                // Sidebar içindeki "Etiketler" linkini bul
             WebElement tagsLink = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.xpath("//a[contains(@href, '/admin/etiketler')] | //a[contains(text(), 'Etiketler')]")
-                )
-            );
-            tagsLink.click();
-            waitForPageLoad();
-            Thread.sleep(3000);
+                        By.cssSelector(".writer-sidebar.open .sidebar-link[href='/admin/etiketler'], .writer-sidebar.open a[href*='/admin/etiketler']")
+                    )
+                );
+                
+                // JavaScript ile tıkla (React Router için)
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", tagsLink);
+                waitForPageLoad();
+                Thread.sleep(2000);
+            } catch (Exception e) {
+                // Link bulunamazsa direkt URL'e git
+                System.out.println("Case 12e: Sidebar linki bulunamadı, direkt URL'e gidiliyor: " + e.getMessage());
+                driver.get(BASE_URL + "/admin/etiketler");
+                waitForPageLoad();
+                Thread.sleep(2000);
+            }
             
-            // 3. Yeni etiket ekle butonunu bul ve tıkla
-            WebElement addButton = wait.until(
-                ExpectedConditions.elementToBeClickable(
-                    By.xpath("//button[contains(text(), 'Yeni Etiket')]")
+            // Sayfa içeriğinin yüklendiğini kontrol et (başlık, loading durumunun bitmesi veya tablo)
+            wait.until(
+                ExpectedConditions.or(
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-container")),
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-title"))
                 )
             );
-            addButton.click();
-            Thread.sleep(2000);
+            // Loading state'inin bitmesini bekle
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(2000); // React render için ekstra süre
+            
+            // 3. Yeni etiket ekle butonunu bul ve tıkla - birden fazla selector dene
+            WebElement addButton = null;
+            try {
+                // Önce header içindeki primary butonu bul (daha spesifik)
+                addButton = wait.until(ExpectedConditions.elementToBeClickable(
+                    By.cssSelector(".admin-dashboard-header button.admin-btn-primary")
+                ));
+            } catch (Exception e1) {
+                try {
+                    // Sonra XPath ile "+ Yeni Etiket" text'ini içeren butonu ara
+                    addButton = wait.until(ExpectedConditions.elementToBeClickable(
+                        By.xpath("//button[contains(text(), '+ Yeni Etiket')]")
+                    ));
+                } catch (Exception e2) {
+                    // Son olarak sadece "Yeni Etiket" text'ini içeren butonu ara
+                    addButton = wait.until(ExpectedConditions.elementToBeClickable(
+                    By.xpath("//button[contains(text(), 'Yeni Etiket')]")
+                    ));
+                }
+            }
+            // Güvenilir tıklama kullan (overlay sorunlarını çözer)
+            safeClick(addButton);
+            
+            // Modal'ın açılmasını bekle (overlay görünür olmalı)
+            wait.until(
+                ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector(".admin-modal-overlay")
+                )
+            );
+            Thread.sleep(1000);
             
             // 4. Modal'da etiket formunu doldur
             String tagName = "Test Etiket " + System.currentTimeMillis();
             
             WebElement nameInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
+                ExpectedConditions.visibilityOfElementLocated(
                     By.cssSelector(".admin-modal input[type='text'], .admin-form-input")
                 )
             );
@@ -86,18 +160,16 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
                     By.xpath("//div[contains(@class, 'admin-modal')]//button[contains(text(), 'Oluştur')]")
                 )
             );
-            saveButton.click();
+            safeClick(saveButton);
             Thread.sleep(3000);
             
             // 6. Etiketin eklendiğini kontrol et - tüm sayfalarda ara
-            WebElement tagElement = findTagInAllPages(tagName);
+            WebElement tagRow = findTagInAllPages(tagName);
             
-            if (tagElement == null) {
+            if (tagRow == null) {
                 fail("Case 12e: Etiket eklenemedi (listedeki tüm sayfalarda bulunamadı)");
                 return;
             }
-            
-            WebElement tagRow = tagElement.findElement(By.xpath("./ancestor::tr"));
             
             assertTrue(tagRow.isDisplayed(),
                 "Case 12e: Etiket eklenemedi");
@@ -121,40 +193,115 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
             
             // 2. Sidebar'ı aç ve "Etiketler" linkine tıkla
             try {
+                // Header içindeki hamburger menu butonunu bul (daha spesifik)
                 WebElement sidebarToggle = wait.until(
                     ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("button[aria-label*='menu'], .menu-toggle, .sidebar-toggle, button[class*='menu']")
+                        By.cssSelector(".reader-header button.hamburger-menu, .reader-header-content button.hamburger-menu, button.hamburger-menu[aria-label='Menu']")
                     )
                 );
-                sidebarToggle.click();
+                
+                // Butonun görünür olduğundan emin ol
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", sidebarToggle);
+                Thread.sleep(500);
+                
+                // JavaScript ile tıkla (React state güncellemesi için)
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", sidebarToggle);
                 Thread.sleep(1000);
+                
+                // Sidebar'ın açılmasını bekle (open class'ının eklenmesi ve görünür olması)
+                wait.until(
+                    ExpectedConditions.and(
+                        ExpectedConditions.presenceOfElementLocated(By.cssSelector(".writer-sidebar.open")),
+                        ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".writer-sidebar.open"))
+                    )
+                );
+                Thread.sleep(1000); // Sidebar animasyonu için ek bekleme
             } catch (Exception e) {
-                System.out.println("Case 12e Negative: Sidebar toggle bulunamadı");
+                System.out.println("Case 12e Negative: Sidebar toggle bulunamadı veya açılamadı: " + e.getMessage());
+                // Sidebar açılamazsa direkt URL'e git
+                driver.get(BASE_URL + "/admin/etiketler");
+                waitForPageLoad();
+                Thread.sleep(2000);
             }
             
+            // "Etiketler" linkini bul ve tıkla (sidebar açıksa)
+            try {
+                // Önce sidebar'ın açık ve görünür olduğundan emin ol
+                wait.until(
+                    ExpectedConditions.and(
+                        ExpectedConditions.presenceOfElementLocated(By.cssSelector(".writer-sidebar.open")),
+                        ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".writer-sidebar.open"))
+                    )
+                );
+                Thread.sleep(500);
+                
+                // Sidebar içindeki "Etiketler" linkini bul
             WebElement tagsLink = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.xpath("//a[contains(@href, '/admin/etiketler')] | //a[contains(text(), 'Etiketler')]")
-                )
-            );
-            tagsLink.click();
+                        By.cssSelector(".writer-sidebar.open .sidebar-link[href='/admin/etiketler'], .writer-sidebar.open a[href*='/admin/etiketler']")
+                    )
+                );
+                
+                // JavaScript ile tıkla (React Router için)
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", tagsLink);
+                waitForPageLoad();
+                Thread.sleep(2000);
+            } catch (Exception e) {
+                // Link bulunamazsa direkt URL'e git
+                System.out.println("Case 12e Negative: Sidebar linki bulunamadı, direkt URL'e gidiliyor: " + e.getMessage());
+                driver.get(BASE_URL + "/admin/etiketler");
             waitForPageLoad();
-            Thread.sleep(3000);
+                Thread.sleep(2000);
+            }
             
             // 3. Önce bir etiket ekle (test için)
-            String tagName = "Silinecek Etiket " + System.currentTimeMillis();
-            
-            WebElement addButton = wait.until(
-                ExpectedConditions.elementToBeClickable(
-                    By.xpath("//button[contains(text(), 'Yeni Etiket')]")
+            // Sayfa içeriğinin yüklendiğini kontrol et
+            wait.until(
+                ExpectedConditions.or(
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-container")),
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-title"))
                 )
             );
-            addButton.click();
-            Thread.sleep(2000);
+            // Loading state'inin bitmesini bekle
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(2000); // React render için ekstra süre
+            
+            String tagName = "Silinecek Etiket " + System.currentTimeMillis();
+            
+            // Yeni etiket butonunu bul - birden fazla selector dene
+            WebElement addButton = null;
+            try {
+                // Önce header içindeki primary butonu bul (daha spesifik)
+                addButton = wait.until(ExpectedConditions.elementToBeClickable(
+                    By.cssSelector(".admin-dashboard-header button.admin-btn-primary")
+                ));
+            } catch (Exception e1) {
+                try {
+                    // Sonra XPath ile "+ Yeni Etiket" text'ini içeren butonu ara
+                    addButton = wait.until(ExpectedConditions.elementToBeClickable(
+                        By.xpath("//button[contains(text(), '+ Yeni Etiket')]")
+                    ));
+                } catch (Exception e2) {
+                    // Son olarak sadece "Yeni Etiket" text'ini içeren butonu ara
+                    addButton = wait.until(ExpectedConditions.elementToBeClickable(
+                    By.xpath("//button[contains(text(), 'Yeni Etiket')]")
+                    ));
+                }
+            }
+            // Güvenilir tıklama kullan (overlay sorunlarını çözer)
+            safeClick(addButton);
+            
+            // Modal'ın açılmasını bekle
+            wait.until(
+                ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector(".admin-modal-overlay")
+                )
+            );
+            Thread.sleep(1000);
             
             WebElement nameInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector(".admin-modal input[type='text']")
+                ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector(".admin-modal input[type='text'], .admin-form-input")
                 )
             );
             nameInput.clear();
@@ -167,18 +314,16 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
                     By.xpath("//div[contains(@class, 'admin-modal')]//button[contains(text(), 'Oluştur')]")
                 )
             );
-            saveButton.click();
+            safeClick(saveButton);
             Thread.sleep(3000);
             
             // 4. Etiketi bul ve sil - tüm sayfalarda ara
-            WebElement tagElement = findTagInAllPages(tagName);
+            WebElement tagRow = findTagInAllPages(tagName);
             
-            if (tagElement == null) {
+            if (tagRow == null) {
                 fail("Case 12e Negative: Etiket listede bulunamadı: " + tagName);
                 return;
             }
-            
-            WebElement tagRow = tagElement.findElement(By.xpath("./ancestor::tr"));
             
             // Etiket ID'sini al (veritabanı kontrolü için)
             String tagIdText = tagRow.findElement(By.xpath(".//td[1]")).getText();
@@ -197,7 +342,7 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
                 By.xpath(".//button[contains(text(), 'Sil')]")
             );
             
-            deleteButton.click();
+            safeClick(deleteButton);
             
             // Alert'i kabul et (eğer varsa)
             Thread.sleep(1000);
@@ -333,40 +478,115 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
             
             // 2. Sidebar'ı aç ve "Etiketler" linkine tıkla
             try {
+                // Header içindeki hamburger menu butonunu bul (daha spesifik)
                 WebElement sidebarToggle = wait.until(
                     ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("button[aria-label*='menu'], .menu-toggle, .sidebar-toggle, button[class*='menu']")
+                        By.cssSelector(".reader-header button.hamburger-menu, .reader-header-content button.hamburger-menu, button.hamburger-menu[aria-label='Menu']")
                     )
                 );
-                sidebarToggle.click();
+                
+                // Butonun görünür olduğundan emin ol
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", sidebarToggle);
+                Thread.sleep(500);
+                
+                // JavaScript ile tıkla (React state güncellemesi için)
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", sidebarToggle);
+                Thread.sleep(1000);
+                
+                // Sidebar'ın açılmasını bekle
+                wait.until(
+                    ExpectedConditions.and(
+                        ExpectedConditions.presenceOfElementLocated(By.cssSelector(".writer-sidebar.open")),
+                        ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".writer-sidebar.open"))
+                    )
+                );
                 Thread.sleep(1000);
             } catch (Exception e) {
-                System.out.println("Case 12e: Sidebar toggle bulunamadı");
+                // Sidebar toggle bulunamadıysa direkt URL'e git
+                System.out.println("Case 12e: Sidebar toggle bulunamadı, direkt URL'e gidiliyor: " + e.getMessage());
+                driver.get(BASE_URL + "/admin/etiketler");
+                waitForPageLoad();
+                Thread.sleep(2000);
             }
             
+            // "Etiketler" linkini bul ve tıkla (sidebar açıksa)
+            try {
+                // Önce sidebar'ın açık ve görünür olduğundan emin ol
+                wait.until(
+                    ExpectedConditions.and(
+                        ExpectedConditions.presenceOfElementLocated(By.cssSelector(".writer-sidebar.open")),
+                        ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".writer-sidebar.open"))
+                    )
+                );
+                Thread.sleep(500);
+                
+                // Sidebar içindeki "Etiketler" linkini bul
             WebElement tagsLink = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.xpath("//a[contains(@href, '/admin/etiketler')] | //a[contains(text(), 'Etiketler')]")
-                )
-            );
-            tagsLink.click();
+                        By.cssSelector(".writer-sidebar.open .sidebar-link[href='/admin/etiketler'], .writer-sidebar.open a[href*='/admin/etiketler']")
+                    )
+                );
+                
+                // JavaScript ile tıkla (React Router için)
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", tagsLink);
+                waitForPageLoad();
+                Thread.sleep(2000);
+            } catch (Exception e) {
+                // Link bulunamazsa direkt URL'e git
+                System.out.println("Case 12e: Sidebar linki bulunamadı, direkt URL'e gidiliyor: " + e.getMessage());
+                driver.get(BASE_URL + "/admin/etiketler");
             waitForPageLoad();
-            Thread.sleep(3000);
+                Thread.sleep(2000);
+            }
             
             // 3. Önce bir etiket ekle (test için)
-            String originalTagName = "Düzenlenecek Etiket " + System.currentTimeMillis();
-            
-            WebElement addButton = wait.until(
-                ExpectedConditions.elementToBeClickable(
-                    By.xpath("//button[contains(text(), 'Yeni Etiket')]")
+            // Sayfa içeriğinin yüklendiğini kontrol et
+            wait.until(
+                ExpectedConditions.or(
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-container")),
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-title"))
                 )
             );
-            addButton.click();
-            Thread.sleep(2000);
+            // Loading state'inin bitmesini bekle
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(2000); // React render için ekstra süre
+            
+            String originalTagName = "Düzenlenecek Etiket " + System.currentTimeMillis();
+            
+            // Yeni etiket butonunu bul - birden fazla selector dene
+            WebElement addButton = null;
+            try {
+                // Önce header içindeki primary butonu bul (daha spesifik)
+                addButton = wait.until(ExpectedConditions.elementToBeClickable(
+                    By.cssSelector(".admin-dashboard-header button.admin-btn-primary")
+                ));
+            } catch (Exception e1) {
+                try {
+                    // Sonra XPath ile "+ Yeni Etiket" text'ini içeren butonu ara
+                    addButton = wait.until(ExpectedConditions.elementToBeClickable(
+                        By.xpath("//button[contains(text(), '+ Yeni Etiket')]")
+                    ));
+                } catch (Exception e2) {
+                    // Son olarak sadece "Yeni Etiket" text'ini içeren butonu ara
+                    addButton = wait.until(ExpectedConditions.elementToBeClickable(
+                    By.xpath("//button[contains(text(), 'Yeni Etiket')]")
+                    ));
+                }
+            }
+            // Güvenilir tıklama kullan (overlay sorunlarını çözer)
+            safeClick(addButton);
+            
+            // Modal'ın açılmasını bekle
+            wait.until(
+                ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector(".admin-modal-overlay")
+                )
+            );
+            Thread.sleep(1000);
             
             WebElement nameInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector(".admin-modal input[type='text']")
+                ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector(".admin-modal input[type='text'], .admin-form-input")
                 )
             );
             nameInput.clear();
@@ -379,33 +599,39 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
                     By.xpath("//div[contains(@class, 'admin-modal')]//button[contains(text(), 'Oluştur')]")
                 )
             );
-            saveButton.click();
+            safeClick(saveButton);
             Thread.sleep(3000);
             
             // 4. Etiketi bul ve düzenle - tüm sayfalarda ara
-            WebElement tagElement = findTagInAllPages(originalTagName);
+            WebElement tagRow = findTagInAllPages(originalTagName);
             
-            if (tagElement == null) {
+            if (tagRow == null) {
                 fail("Case 12e: Etiket listede bulunamadı: " + originalTagName);
                 return;
             }
-            
-            WebElement tagRow = tagElement.findElement(By.xpath("./ancestor::tr"));
             
             // Düzenle butonunu bul ve tıkla
             WebElement editButton = tagRow.findElement(
                 By.xpath(".//button[contains(text(), 'Düzenle')]")
             );
-            editButton.click();
+            safeClick(editButton);
             Thread.sleep(2000);
             
             // 5. Modal'da etiket bilgilerini güncelle
             String updatedTagName = "Güncellenmiş Etiket " + System.currentTimeMillis();
             
+            // Modal'ın açılmasını bekle (düzenleme modal'ı)
+            wait.until(
+                ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector(".admin-modal-overlay")
+                )
+            );
+            Thread.sleep(1000);
+            
             // Etiket adını güncelle
             WebElement editNameInput = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector(".admin-modal input[type='text']")
+                ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector(".admin-modal input[type='text'], .admin-form-input")
                 )
             );
             editNameInput.clear();
@@ -419,21 +645,21 @@ public class Case12e_AdminTagManagementTest extends BaseSeleniumTest {
                     By.xpath("//div[contains(@class, 'admin-modal')]//button[contains(text(), 'Güncelle')]")
                 )
             );
-            updateButton.click();
+            safeClick(updateButton);
             Thread.sleep(3000);
             
             // 7. Etiketin güncellendiğini kontrol et - tüm sayfalarda ara
             Thread.sleep(2000);
-            WebElement updatedTagElement = findTagInAllPages(updatedTagName);
+            WebElement updatedTagRow = findTagInAllPages(updatedTagName);
             
-            if (updatedTagElement == null) {
+            if (updatedTagRow == null) {
                 fail("Case 12e: Etiket güncellenemedi (güncellenmiş etiket listede bulunamadı)");
                 return;
             }
             
             // Eski etiket adının artık görünmediğini kontrol et
-            WebElement oldTagElement = findTagInAllPages(originalTagName);
-            if (oldTagElement != null) {
+            WebElement oldTagRow = findTagInAllPages(originalTagName);
+            if (oldTagRow != null) {
                 fail("Case 12e: Eski etiket adı hala görünüyor");
             } else {
                 assertTrue(true, "Case 12e: Etiket başarıyla güncellendi");

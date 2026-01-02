@@ -56,17 +56,35 @@ public class Case12c_AdminCommentDeletionTest extends BaseSeleniumTest {
             String userEmail = "user_comment_del_" + System.currentTimeMillis() + "@example.com";
             String username = "user_comment_del_" + System.currentTimeMillis();
             
+            // Önce logout yap
             try {
                 driver.get(BASE_URL + "/logout");
-                Thread.sleep(2000);
+                Thread.sleep(3000);
+                waitForPageLoad();
             } catch (Exception e) {
                 // Logout sayfası yoksa devam et
             }
             
+            // Eğer hala giriş yapılmış durumdaysa, direkt register sayfasına git
+            String registerUrl = driver.getCurrentUrl();
+            if (!registerUrl.contains("/register") && !registerUrl.contains("/login")) {
+                driver.get(BASE_URL + "/register");
+                Thread.sleep(2000);
+                waitForPageLoad();
+            }
+            
             boolean userRegistered = registerUser("User", "CommentDel", userEmail, username, "Test123456");
             if (!userRegistered) {
-                fail("Case 12c: Kullanıcı kaydı başarısız");
-                return;
+                // Kayıt başarısız oldu, tekrar dene
+                Thread.sleep(2000);
+                driver.get(BASE_URL + "/register");
+                Thread.sleep(2000);
+                waitForPageLoad();
+                userRegistered = registerUser("User", "CommentDel", userEmail, username, "Test123456");
+                if (!userRegistered) {
+                    fail("Case 12c: Kullanıcı kaydı başarısız");
+                    return;
+                }
             }
             
             // Story sayfasına git ve yorum yap
@@ -91,7 +109,7 @@ public class Case12c_AdminCommentDeletionTest extends BaseSeleniumTest {
                     By.xpath("//button[contains(text(), 'Gönder') or contains(text(), 'Yorum')] | //button[@type='submit']")
                 )
             );
-            submitCommentButton.click();
+            safeClick(submitCommentButton);
             Thread.sleep(3000); // Yorumun yayınlanması için bekle
             
             // 3. ADMIN olarak giriş yap
@@ -115,26 +133,49 @@ public class Case12c_AdminCommentDeletionTest extends BaseSeleniumTest {
             
             // 4. Sidebar'ı aç ve "Yorumlar" linkine tıkla
             try {
-                // Sidebar toggle butonunu bul ve tıkla
+                // Header içindeki hamburger menu butonunu bul (daha spesifik)
                 WebElement sidebarToggle = wait.until(
                     ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("button[aria-label*='menu'], .menu-toggle, .sidebar-toggle, button[class*='menu']")
+                        By.cssSelector(".reader-header button.hamburger-menu, .reader-header-content button.hamburger-menu, button.hamburger-menu[aria-label='Menu']")
                     )
                 );
-                sidebarToggle.click();
+                
+                // Butonun görünür olduğundan emin ol
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", sidebarToggle);
+                Thread.sleep(500);
+                
+                // JavaScript ile tıkla (React state güncellemesi için)
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", sidebarToggle);
+                Thread.sleep(1000);
+                
+                // Sidebar'ın açılmasını bekle
+                wait.until(
+                    ExpectedConditions.and(
+                        ExpectedConditions.presenceOfElementLocated(By.cssSelector(".writer-sidebar.open")),
+                        ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".writer-sidebar.open"))
+                    )
+                );
                 Thread.sleep(1000);
             } catch (Exception e) {
-                // Sidebar toggle bulunamadıysa direkt linke tıkla
-                System.out.println("Case 12c: Sidebar toggle bulunamadı, direkt linke tıklanacak");
+                // Sidebar toggle bulunamadıysa direkt URL'e git
+                System.out.println("Case 12c: Sidebar toggle bulunamadı, direkt URL'e gidiliyor: " + e.getMessage());
+                driver.get(BASE_URL + "/admin/comments");
+                waitForPageLoad();
+                Thread.sleep(2000);
             }
             
-            // "Yorumlar" linkini bul ve tıkla
+            // "Yorumlar" linkini bul ve tıkla (sidebar açıksa)
+            try {
             WebElement commentsLink = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.xpath("//a[contains(@href, '/admin/comments')] | //a[contains(text(), 'Yorumlar')]")
+                        By.cssSelector(".writer-sidebar.open .sidebar-link[href='/admin/comments'], .writer-sidebar.open a[href*='/admin/comments']")
                 )
             );
-            commentsLink.click();
+                safeClick(commentsLink);
+            } catch (Exception e) {
+                // Link bulunamazsa direkt URL'e git
+                driver.get(BASE_URL + "/admin/comments");
+            }
             waitForPageLoad();
             Thread.sleep(3000);
             
@@ -153,7 +194,7 @@ public class Case12c_AdminCommentDeletionTest extends BaseSeleniumTest {
             WebElement deleteButton = commentContainer.findElement(
                 By.xpath(".//button[contains(text(), 'Sil')]")
             );
-            deleteButton.click();
+            safeClick(deleteButton);
             
             // Confirm dialog'u kabul et
             Thread.sleep(1000);

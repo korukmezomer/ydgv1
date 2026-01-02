@@ -12,7 +12,10 @@ import com.example.backend.domain.repository.UserRepository;
 import com.example.backend.domain.repository.RoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,8 +92,26 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public Page<UserResponse> findAll(Pageable pageable) {
-        return userRepository.findAll(pageable)
-                .map(this::toResponse);
+        // Tüm kullanıcıları ID'ye göre DESC sıralı al
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), 
+            Sort.by(Sort.Direction.DESC, "id"));
+        
+        // Spring Data JPA'nın varsayılan findAll metodunu kullan
+        Page<User> userPage = userRepository.findAll(sortedPageable);
+        
+        // İçeriği ID'ye göre DESC sırala (ekstra güvenlik için)
+        java.util.List<User> sortedUsers = userPage.getContent().stream()
+            .sorted((u1, u2) -> Long.compare(u2.getId(), u1.getId()))
+            .collect(java.util.stream.Collectors.toList());
+        
+        // Yeni Page oluştur
+        Page<User> sortedUserPage = new PageImpl<>(
+            sortedUsers, 
+            sortedPageable, 
+            userPage.getTotalElements()
+        );
+        
+        return sortedUserPage.map(this::toResponse);
     }
 
     @Override

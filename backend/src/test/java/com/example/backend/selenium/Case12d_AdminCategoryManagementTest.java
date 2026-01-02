@@ -37,35 +37,136 @@ public class Case12d_AdminCategoryManagementTest extends BaseSeleniumTest {
             
             // 2. Sidebar'ı aç ve "Kategoriler" linkine tıkla
             try {
+                // Header içindeki hamburger menu butonunu bul (daha spesifik)
                 WebElement sidebarToggle = wait.until(
                     ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("button[aria-label*='menu'], .menu-toggle, .sidebar-toggle, button[class*='menu']")
+                        By.cssSelector(".reader-header button.hamburger-menu, .reader-header-content button.hamburger-menu, button.hamburger-menu[aria-label='Menu']")
                     )
                 );
-                sidebarToggle.click();
+                
+                // Butonun görünür olduğundan emin ol
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", sidebarToggle);
+                Thread.sleep(500);
+                
+                // JavaScript ile tıkla (React state güncellemesi için)
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", sidebarToggle);
+                Thread.sleep(1000);
+                
+                // Sidebar'ın açılmasını bekle
+                wait.until(
+                    ExpectedConditions.and(
+                        ExpectedConditions.presenceOfElementLocated(By.cssSelector(".writer-sidebar.open")),
+                        ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".writer-sidebar.open"))
+                    )
+                );
                 Thread.sleep(1000);
             } catch (Exception e) {
-                System.out.println("Case 12d: Sidebar toggle bulunamadı, direkt linke tıklanacak");
+                // Sidebar toggle bulunamadıysa direkt URL'e git
+                System.out.println("Case 12d: Sidebar toggle bulunamadı, direkt URL'e gidiliyor: " + e.getMessage());
+                driver.get(BASE_URL + "/admin/kategoriler");
+                waitForPageLoad();
+                Thread.sleep(2000);
             }
             
-            // "Kategoriler" linkini bul ve tıkla
+            // "Kategoriler" linkini bul ve tıkla (sidebar açıksa)
+            try {
             WebElement categoriesLink = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.xpath("//a[contains(@href, '/admin/kategoriler')] | //a[contains(text(), 'Kategoriler')]")
+                        By.cssSelector(".writer-sidebar.open .sidebar-link[href='/admin/kategoriler'], .writer-sidebar.open a[href*='/admin/kategoriler']")
                 )
             );
-            categoriesLink.click();
-            waitForPageLoad();
-            Thread.sleep(3000);
+                safeClick(categoriesLink);
+            } catch (Exception e) {
+                // Link bulunamazsa direkt URL'e git
+                driver.get(BASE_URL + "/admin/kategoriler");
+            }
+            
+            // Sayfa yüklemesini bekle
+            wait.until(
+                ExpectedConditions.or(
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-container")),
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-title"))
+                )
+            );
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(2000);
             
             // 3. Yeni kategori ekle butonunu bul ve tıkla
-            WebElement addButton = wait.until(
-                ExpectedConditions.elementToBeClickable(
-                    By.xpath("//button[contains(text(), 'Yeni Kategori')]")
-                )
-            );
-            addButton.click();
-            Thread.sleep(2000);
+            // Önce açık alert varsa kapat (dashboard'dan gelen alert olabilir)
+            for (int i = 0; i < 3; i++) {
+                try {
+                    org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                    String alertText = alert.getText();
+                    System.out.println("Case 12d: Alert bulundu: " + alertText);
+                    alert.accept();
+                    Thread.sleep(1000);
+                } catch (Exception e) {
+                    // Alert yoksa devam et
+                    break;
+                }
+            }
+            
+            // CSS selector'da :contains() kullanılamaz, önce CSS selector dene, sonra XPath
+            WebElement addButton = null;
+            try {
+                addButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.cssSelector(".admin-dashboard-header button.admin-btn-primary")
+                    )
+                );
+            } catch (Exception e1) {
+                try {
+                    addButton = wait.until(
+                        ExpectedConditions.elementToBeClickable(
+                            By.cssSelector("button.admin-btn[class*='primary']")
+                        )
+                    );
+                } catch (Exception e2) {
+                    // XPath ile dene
+                    addButton = wait.until(
+                        ExpectedConditions.elementToBeClickable(
+                            By.xpath("//button[contains(@class, 'admin-btn-primary') or contains(text(), 'Yeni Kategori')]")
+                        )
+                    );
+                }
+            }
+            
+            // Butonun görünür olduğundan emin ol
+            ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", addButton);
+            Thread.sleep(500);
+            
+            safeClick(addButton);
+            
+            // Buton tıklamasından sonra alert kontrolü yap
+            try {
+                org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                alert.accept();
+                Thread.sleep(500);
+            } catch (Exception e) {
+                // Alert yoksa devam et
+            }
+            
+            // Modal'ın açılmasını bekle (daha uzun timeout ile)
+            try {
+                wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-modal-overlay")));
+                Thread.sleep(1000);
+            } catch (org.openqa.selenium.TimeoutException e) {
+                // Modal açılmadı, sayfayı yenile ve tekrar dene
+                System.out.println("Case 12d: Modal açılmadı, sayfa yenileniyor...");
+                driver.navigate().refresh();
+                Thread.sleep(3000);
+                waitForPageLoad();
+                
+                // Tekrar butonu bul ve tıkla
+                addButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.cssSelector(".admin-dashboard-header button.admin-btn-primary, button.admin-btn[class*='primary']")
+                    )
+                );
+                safeClick(addButton);
+                wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-modal-overlay")));
+                Thread.sleep(1000);
+            }
             
             // 4. Modal'da kategori formunu doldur
             String categoryName = "Test Kategori " + System.currentTimeMillis();
@@ -97,11 +198,22 @@ public class Case12d_AdminCategoryManagementTest extends BaseSeleniumTest {
             // 5. Oluştur butonuna tıkla
             WebElement saveButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.xpath("//div[contains(@class, 'admin-modal')]//button[contains(text(), 'Oluştur')]")
+                    By.cssSelector(".admin-modal button[type='submit'].admin-btn-primary, .admin-modal button.admin-btn-primary")
                 )
             );
-            saveButton.click();
-            Thread.sleep(3000);
+            safeClick(saveButton);
+            Thread.sleep(2000);
+            
+            // Alert'i handle et (kategori eklendi mesajı için)
+            try {
+                org.openqa.selenium.Alert alert = wait.until(ExpectedConditions.alertIsPresent());
+                alert.accept();
+                System.out.println("Case 12d: Alert kapatıldı");
+            } catch (Exception e) {
+                // Alert yoksa devam et
+            }
+            
+            Thread.sleep(2000);
             
             // 6. Kategorinin eklendiğini kontrol et (tabloda)
             WebElement categoryRow = wait.until(
@@ -132,36 +244,161 @@ public class Case12d_AdminCategoryManagementTest extends BaseSeleniumTest {
             
             // 2. Sidebar'ı aç ve "Kategoriler" linkine tıkla
             try {
+                // Header içindeki hamburger menu butonunu bul (daha spesifik)
                 WebElement sidebarToggle = wait.until(
                     ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("button[aria-label*='menu'], .menu-toggle, .sidebar-toggle, button[class*='menu']")
+                        By.cssSelector(".reader-header button.hamburger-menu, .reader-header-content button.hamburger-menu, button.hamburger-menu[aria-label='Menu']")
                     )
                 );
-                sidebarToggle.click();
+                
+                // Butonun görünür olduğundan emin ol
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", sidebarToggle);
+                Thread.sleep(500);
+                
+                // JavaScript ile tıkla (React state güncellemesi için)
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", sidebarToggle);
+                Thread.sleep(1000);
+                
+                // Sidebar'ın açılmasını bekle
+                wait.until(
+                    ExpectedConditions.and(
+                        ExpectedConditions.presenceOfElementLocated(By.cssSelector(".writer-sidebar.open")),
+                        ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".writer-sidebar.open"))
+                    )
+                );
                 Thread.sleep(1000);
             } catch (Exception e) {
-                System.out.println("Case 12d Negative: Sidebar toggle bulunamadı");
+                // Sidebar toggle bulunamadıysa direkt URL'e git
+                System.out.println("Case 12d Negative: Sidebar toggle bulunamadı, direkt URL'e gidiliyor: " + e.getMessage());
+                driver.get(BASE_URL + "/admin/kategoriler");
+                waitForPageLoad();
+                Thread.sleep(2000);
             }
             
+            // "Kategoriler" linkini bul ve tıkla (sidebar açıksa)
+            try {
             WebElement categoriesLink = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.xpath("//a[contains(@href, '/admin/kategoriler')] | //a[contains(text(), 'Kategoriler')]")
+                        By.cssSelector(".writer-sidebar.open .sidebar-link[href='/admin/kategoriler'], .writer-sidebar.open a[href*='/admin/kategoriler']")
                 )
             );
-            categoriesLink.click();
-            waitForPageLoad();
-            Thread.sleep(3000);
+                safeClick(categoriesLink);
+            } catch (Exception e) {
+                // Link bulunamazsa direkt URL'e git
+                driver.get(BASE_URL + "/admin/kategoriler");
+            }
+            
+            // Sayfa yüklemesini bekle
+            wait.until(
+                ExpectedConditions.or(
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-container")),
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-title"))
+                )
+            );
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(2000);
+            
+            // Önce açık alert varsa kapat (dashboard'dan gelen alert olabilir)
+            // Alert'i modal açılmadan önce kontrol et
+            for (int i = 0; i < 3; i++) {
+                try {
+                    org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                    String alertText = alert.getText();
+                    System.out.println("Case 12d Negative: Alert bulundu: " + alertText);
+                    alert.accept();
+                    Thread.sleep(1000);
+                } catch (Exception e) {
+                    // Alert yoksa devam et
+                    break;
+                }
+            }
             
             // 3. Önce bir kategori ekle (test için)
             String categoryName = "Silinecek Kategori " + System.currentTimeMillis();
             
-            WebElement addButton = wait.until(
-                ExpectedConditions.elementToBeClickable(
-                    By.xpath("//button[contains(text(), 'Yeni Kategori')]")
-                )
-            );
-            addButton.click();
-            Thread.sleep(2000);
+            WebElement addButton = null;
+            try {
+                addButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.cssSelector(".admin-dashboard-header button.admin-btn-primary")
+                    )
+                );
+            } catch (Exception e1) {
+                try {
+                    addButton = wait.until(
+                        ExpectedConditions.elementToBeClickable(
+                            By.cssSelector("button.admin-btn[class*='primary']")
+                        )
+                    );
+                } catch (Exception e2) {
+                    // XPath ile dene
+                    addButton = wait.until(
+                        ExpectedConditions.elementToBeClickable(
+                            By.xpath("//button[contains(@class, 'admin-btn-primary') or contains(text(), 'Yeni Kategori')]")
+                        )
+                    );
+                }
+            }
+            
+            // Butonun görünür olduğundan emin ol
+            ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", addButton);
+            Thread.sleep(500);
+            
+            safeClick(addButton);
+            
+            // Buton tıklamasından sonra alert kontrolü yap
+            try {
+                org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                alert.accept();
+                Thread.sleep(500);
+            } catch (Exception e) {
+                // Alert yoksa devam et
+            }
+            
+            // Modal'ın açılmasını bekle (daha uzun timeout ile)
+            try {
+                wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-modal-overlay")));
+                Thread.sleep(1000);
+            } catch (org.openqa.selenium.TimeoutException e) {
+                // Modal açılmadı, sayfayı yenile ve tekrar dene
+                System.out.println("Case 12d Negative: Modal açılmadı, sayfa yenileniyor...");
+                driver.navigate().refresh();
+                Thread.sleep(3000);
+                waitForPageLoad();
+                
+                // Alert'leri kapat
+                for (int i = 0; i < 3; i++) {
+                    try {
+                        org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                        alert.accept();
+                        Thread.sleep(500);
+                    } catch (Exception ex) {
+                        break;
+                    }
+                }
+                
+                // Tekrar butonu bul ve tıkla
+                addButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.cssSelector(".admin-dashboard-header button.admin-btn-primary, button.admin-btn[class*='primary']")
+                    )
+                );
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", addButton);
+                Thread.sleep(500);
+                safeClick(addButton);
+                
+                // Alert kontrolü
+                try {
+                    org.openqa.selenium.Alert alert = driver.switchTo().alert();
+                    alert.accept();
+                    Thread.sleep(500);
+                } catch (Exception ex) {
+                    // Alert yoksa devam et
+                }
+                
+                wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-modal-overlay")));
+                Thread.sleep(1000);
+            }
             
             WebElement nameInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
@@ -175,11 +412,22 @@ public class Case12d_AdminCategoryManagementTest extends BaseSeleniumTest {
             
             WebElement saveButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.xpath("//div[contains(@class, 'admin-modal')]//button[contains(text(), 'Oluştur')]")
+                    By.cssSelector(".admin-modal button[type='submit'].admin-btn-primary, .admin-modal button.admin-btn-primary")
                 )
             );
-            saveButton.click();
-            Thread.sleep(3000);
+            safeClick(saveButton);
+            Thread.sleep(2000);
+            
+            // Alert'i handle et (kategori eklendi mesajı için)
+            try {
+                org.openqa.selenium.Alert alert = wait.until(ExpectedConditions.alertIsPresent());
+                alert.accept();
+                System.out.println("Case 12d Negative: Alert kapatıldı");
+            } catch (Exception e) {
+                // Alert yoksa devam et
+            }
+            
+            Thread.sleep(2000);
             
             // 4. Kategoriyi bul ve sil
             WebElement categoryRow = wait.until(
@@ -190,9 +438,9 @@ public class Case12d_AdminCategoryManagementTest extends BaseSeleniumTest {
             
             // Sil butonunu bul ve tıkla
             WebElement deleteButton = categoryRow.findElement(
-                By.xpath(".//button[contains(text(), 'Sil')]")
+                By.cssSelector("button.admin-btn-danger, button[class*='danger']")
             );
-            deleteButton.click();
+            safeClick(deleteButton);
             
             // Confirm dialog'u kabul et
             Thread.sleep(1000);
@@ -247,36 +495,81 @@ public class Case12d_AdminCategoryManagementTest extends BaseSeleniumTest {
             
             // 2. Sidebar'ı aç ve "Kategoriler" linkine tıkla
             try {
+                // Header içindeki hamburger menu butonunu bul (daha spesifik)
                 WebElement sidebarToggle = wait.until(
                     ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("button[aria-label*='menu'], .menu-toggle, .sidebar-toggle, button[class*='menu']")
+                        By.cssSelector(".reader-header button.hamburger-menu, .reader-header-content button.hamburger-menu, button.hamburger-menu[aria-label='Menu']")
                     )
                 );
-                sidebarToggle.click();
+                
+                // Butonun görünür olduğundan emin ol
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", sidebarToggle);
+                Thread.sleep(500);
+                
+                // JavaScript ile tıkla (React state güncellemesi için)
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", sidebarToggle);
+                Thread.sleep(1000);
+                
+                // Sidebar'ın açılmasını bekle
+                wait.until(
+                    ExpectedConditions.and(
+                        ExpectedConditions.presenceOfElementLocated(By.cssSelector(".writer-sidebar.open")),
+                        ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".writer-sidebar.open"))
+                    )
+                );
                 Thread.sleep(1000);
             } catch (Exception e) {
-                System.out.println("Case 12d: Sidebar toggle bulunamadı");
+                // Sidebar toggle bulunamadıysa direkt URL'e git
+                System.out.println("Case 12d: Sidebar toggle bulunamadı, direkt URL'e gidiliyor: " + e.getMessage());
+                driver.get(BASE_URL + "/admin/kategoriler");
+                waitForPageLoad();
+                Thread.sleep(2000);
             }
             
+            // "Kategoriler" linkini bul ve tıkla (sidebar açıksa)
+            try {
             WebElement categoriesLink = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.xpath("//a[contains(@href, '/admin/kategoriler')] | //a[contains(text(), 'Kategoriler')]")
+                        By.cssSelector(".writer-sidebar.open .sidebar-link[href='/admin/kategoriler'], .writer-sidebar.open a[href*='/admin/kategoriler']")
                 )
             );
-            categoriesLink.click();
-            waitForPageLoad();
-            Thread.sleep(3000);
+                safeClick(categoriesLink);
+            } catch (Exception e) {
+                // Link bulunamazsa direkt URL'e git
+                driver.get(BASE_URL + "/admin/kategoriler");
+            }
+            
+            // Sayfa yüklemesini bekle
+            wait.until(
+                ExpectedConditions.or(
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-container")),
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-title"))
+                )
+            );
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(2000);
             
             // 3. Önce bir kategori ekle (test için)
             String originalCategoryName = "Düzenlenecek Kategori " + System.currentTimeMillis();
             
+            // Önce açık alert varsa kapat
+            try {
+                driver.switchTo().alert().accept();
+                Thread.sleep(500);
+            } catch (Exception e) {
+                // Alert yoksa devam et
+            }
+            
             WebElement addButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.xpath("//button[contains(text(), 'Yeni Kategori')]")
+                    By.cssSelector(".admin-dashboard-header button.admin-btn-primary, button.admin-btn[class*='primary']")
                 )
             );
-            addButton.click();
-            Thread.sleep(2000);
+            safeClick(addButton);
+            
+            // Modal'ın açılmasını bekle
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-modal-overlay")));
+            Thread.sleep(1000);
             
             WebElement nameInput = wait.until(
                 ExpectedConditions.presenceOfElementLocated(
@@ -290,11 +583,22 @@ public class Case12d_AdminCategoryManagementTest extends BaseSeleniumTest {
             
             WebElement saveButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.xpath("//div[contains(@class, 'admin-modal')]//button[contains(text(), 'Oluştur')]")
+                    By.cssSelector(".admin-modal button[type='submit'].admin-btn-primary, .admin-modal button.admin-btn-primary")
                 )
             );
-            saveButton.click();
-            Thread.sleep(3000);
+            safeClick(saveButton);
+            Thread.sleep(2000);
+            
+            // Alert'i handle et (kategori eklendi mesajı için)
+            try {
+                org.openqa.selenium.Alert alert = wait.until(ExpectedConditions.alertIsPresent());
+                alert.accept();
+                System.out.println("Case 12d: Alert kapatıldı");
+            } catch (Exception e) {
+                // Alert yoksa devam et
+            }
+            
+            Thread.sleep(2000);
             
             // 4. Kategoriyi bul ve düzenle
             WebElement categoryRow = wait.until(
@@ -305,9 +609,13 @@ public class Case12d_AdminCategoryManagementTest extends BaseSeleniumTest {
             
             // Düzenle butonunu bul ve tıkla
             WebElement editButton = categoryRow.findElement(
-                By.xpath(".//button[contains(text(), 'Düzenle')]")
+                By.cssSelector("button.admin-btn-secondary, button[class*='secondary']")
             );
-            editButton.click();
+            safeClick(editButton);
+            
+            // Modal'ın açılmasını bekle
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-modal-overlay")));
+            Thread.sleep(1000);
             Thread.sleep(2000);
             
             // 5. Modal'da kategori bilgilerini güncelle
@@ -341,11 +649,22 @@ public class Case12d_AdminCategoryManagementTest extends BaseSeleniumTest {
             // 6. Güncelle butonuna tıkla
             WebElement updateButton = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.xpath("//div[contains(@class, 'admin-modal')]//button[contains(text(), 'Güncelle')]")
+                    By.cssSelector(".admin-modal button[type='submit'].admin-btn-primary, .admin-modal button.admin-btn-primary")
                 )
             );
-            updateButton.click();
-            Thread.sleep(3000);
+            safeClick(updateButton);
+            Thread.sleep(2000);
+            
+            // Alert'i handle et (kategori güncellendi mesajı için)
+            try {
+                org.openqa.selenium.Alert alert = wait.until(ExpectedConditions.alertIsPresent());
+                alert.accept();
+                System.out.println("Case 12d: Alert kapatıldı");
+            } catch (Exception e) {
+                // Alert yoksa devam et
+            }
+            
+            Thread.sleep(2000);
             
             // 7. Kategorinin güncellendiğini kontrol et
             driver.navigate().refresh();

@@ -16,7 +16,19 @@ const AdminCategories = ({ sidebarOpen }) => {
   const fetchCategories = async (pageToLoad = page, q = search) => {
     try {
       setLoading(true);
-      const params = { page: pageToLoad, size };
+      
+      // Önce toplam sayfa sayısını al (eğer bilinmiyorsa)
+      let totalPagesCount = totalPages;
+      if (totalPagesCount === 0) {
+        const firstResponse = await kategoriAPI.getAllSayfali({ page: 0, size });
+        totalPagesCount = firstResponse.data.totalPages || 1;
+        setTotalPages(totalPagesCount);
+      }
+      
+      // Sayfa numarasını tersine çevir (son sayfa ilk sayfa olarak görünsün)
+      const backendPage = totalPagesCount > 0 ? Math.max(0, totalPagesCount - 1 - pageToLoad) : 0;
+      
+      const params = { page: backendPage, size };
       const response = await kategoriAPI.getAllSayfali(params);
       const data = response.data;
       let filteredCategories = data.content || [];
@@ -28,9 +40,9 @@ const AdminCategories = ({ sidebarOpen }) => {
         );
       }
       
+      // Backend'den zaten sıralı geliyor (ORDER BY id DESC)
       setCategories(filteredCategories);
-      setPage(data.page ?? pageToLoad);
-      setTotalPages(data.totalPages ?? 0);
+      setPage(pageToLoad); // Frontend'de gösterilen sayfa numarası
     } catch (error) {
       console.error('Kategoriler yüklenirken hata:', error);
       setCategories([]);

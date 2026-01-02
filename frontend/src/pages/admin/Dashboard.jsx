@@ -18,11 +18,35 @@ const AdminDashboard = ({ sidebarOpen, setSidebarOpen }) => {
   const fetchBekleyenHaberler = async (pageToLoad = page) => {
     try {
       setLoading(true);
-      const response = await haberAPI.getBekleyen({ page: pageToLoad, size });
+      
+      // Önce toplam sayfa sayısını al (eğer bilinmiyorsa)
+      let totalPagesCount = totalPages;
+      if (totalPagesCount === 0) {
+        const firstResponse = await haberAPI.getBekleyen({ page: 0, size });
+        totalPagesCount = firstResponse.data.totalPages || 1;
+        setTotalPages(totalPagesCount);
+      }
+      
+      // Sayfa numarasını tersine çevir (son sayfa ilk sayfa olarak görünsün)
+      // Frontend'de page 0 = Backend'de son sayfa (totalPages-1)
+      // Frontend'de page 1 = Backend'de totalPages-2
+      // Frontend'de son sayfa = Backend'de page 0
+      const backendPage = totalPagesCount > 0 ? Math.max(0, totalPagesCount - 1 - pageToLoad) : 0;
+      
+      const response = await haberAPI.getBekleyen({ page: backendPage, size });
       const data = response.data;
-      setBekleyenHaberler(data.content || []);
-      setPage(data.page ?? pageToLoad);
-      setTotalPages(data.totalPages ?? 0);
+      
+      // Backend'den gelen veriyi tarihe göre ters sırala (en yeni en başta)
+      let haberler = data.content || [];
+      haberler = haberler.sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.olusturmaTarihi);
+        const dateB = new Date(b.createdAt || b.olusturmaTarihi);
+        return dateB - dateA; // En yeni en başta
+      });
+      
+      setBekleyenHaberler(haberler);
+      setPage(pageToLoad); // Frontend'de gösterilen sayfa numarası
+      // totalPages zaten set edildi, tekrar set etmeye gerek yok
     } catch (error) {
       console.error('Haberler yüklenirken hata:', error);
       setBekleyenHaberler([]);
@@ -112,7 +136,7 @@ const AdminDashboard = ({ sidebarOpen, setSidebarOpen }) => {
                     disabled={page === 0}
                     onClick={() => fetchBekleyenHaberler(page - 1)}
                   >
-                    Önceki 50
+                    Önceki
                   </button>
                   <span>
                     Sayfa {page + 1} / {totalPages}
@@ -122,7 +146,7 @@ const AdminDashboard = ({ sidebarOpen, setSidebarOpen }) => {
                     disabled={page + 1 >= totalPages}
                     onClick={() => fetchBekleyenHaberler(page + 1)}
                   >
-                    Sonraki 50
+                    Sonraki
                   </button>
                 </div>
               )}

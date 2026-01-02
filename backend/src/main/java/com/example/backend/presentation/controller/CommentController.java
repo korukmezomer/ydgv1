@@ -58,7 +58,7 @@ public class CommentController {
             @PathVariable Long haberId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
         Page<CommentResponse> yorumPage = commentService.findByStoryId(haberId, pageable);
         PageResponse<CommentResponse> response = toPageResponse(yorumPage);
         return ResponseEntity.ok(response);
@@ -69,7 +69,7 @@ public class CommentController {
             @PathVariable CommentStatus durum,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
         Page<CommentResponse> yorumPage = commentService.findByDurum(durum, pageable);
         PageResponse<CommentResponse> response = toPageResponse(yorumPage);
         return ResponseEntity.ok(response);
@@ -122,7 +122,7 @@ public class CommentController {
             @PathVariable Long yazarId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
         Page<CommentResponse> yorumPage = commentService.findByAuthorId(yazarId, pageable);
         PageResponse<CommentResponse> response = toPageResponse(yorumPage);
         return ResponseEntity.ok(response);
@@ -136,7 +136,7 @@ public class CommentController {
             @PathVariable Long haberId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
         Page<CommentResponse> yorumPage = commentService.findByAuthorIdAndStoryId(yazarId, haberId, pageable);
         PageResponse<CommentResponse> response = toPageResponse(yorumPage);
         return ResponseEntity.ok(response);

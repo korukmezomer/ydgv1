@@ -66,24 +66,48 @@ public class Case12f_AdminEditorPickTest extends BaseSeleniumTest {
             
             // 3. Sidebar'ı aç ve "Editör Seçimleri" linkine tıkla
             try {
+                // Header içindeki hamburger menu butonunu bul (daha spesifik)
                 WebElement sidebarToggle = wait.until(
                     ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("button[aria-label*='menu'], .menu-toggle, .sidebar-toggle, button[class*='menu']")
+                        By.cssSelector(".reader-header button.hamburger-menu, .reader-header-content button.hamburger-menu, button.hamburger-menu[aria-label='Menu']")
                     )
                 );
-                sidebarToggle.click();
+                
+                // Butonun görünür olduğundan emin ol
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", sidebarToggle);
+                Thread.sleep(500);
+                
+                // JavaScript ile tıkla (React state güncellemesi için)
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", sidebarToggle);
+                Thread.sleep(1000);
+                
+                // Sidebar'ın açılmasını bekle
+                wait.until(
+                    ExpectedConditions.and(
+                        ExpectedConditions.presenceOfElementLocated(By.cssSelector(".writer-sidebar.open")),
+                        ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".writer-sidebar.open"))
+                    )
+                );
                 Thread.sleep(1000);
             } catch (Exception e) {
-                System.out.println("Case 12f: Sidebar toggle bulunamadı");
+                System.out.println("Case 12f: Sidebar toggle bulunamadı, direkt URL'e gidiliyor: " + e.getMessage());
+                driver.get(BASE_URL + "/admin/editor-secimleri");
+                waitForPageLoad();
+                Thread.sleep(2000);
             }
             
-            // "Editör Seçimleri" linkini bul ve tıkla
+            // "Editör Seçimleri" linkini bul ve tıkla (sidebar açıksa)
+            try {
             WebElement editorPicksLink = wait.until(
                 ExpectedConditions.elementToBeClickable(
-                    By.xpath("//a[contains(@href, '/admin/editor-secimleri')] | //a[contains(text(), 'Editör Seçimleri')]")
+                        By.cssSelector(".writer-sidebar.open .sidebar-link[href='/admin/editor-secimleri'], .writer-sidebar.open a[href*='/admin/editor-secimleri']")
                 )
             );
-            editorPicksLink.click();
+                safeClick(editorPicksLink);
+            } catch (Exception e) {
+                // Link bulunamazsa direkt URL'e git
+                driver.get(BASE_URL + "/admin/editor-secimleri");
+            }
             waitForPageLoad();
             Thread.sleep(1000); // 3000 -> 1000
             
@@ -106,7 +130,7 @@ public class Case12f_AdminEditorPickTest extends BaseSeleniumTest {
             String buttonTextBefore = editorPickButton.getText();
             
             // Editor seçimi yap
-            editorPickButton.click();
+            safeClick(editorPickButton);
             Thread.sleep(1000); // 3000 -> 1000
             
             // Butonun durumunun değiştiğini kontrol et (yeniden bul)

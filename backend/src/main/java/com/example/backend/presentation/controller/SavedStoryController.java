@@ -31,6 +31,7 @@ public class SavedStoryController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Long userId = getUserIdFromToken(token);
+        // Repository'de zaten ORDER BY createdAt DESC var, bu yüzden Sort eklemiyoruz
         Pageable pageable = PageRequest.of(page, size);
         Page<StoryResponse> storyPage = savedStoryService.findByUserId(userId, pageable);
         PageResponse<StoryResponse> response = toPageResponse(storyPage);

@@ -33,8 +33,6 @@ public class Case12b_AdminStoryDeletionTest extends BaseSeleniumTest {
                 return;
             }
             
-            // Writer olarak zaten giriş yapılmış durumda (kayıt sonrası dashboard'a yönlendirildi)
-            
             // Story oluştur ve yayınla (onay bekleyen durumda)
             String storyTitle = "Reddedilecek Story " + System.currentTimeMillis();
             String storyContent = "Bu bir reddedilecek story'dir.";
@@ -45,12 +43,15 @@ public class Case12b_AdminStoryDeletionTest extends BaseSeleniumTest {
                 return;
             }
             
+            // Veritabanı transaction'ının commit olması için bekle
+            Thread.sleep(2000);
+            
             // 2. ADMIN olarak giriş yap
             AdminCredentials adminCreds = ensureAdminUserExists();
             
             try {
                 driver.get(BASE_URL + "/logout");
-                Thread.sleep(500); // 2000 -> 500
+                Thread.sleep(2000);
             } catch (Exception e) {
                 // Logout sayfası yoksa devam et
             }
@@ -64,111 +65,127 @@ public class Case12b_AdminStoryDeletionTest extends BaseSeleniumTest {
                 "Case 12b: Admin olarak giriş yapılamadı. URL: " + currentUrl
             );
             
-            // 3. Story'yi tüm sayfalarda ara ve reddet
-            WebElement storyTextElement = findStoryInAllPages(storyTitle);
+            // 3. Direkt admin dashboard'a git (onay bekleyen story'ler burada)
+            driver.get(BASE_URL + "/admin/dashboard");
+            waitForPageLoad();
+            Thread.sleep(3000);
             
-            if (storyTextElement != null) {
-                // Story bulundu, reddet
-                // Story item container'ını bul (parent'a çık)
-                WebElement storyItem = storyTextElement.findElement(By.xpath("./ancestor::div[contains(@class, 'admin-haber-item')]"));
-                
-                // Reddet butonunu bul ve tıkla (admin-haber-actions içinde)
-                WebElement rejectButton = storyItem.findElement(
-                    By.xpath(".//button[contains(text(), 'Reddet')]")
+            // Sayfa yüklemesini bekle
+            wait.until(
+                ExpectedConditions.or(
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-container")),
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-haber-item"))
+                )
+            );
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(2000);
+            
+            // 4. Story'yi bul (ilk iki sayfada ara - en yeni en başta olduğu için)
+            System.out.println("Story aranıyor: " + storyTitle);
+            
+            WebElement storyElement = null;
+            try {
+                // İlk sayfada ara
+                storyElement = wait.until(
+                    ExpectedConditions.presenceOfElementLocated(
+                        By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
+                    )
                 );
-                
-                // Prompt'u override et (butona tıklamadan önce)
-                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
-                    "window.prompt = function() { return 'Test red sebebi - uygun değil'; }"
-                );
-                
-                rejectButton.click();
-                
-                // Red sebebi prompt'unu handle et (JavaScript prompt)
-                Thread.sleep(500); // 2000 -> 500
-                
-                // Alert'i bekle ve handle et (reddedildi mesajı için)
+                System.out.println("Story ilk sayfada bulundu: " + storyTitle);
+            } catch (org.openqa.selenium.TimeoutException e) {
+                // İlk sayfada bulunamadı, ikinci sayfayı kontrol et
+                System.out.println("Story ilk sayfada bulunamadı, ikinci sayfa kontrol ediliyor...");
                 try {
-                    org.openqa.selenium.Alert alert = wait.until(ExpectedConditions.alertIsPresent());
-                    alert.accept();
-                } catch (Exception e) {
-                    // Alert yoksa devam et
-                    System.out.println("Case 12b: Alert beklenmedi: " + e.getMessage());
-                }
-                
-                Thread.sleep(1000); // 3000 -> 1000
-                
-                // Story'nin reddedildiğini kontrol et (artık onay bekleyen listede olmamalı)
-                driver.navigate().refresh();
-                Thread.sleep(1000); // 3000 -> 1000
-                
-                try {
-                    driver.findElement(
-                        By.xpath("//*[contains(text(), '" + storyTitle + "')]")
+                    WebElement nextButton = driver.findElement(
+                        By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki') or contains(text(), 'Next')]")
                     );
-                    // Hala görünüyorsa test başarısız
-                    fail("Case 12b: Story reddedilmedi (hala listede görünüyor)");
-                } catch (org.openqa.selenium.NoSuchElementException e) {
-                    // Story bulunamadı - bu beklenen davranış (reddedildi, listeden çıktı)
-                    assertTrue(true, "Case 12b: Story başarıyla reddedildi");
-                }
-                
-                System.out.println("Case 12b: Story reddetme başarıyla test edildi");
-                
-            } else {
-                // Story UI'da bulunamadı (pagination nedeniyle ilk 50'de olmayabilir)
-                // Direkt veritabanından reddet
-                System.out.println("Case 12b: Story admin dashboard'da bulunamadı, veritabanından reddediliyor: " + storyTitle);
-                Long storyId = getStoryIdByTitle(storyTitle, null);
-                if (storyId == null) {
-                    // Son çare: En son oluşturulan story'yi al
-                    try (java.sql.Connection conn = getTestDatabaseConnection()) {
-                        String sql = "SELECT id FROM stories WHERE baslik = ? ORDER BY created_at DESC LIMIT 1";
-                        try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
-                            stmt.setString(1, storyTitle);
-                            try (java.sql.ResultSet rs = stmt.executeQuery()) {
-                                if (rs.next()) {
-                                    storyId = rs.getLong("id");
-                                }
-                            }
-                        }
-                    } catch (java.sql.SQLException ex) {
-                        System.err.println("Case 12b: Story ID alınamadı: " + ex.getMessage());
+                    if (nextButton.getAttribute("disabled") == null) {
+                        safeClick(nextButton);
+                        Thread.sleep(2000);
+                        wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+                        Thread.sleep(2000);
+                        
+                        storyElement = wait.until(
+                            ExpectedConditions.presenceOfElementLocated(
+                                By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
+                            )
+                        );
+                        System.out.println("Story ikinci sayfada bulundu: " + storyTitle);
                     }
-                }
-                
-                if (storyId != null) {
-                    // Veritabanından story'yi reddet
-                    try (java.sql.Connection conn = getTestDatabaseConnection()) {
-                        String sql = "UPDATE stories SET durum = 'REDDEDILDI' WHERE id = ?";
-                        try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
-                            stmt.setLong(1, storyId);
-                            int updated = stmt.executeUpdate();
-                            if (updated > 0) {
-                                System.out.println("Case 12b: Story veritabanından reddedildi: " + storyId);
-                                // Story'nin reddedildiğini kontrol et
-                                driver.navigate().refresh();
-                                Thread.sleep(1000);
-                                try {
-                                    driver.findElement(
-                                        By.xpath("//*[contains(text(), '" + storyTitle + "')]")
-                                    );
-                                    fail("Case 12b: Story reddedilmedi (hala listede görünüyor)");
-                                } catch (org.openqa.selenium.NoSuchElementException ex) {
-                                    assertTrue(true, "Case 12b: Story başarıyla reddedildi");
-                                }
-                            } else {
-                                fail("Case 12b: Story veritabanından reddedilemedi");
-                            }
-                        }
-                    } catch (java.sql.SQLException ex) {
-                        System.err.println("Case 12b: Story reddetme hatası: " + ex.getMessage());
-                        fail("Case 12b: Story reddetme testi başarısız - " + ex.getMessage());
-                    }
-                } else {
-                    fail("Case 12b: Story ID alınamadı, reddetme yapılamadı");
+                } catch (Exception ex) {
+                    System.out.println("Story bulunamadı: " + storyTitle);
                 }
             }
+            
+            if (storyElement == null) {
+                fail("Case 12b: Story admin dashboard'da bulunamadı: " + storyTitle);
+                return;
+            }
+            
+            // 5. Story item container'ını bul
+            WebElement storyItem = storyElement.findElement(By.xpath("./ancestor::div[contains(@class, 'admin-haber-item')]"));
+            
+            // 6. Reddet butonunu bul ve tıkla
+            WebElement rejectButton = wait.until(
+                ExpectedConditions.elementToBeClickable(
+                    storyItem.findElement(By.xpath(".//button[contains(text(), 'Reddet')]"))
+                )
+            );
+            
+            System.out.println("Reddet butonu bulundu, tıklanıyor...");
+            
+            // Prompt'u override et (butona tıklamadan önce)
+            ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
+                "window.prompt = function() { return 'Test red sebebi - uygun değil'; }"
+            );
+            
+            safeClick(rejectButton);
+            
+            // Red sebebi prompt'unu handle et
+            Thread.sleep(1000);
+            
+            // Alert'i bekle ve handle et (reddedildi mesajı için)
+            try {
+                org.openqa.selenium.Alert alert = wait.until(ExpectedConditions.alertIsPresent());
+                alert.accept();
+            } catch (Exception e) {
+                // Alert yoksa devam et
+                System.out.println("Case 12b: Alert beklenmedi");
+            }
+            
+            // Silme işleminin tamamlanmasını bekle
+            Thread.sleep(3000);
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(2000);
+            
+            // 7. Story'nin reddedildiğini kontrol et - sayfayı yenile
+            driver.navigate().refresh();
+            Thread.sleep(3000);
+            waitForPageLoad();
+            
+            wait.until(
+                ExpectedConditions.or(
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-dashboard-container")),
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".admin-haber-item"))
+                )
+            );
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(2000);
+            
+            // Story artık listede olmamalı
+            try {
+                driver.findElement(
+                    By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
+                );
+                // Hala görünüyorsa test başarısız
+                fail("Case 12b: Story reddedilmedi (hala listede görünüyor)");
+            } catch (org.openqa.selenium.NoSuchElementException e) {
+                // Story bulunamadı - bu beklenen davranış (reddedildi, listeden çıktı)
+                System.out.println("Case 12b: Story listede bulunamadı (reddedildi)");
+                assertTrue(true, "Case 12b: Story başarıyla reddedildi");
+            }
+            
+            System.out.println("Case 12b: Story reddetme başarıyla test edildi");
             
         } catch (Exception e) {
             System.err.println("Case 12b: Beklenmeyen hata - " + e.getMessage());
@@ -177,4 +194,3 @@ public class Case12b_AdminStoryDeletionTest extends BaseSeleniumTest {
         }
     }
 }
-

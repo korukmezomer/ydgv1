@@ -13,15 +13,31 @@ const AdminUsers = ({ sidebarOpen }) => {
   const fetchUsers = async (pageToLoad = page, q = search) => {
     try {
       setLoading(true);
-      const params = { page: pageToLoad, size };
+      
+      // Önce toplam sayfa sayısını al (eğer bilinmiyorsa)
+      let totalPagesCount = totalPages;
+      if (totalPagesCount === 0) {
+        const firstParams = { page: 0, size };
+        if (q && q.trim()) {
+          firstParams.q = q.trim();
+        }
+        const firstResponse = await kullaniciAPI.getAll(firstParams);
+        totalPagesCount = firstResponse.data.totalPages || 1;
+        setTotalPages(totalPagesCount);
+      }
+      
+      // Sayfa numarasını tersine çevir (son sayfa ilk sayfa olarak görünsün)
+      const backendPage = totalPagesCount > 0 ? Math.max(0, totalPagesCount - 1 - pageToLoad) : 0;
+      
+      const params = { page: backendPage, size };
       if (q && q.trim()) {
         params.q = q.trim();
       }
       const response = await kullaniciAPI.getAll(params);
       const data = response.data;
+      // Backend'den zaten sıralı geliyor (ORDER BY u.id DESC)
       setUsers(data.content || []);
-      setPage(data.page ?? pageToLoad);
-      setTotalPages(data.totalPages ?? 0);
+      setPage(pageToLoad); // Frontend'de gösterilen sayfa numarası
     } catch (error) {
       console.error('Kullanıcılar yüklenirken hata:', error);
       setUsers([]);
@@ -37,6 +53,7 @@ const AdminUsers = ({ sidebarOpen }) => {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
+    setTotalPages(0); // Arama yapıldığında totalPages'i sıfırla
     fetchUsers(0, search);
   };
 

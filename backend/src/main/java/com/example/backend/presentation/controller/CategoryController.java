@@ -51,7 +51,7 @@ public class CategoryController {
     public ResponseEntity<PageResponse<CategoryResponse>> findAllSayfali(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
         Page<CategoryResponse> kategoriPage = categoryService.findAll(pageable);
         PageResponse<CategoryResponse> response = toPageResponse(kategoriPage);
         return ResponseEntity.ok(response);

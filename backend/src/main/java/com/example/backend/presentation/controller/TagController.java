@@ -51,7 +51,7 @@ public class TagController {
     public ResponseEntity<PageResponse<TagResponse>> findAllSayfali(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
         Page<TagResponse> tagPage = tagService.findAll(pageable);
         PageResponse<TagResponse> response = toPageResponse(tagPage);
         return ResponseEntity.ok(response);

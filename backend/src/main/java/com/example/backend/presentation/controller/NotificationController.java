@@ -29,6 +29,7 @@ public class NotificationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Long kullaniciId = getKullaniciIdFromToken(token);
+        // Repository'de zaten ORDER BY createdAt DESC var, bu yüzden Sort eklemiyoruz
         Pageable pageable = PageRequest.of(page, size);
         Page<NotificationResponse> bildirimPage = notificationService.findByUserId(kullaniciId, pageable);
         PageResponse<NotificationResponse> response = toPageResponse(bildirimPage);
@@ -41,6 +42,7 @@ public class NotificationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Long kullaniciId = getKullaniciIdFromToken(token);
+        // Repository'de zaten ORDER BY createdAt DESC var, bu yüzden Sort eklemiyoruz
         Pageable pageable = PageRequest.of(page, size);
         Page<NotificationResponse> bildirimPage = notificationService.findUnreadByUserId(kullaniciId, pageable);
         PageResponse<NotificationResponse> response = toPageResponse(bildirimPage);

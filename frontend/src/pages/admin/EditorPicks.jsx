@@ -19,20 +19,34 @@ const EditorPicks = ({ sidebarOpen, setSidebarOpen }) => {
   const fetchYayinlananHaberler = async () => {
     try {
       setLoading(true);
+      
+      // Önce toplam sayfa sayısını al (eğer bilinmiyorsa)
+      let totalPagesCount = totalPages;
+      if (totalPagesCount === 0) {
+        const firstResponse = await haberAPI.getAll({ page: 0, size: 20 });
+        if (firstResponse.data && firstResponse.data.content) {
+          totalPagesCount = firstResponse.data.totalPages || 1;
+        } else {
+          totalPagesCount = 1;
+        }
+        setTotalPages(totalPagesCount);
+      }
+      
+      // Sayfa numarasını tersine çevir (son sayfa ilk sayfa olarak görünsün)
+      const backendPage = totalPagesCount > 0 ? Math.max(0, totalPagesCount - 1 - page) : 0;
+      
       // Yayınlanmış story'leri getir (getAll zaten yayınlanmış story'leri getiriyor)
-      const response = await haberAPI.getAll({ page, size: 20 });
+      const response = await haberAPI.getAll({ page: backendPage, size: 20 });
       if (response.data && response.data.content) {
+        // Backend'den zaten sıralı geliyor (ORDER BY publishedAt DESC)
         setYayinlananHaberler(response.data.content || []);
-        setTotalPages(response.data.totalPages || 0);
       } else {
         // Eğer response.data direkt array ise
         setYayinlananHaberler(response.data || []);
-        setTotalPages(1);
       }
     } catch (error) {
       console.error('Haberler yüklenirken hata:', error);
       setYayinlananHaberler([]);
-      setTotalPages(0);
     } finally {
       setLoading(false);
     }

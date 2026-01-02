@@ -116,7 +116,7 @@ public class Case15_AdminReviewStoryTest extends BaseSeleniumTest {
                 "Case 15: İncele butonu bulunamadı"
             );
 
-            reviewButton.click();
+            safeClick(reviewButton);
             waitForPageLoad();
             Thread.sleep(3000);
 

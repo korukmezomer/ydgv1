@@ -15,9 +15,11 @@ import java.util.Optional;
 public interface StoryRepository extends JpaRepository<Story, Long> {
     Optional<Story> findBySlug(String slug);
 
-    Page<Story> findByStatus(StoryStatus status, Pageable pageable);
+    @Query("SELECT s FROM Story s WHERE s.status = :status ORDER BY s.id DESC")
+    Page<Story> findByStatus(@Param("status") StoryStatus status, Pageable pageable);
 
-    Page<Story> findByCategoryId(Long categoryId, Pageable pageable);
+    @Query("SELECT s FROM Story s WHERE s.category.id = :categoryId AND s.isActive = true ORDER BY s.id DESC")
+    Page<Story> findByCategoryId(@Param("categoryId") Long categoryId, Pageable pageable);
 
     @Query("SELECT s FROM Story s WHERE s.user.id = :userId AND s.isActive = true ORDER BY s.createdAt DESC")
     Page<Story> findByUserId(@Param("userId") Long userId, Pageable pageable);
@@ -35,7 +37,7 @@ public interface StoryRepository extends JpaRepository<Story, Long> {
            "(LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(s.title, 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U')) LIKE LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(CONCAT('%', :search, '%'), 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U')) OR " +
            "LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(s.content, 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U')) LIKE LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(CONCAT('%', :search, '%'), 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U')) OR " +
            "LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(s.summary, 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U')) LIKE LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(CONCAT('%', :search, '%'), 'ö', 'o'), 'Ö', 'O'), 'ş', 's'), 'Ş', 'S'), 'ı', 'i'), 'İ', 'I'), 'ü', 'u'), 'Ü', 'U')))" +
-           "AND s.status = :status AND s.isActive = true")
+           "AND s.status = :status AND s.isActive = true ORDER BY s.id DESC")
     Page<Story> searchStories(@Param("search") String search, @Param("status") StoryStatus status, Pageable pageable);
 
     @Query("SELECT s FROM Story s WHERE s.isEditorPick = true AND s.status = :status AND s.isActive = true ORDER BY s.publishedAt DESC")

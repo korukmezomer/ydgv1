@@ -133,8 +133,22 @@ public class StoryServiceImpl implements StoryService {
     @Override
     @Transactional(readOnly = true)
     public Page<StoryResponse> findByStatus(Story.StoryStatus status, Pageable pageable) {
-        return storyRepository.findByStatus(status, pageable)
-                .map(this::toResponse);
+        // Repository'den veriyi al
+        Page<Story> storyPage = storyRepository.findByStatus(status, pageable);
+        
+        // İçeriği ID'ye göre DESC sırala (ekstra güvenlik için)
+        java.util.List<Story> sortedStories = storyPage.getContent().stream()
+            .sorted((s1, s2) -> Long.compare(s2.getId(), s1.getId()))
+            .collect(java.util.stream.Collectors.toList());
+        
+        // Yeni Page oluştur
+        Page<Story> sortedStoryPage = new org.springframework.data.domain.PageImpl<>(
+            sortedStories, 
+            pageable, 
+            storyPage.getTotalElements()
+        );
+        
+        return sortedStoryPage.map(this::toResponse);
     }
 
     @Override

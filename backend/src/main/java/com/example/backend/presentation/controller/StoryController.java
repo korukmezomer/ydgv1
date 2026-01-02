@@ -55,7 +55,7 @@ public class StoryController {
     public ResponseEntity<PageResponse<StoryResponse>> findAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "publishedAt"));
         Page<StoryResponse> storyPage = storyService.findPublishedStories(pageable);
         PageResponse<StoryResponse> response = toPageResponse(storyPage);
         return ResponseEntity.ok(response);
@@ -66,7 +66,7 @@ public class StoryController {
             @PathVariable Long kullaniciId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
         Page<StoryResponse> storyPage = storyService.findByUserId(kullaniciId, pageable);
         PageResponse<StoryResponse> response = toPageResponse(storyPage);
         return ResponseEntity.ok(response);
@@ -77,7 +77,7 @@ public class StoryController {
             @PathVariable Long kategoriId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
         Page<StoryResponse> storyPage = storyService.findByCategoryId(kategoriId, pageable);
         PageResponse<StoryResponse> response = toPageResponse(storyPage);
         return ResponseEntity.ok(response);
@@ -87,6 +87,7 @@ public class StoryController {
     public ResponseEntity<PageResponse<StoryResponse>> getPopular(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        // Repository'de zaten ORDER BY viewCount DESC var, bu yüzden Sort eklemiyoruz
         Pageable pageable = PageRequest.of(page, size);
         Page<StoryResponse> storyPage = storyService.findPopularStories(pageable);
         PageResponse<StoryResponse> response = toPageResponse(storyPage);
@@ -97,6 +98,7 @@ public class StoryController {
     public ResponseEntity<PageResponse<StoryResponse>> getEditorPicks(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        // Repository'de zaten ORDER BY publishedAt DESC var, bu yüzden Sort eklemiyoruz
         Pageable pageable = PageRequest.of(page, size);
         Page<StoryResponse> storyPage = storyService.findEditorPicks(pageable);
         PageResponse<StoryResponse> response = toPageResponse(storyPage);
@@ -108,6 +110,8 @@ public class StoryController {
     public ResponseEntity<PageResponse<StoryResponse>> getBekleyen(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        // Repository'de zaten ORDER BY s.id DESC var, bu yüzden Sort eklemiyoruz
+        // @Query içinde ORDER BY varsa, Pageable'daki Sort göz ardı edilir
         Pageable pageable = PageRequest.of(page, size);
         Page<StoryResponse> storyPage = storyService.findByStatus(StoryStatus.YAYIN_BEKLIYOR, pageable);
         PageResponse<StoryResponse> response = toPageResponse(storyPage);
@@ -119,7 +123,7 @@ public class StoryController {
             @RequestParam String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
         Page<StoryResponse> storyPage = storyService.search(q, pageable);
         PageResponse<StoryResponse> response = toPageResponse(storyPage);
         return ResponseEntity.ok(response);
