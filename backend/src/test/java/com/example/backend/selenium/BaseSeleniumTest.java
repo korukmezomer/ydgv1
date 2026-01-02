@@ -225,7 +225,8 @@ public abstract class BaseSeleniumTest {
         }
         
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless=new", "--disable-dev-shm-usage", "--no-sandbox", "--window-size=1280,720");
+        // Varsayılan: headless kapalı (lokalde UI gözüksün). Headless sadece CI'da/flag ile açılacak.
+        options.addArguments("--window-size=1280,720");
         
         // Şifre yöneticisini tamamen devre dışı bırak (test sırasında pop-up'ları önlemek için)
         options.addArguments("--disable-password-manager");
@@ -1841,16 +1842,20 @@ public abstract class BaseSeleniumTest {
     }
     
     /**
-     * Kullanıcının bir story'i kaydedip kaydetmediğini API üzerinden kontrol et
+     * Kullanıcının bir story'i kaydedip kaydetmediğini API üzerinden kontrol et.
+     * Eğer endpoint auth istiyorsa bearerToken geçilmeli.
      */
-    protected Boolean getSaveStatusViaApi(Long userId, Long storyId) {
+    protected Boolean getSaveStatusViaApi(Long userId, Long storyId, String bearerToken) {
         try {
             String url = BACKEND_URL + "/api/kaydedilenler/kullanici/" + userId + "/story/" + storyId;
-            HttpRequest request = HttpRequest.newBuilder()
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(Duration.ofSeconds(10))
-                .GET()
-                .build();
+                .GET();
+            if (bearerToken != null) {
+                builder.header("Authorization", "Bearer " + bearerToken);
+            }
+            HttpRequest request = builder.build();
             
             HttpClient client = HttpClient.newHttpClient();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -1870,6 +1875,56 @@ public abstract class BaseSeleniumTest {
             }
         } catch (Exception e) {
             System.err.println("API'den save status alınamadı: " + e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
+     * Halihazırda açık olan tarayıcı oturumundan (localStorage/sessionStorage) JWT token al
+     */
+    protected String getBrowserToken() {
+        try {
+            Object token = ((JavascriptExecutor) driver).executeScript(
+                "return window.localStorage.getItem('token') || " +
+                "window.localStorage.getItem('authToken') || " +
+                "window.localStorage.getItem('accessToken') || " +
+                "window.sessionStorage.getItem('token') || " +
+                "window.sessionStorage.getItem('authToken') || " +
+                "window.sessionStorage.getItem('accessToken');"
+            );
+            return token != null ? token.toString() : null;
+        } catch (Exception e) {
+            System.err.println("Tarayıcı token'ı okunamadı: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Kullanıcı token'ı al (login)
+     */
+    protected String getUserToken(String email, String password) {
+        try {
+            String url = BACKEND_URL + "/api/auth/login";
+            String payload = String.format("{\"email\":\"%s\",\"password\":\"%s\"}", email, password);
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(10))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(payload))
+                .build();
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode node = mapper.readTree(response.body());
+                if (node.has("token")) {
+                    return node.get("token").asText();
+                }
+            } else {
+                System.out.println("Kullanıcı token alınamadı: " + response.statusCode() + " - " + response.body());
+            }
+        } catch (Exception e) {
+            System.err.println("Kullanıcı token alınamadı: " + e.getMessage());
         }
         return null;
     }
@@ -2394,31 +2449,31 @@ public abstract class BaseSeleniumTest {
             int currentPage = 1;
             int maxPages = 50; // güvenlik için üst sınır
             while (currentPage <= maxPages) {
-                try {
-                    WebElement storyElement = wait.until(
-                        ExpectedConditions.presenceOfElementLocated(
-                            By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')] | //*[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
-                        )
-                    );
+            try {
+                WebElement storyElement = wait.until(
+                    ExpectedConditions.presenceOfElementLocated(
+                        By.xpath("//div[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')] | //*[contains(@class, 'admin-haber-item')]//*[contains(text(), '" + storyTitle + "')]")
+                    )
+                );
                     System.out.println("Story bulundu (sayfa " + currentPage + "): " + storyTitle);
-                    return storyElement;
-                } catch (org.openqa.selenium.TimeoutException e) {
+                return storyElement;
+            } catch (org.openqa.selenium.TimeoutException e) {
                     // bu sayfada yok, sonraki sayfayı dene
-                    try {
-                        WebElement nextButton = driver.findElement(
-                            By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki') or contains(text(), 'Next')]")
-                        );
-                        if (nextButton.getAttribute("disabled") != null) {
+                try {
+                    WebElement nextButton = driver.findElement(
+                        By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki') or contains(text(), 'Next')]")
+                    );
+                    if (nextButton.getAttribute("disabled") != null) {
                             System.out.println("Story bulunamadı, son sayfaya ulaşıldı: " + storyTitle);
-                            return null;
-                        }
-                        safeClick(nextButton);
+                        return null;
+                    }
+                    safeClick(nextButton);
                         wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
                         Thread.sleep(500);
                         currentPage++;
-                    } catch (org.openqa.selenium.NoSuchElementException ex) {
+                } catch (org.openqa.selenium.NoSuchElementException ex) {
                         System.out.println("Story bulunamadı, pagination yok: " + storyTitle);
-                        return null;
+                    return null;
                     }
                 }
             }
@@ -2815,29 +2870,29 @@ public abstract class BaseSeleniumTest {
                 return null;
             }
             
-            WebElement storyRow = storyTextElement.findElement(By.xpath("./ancestor::div[contains(@class, 'admin-haber-item')]"));
-            WebElement approveButton = storyRow.findElement(
+                WebElement storyRow = storyTextElement.findElement(By.xpath("./ancestor::div[contains(@class, 'admin-haber-item')]"));
+                WebElement approveButton = storyRow.findElement(
                 By.xpath(".//button[contains(text(), 'Onayla') or contains(text(), 'onayla') or contains(@class, 'approve')]")
-            );
+                );
             
             // Scroll & güvenli tıklama
             ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", approveButton);
             safeClick(approveButton);
-            
-            Thread.sleep(1000);
+                
+                Thread.sleep(1000);
             try { driver.switchTo().alert().accept(); } catch (Exception ignored) {}
             Thread.sleep(1000);
             
             // Slug'ı API veya title'dan türet
-            Long storyId = getStoryIdByTitle(storyTitle, null);
-            if (storyId != null) {
+                Long storyId = getStoryIdByTitle(storyTitle, null);
+                if (storyId != null) {
                 String slug = getStorySlugViaApi(storyId);
                 if (slug != null) return slug;
             }
-            return storyTitle.toLowerCase()
-                .replaceAll("[^a-z0-9\\s-]", "")
-                .replaceAll("\\s+", "-")
-                .replaceAll("-+", "-");
+                return storyTitle.toLowerCase()
+                    .replaceAll("[^a-z0-9\\s-]", "")
+                    .replaceAll("\\s+", "-")
+                    .replaceAll("-+", "-");
         } catch (Exception e) {
             System.err.println("Admin onaylama hatası: " + e.getMessage());
             return null;

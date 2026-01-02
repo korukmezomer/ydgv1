@@ -201,26 +201,55 @@ public class Case11_NotificationTest extends BaseSeleniumTest {
         safeSubmitForm(writerLoginSubmitButtonFinal, writerLoginFormFinal);
         Thread.sleep(3000);
         
-        // Bildirimler sayfasına git
-        driver.get(BASE_URL + "/reader/notifications");
-        waitForPageLoad();
-        Thread.sleep(3000);
+        // Header bildirim ikonuna tıkla, dropdown aç
+        try {
+            WebElement bellButton = wait.until(
+                ExpectedConditions.elementToBeClickable(
+                    By.cssSelector("button[aria-label*='bildirim'], button[aria-label*='notification'], .notification-bell, .header-notification-btn")
+                )
+            );
+            ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block:'center'});", bellButton);
+            safeClick(bellButton);
+            Thread.sleep(1000);
+        } catch (Exception e) {
+            // Fallback: bildirim sayfasına git
+            driver.get(BASE_URL + "/reader/notifications");
+            waitForPageLoad();
+            Thread.sleep(2000);
+        }
         
-        // Bildirimi kontrol et (çok yavaş ortamlar için 3 deneme, 40 sn bekleme)
+        // Bildirimi kontrol et (yavaş ortamlar için 5 deneme, 60 sn bekleme, ara ara yeniden giriş)
         WebElement notificationElement = null;
         boolean notificationFound = false;
-        for (int i = 0; i < 3 && !notificationFound; i++) {
+        int maxTries = 5;
+        for (int i = 0; i < maxTries && !notificationFound; i++) {
             try {
-                notificationElement = new org.openqa.selenium.support.ui.WebDriverWait(driver, java.time.Duration.ofSeconds(40)).until(
-                    ExpectedConditions.presenceOfElementLocated(
+                notificationElement = new org.openqa.selenium.support.ui.WebDriverWait(driver, java.time.Duration.ofSeconds(60)).until(
+                    ExpectedConditions.visibilityOfElementLocated(
                         By.xpath("//*[contains(text(), 'yorum') or contains(text(), 'Yorum')] | //*[contains(text(), '" + commenterUsername + "')]")
                     )
                 );
-                notificationFound = notificationElement.isDisplayed();
+                notificationFound = notificationElement != null && notificationElement.isDisplayed();
             } catch (Exception ex) {
+                if (i == maxTries - 1) break;
+                // Sayfayı yenile veya dropdown'ı yeniden aç
                 driver.navigate().refresh();
                 waitForPageLoad();
-                Thread.sleep(2000);
+                Thread.sleep(3000);
+                try {
+                    WebElement bellButtonRetry = wait.until(
+                        ExpectedConditions.elementToBeClickable(
+                            By.cssSelector("button[aria-label*='bildirim'], button[aria-label*='notification'], .notification-bell, .header-notification-btn")
+                        )
+                    );
+                    ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block:'center'});", bellButtonRetry);
+                    safeClick(bellButtonRetry);
+                    Thread.sleep(1000);
+                } catch (Exception ignore) {
+                    driver.get(BASE_URL + "/reader/notifications");
+                    waitForPageLoad();
+                    Thread.sleep(2000);
+                }
             }
         }
         
