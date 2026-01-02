@@ -296,11 +296,14 @@ class JwtUtilTest {
     @Test
     void testExtractAllClaimsWithException() {
         // Test exception handling in extractAllClaims
+        // extractEmail exception fırlatmıyor (null döndürüyor)
+        // extractRoles de exception fırlatmıyor (boş liste döndürüyor)
+        // extractClaim public method ve extractAllClaims'i çağırıyor, exception fırlatıyor
         String invalidToken = "invalid.token.here";
         
+        // extractClaim extractAllClaims'i çağırır ve exception fırlatır
         assertThrows(RuntimeException.class, () -> {
-            // Use reflection to call private method, or test via public method
-            jwtUtil.extractEmail(invalidToken); // This will call extractAllClaims internally
+            jwtUtil.extractClaim(invalidToken, claims -> claims.get("test", String.class));
         });
     }
 

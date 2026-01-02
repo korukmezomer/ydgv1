@@ -47,7 +47,13 @@ class SecurityConfigTest {
         CorsConfigurationSource corsSource = securityConfig.corsConfigurationSource();
         
         assertNotNull(corsSource);
-        CorsConfiguration cfg = corsSource.getCorsConfiguration(new MockHttpServletRequest());
+        // UrlBasedCorsConfigurationSource sadece /api/** path'i için CORS configuration döndürür
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setMethod("GET");
+        request.setRequestURI("/api/test"); // /api/** pattern'ine uyan bir path
+        request.setPathInfo("/api/test");
+        request.setServletPath("/api/test");
+        CorsConfiguration cfg = corsSource.getCorsConfiguration(request);
         assertNotNull(cfg);
         assertTrue(cfg.getAllowedOriginPatterns().contains("http://localhost:*"));
         assertTrue(cfg.getAllowedMethods().containsAll(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")));
