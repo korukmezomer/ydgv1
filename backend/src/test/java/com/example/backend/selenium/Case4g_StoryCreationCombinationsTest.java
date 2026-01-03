@@ -341,7 +341,7 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         for (int i = 0; i < 6 && imageElement == null; i++) {
             try {
                 imageElement = wait.until(
-                    ExpectedConditions.presenceOfElementLocated(
+            ExpectedConditions.presenceOfElementLocated(
                         By.cssSelector(".image-block-container img.block-image, .editor-block.image-block-container img, .image-block img, img.block-image")
                     )
                 );

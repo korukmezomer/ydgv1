@@ -88,10 +88,10 @@ public class Case12a_AdminUserManagementTest extends BaseSeleniumTest {
                     try {
                         userElement = driver.findElement(
                             By.xpath("//table//tr//td[contains(text(), '" + testUserUsername + "')]")
-                        );
+                    );
                         if (userElement.isDisplayed()) {
-                            System.out.println("Kullanıcı bulundu (sayfa " + (currentPage + 1) + "): " + testUserUsername);
-                            break;
+                    System.out.println("Kullanıcı bulundu (sayfa " + (currentPage + 1) + "): " + testUserUsername);
+                    break;
                         }
                     } catch (org.openqa.selenium.NoSuchElementException e) {
                         // Kullanıcı bu sayfada yok, devam et

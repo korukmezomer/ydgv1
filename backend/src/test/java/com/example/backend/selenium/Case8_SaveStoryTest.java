@@ -282,8 +282,8 @@ public class Case8_SaveStoryTest extends BaseSeleniumTest {
                     "Case 8 Negative: Kaydetme kaldırma API/UI doğrulanamadı");
             } else {
                 assertFalse(savedStillExists, "Case 8 Negative: Kaydetme kaldırılmadı (API)");
-                assertTrue(buttonClassFinal == null || !buttonClassFinal.contains("active"),
-                    "Case 8 Negative: Kaydetme kaldırıldıktan sonra buton active olmamalı");
+            assertTrue(buttonClassFinal == null || !buttonClassFinal.contains("active"),
+                "Case 8 Negative: Kaydetme kaldırıldıktan sonra buton active olmamalı");
             }
             
             System.out.println("Case 8 Negative: Kaydetme toggle işlevi başarıyla test edildi");

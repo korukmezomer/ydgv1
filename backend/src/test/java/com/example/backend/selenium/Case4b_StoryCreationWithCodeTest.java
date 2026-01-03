@@ -34,8 +34,11 @@ public class Case4b_StoryCreationWithCodeTest extends BaseSeleniumTest {
     public void case4b_StoryCreationWithCode() {
         try {
             // Önce WRITER rolünde kullanıcı kaydı yap (BaseSeleniumTest'teki registerWriter metodunu kullan)
+            // Email çakışmasını önlemek için timestamp + random kullan
             Random random = new Random();
-            String randomSuffix = String.valueOf(random.nextInt(10000));
+            long timestamp = System.currentTimeMillis();
+            int randomNum = random.nextInt(10000);
+            String randomSuffix = timestamp + "_" + randomNum;
             String email = "writer" + randomSuffix + "@example.com";
             String username = "writer" + randomSuffix;
             
@@ -183,8 +186,11 @@ public class Case4b_StoryCreationWithCodeTest extends BaseSeleniumTest {
     public void case4b_MultipleBlocksAfterCode() {
         try {
             // 1. WRITER olarak kayıt ol (BaseSeleniumTest'teki registerWriter metodunu kullan)
+            // Email çakışmasını önlemek için timestamp + random kullan
             Random random = new Random();
-            String randomSuffix = String.valueOf(random.nextInt(10000));
+            long timestamp = System.currentTimeMillis();
+            int randomNum = random.nextInt(10000);
+            String randomSuffix = timestamp + "_" + randomNum;
             String email = "writer" + randomSuffix + "@example.com";
             String username = "writer" + randomSuffix;
             
