@@ -70,11 +70,15 @@ pipeline {
                     sh '''
                         # Unit testleri çalıştır (Selenium ve Integration hariç)
                         # Tüm unit test pattern'lerini kullan (Service, Util, Config, Entity, DTO, Exception, Provider, Initializer, vb.)
-                        mvn test jacoco:report \
-                            -Dtest="*ServiceImplTest,*PojoTest,*UtilTest,*ConfigTest,*ExceptionTest,*FilterTest,*HandlerTest,*EntityTest,*ProviderTest,*InitializerTest" \
-                            -DfailIfNoTests=false \
+                        # Önce JaCoCo agent'ı hazırla
+                        mvn jacoco:prepare-agent \
                             -Djacoco.destFile=target/jacoco-unit.exec \
-                            -Djacoco.propertyName=surefireArgLine || true
+                            -Djacoco.propertyName=surefireArgLine
+                        
+                        # Sonra testleri çalıştır
+                        mvn test \
+                            -Dtest="*ServiceImplTest,*PojoTest,*UtilTest,*ConfigTest,*ExceptionTest,*FilterTest,*HandlerTest,*EntityTest,*ProviderTest,*InitializerTest" \
+                            -DfailIfNoTests=false || true
                         
                         # Exec dosyasını kontrol et
                         if [ -f "target/jacoco-unit.exec" ]; then
@@ -115,12 +119,16 @@ pipeline {
                 dir('backend') {
                     // Integration testleri çalıştır ve exec dosyasını ayrı kaydet
                     sh '''
-                        mvn test jacoco:report -Dtest="*IntegrationTest" \
+                        # Önce JaCoCo agent'ı hazırla
+                        mvn jacoco:prepare-agent \
+                            -Djacoco.destFile=target/jacoco-integration.exec \
+                            -Djacoco.propertyName=surefireArgLine
+                        
+                        # Sonra testleri çalıştır
+                        mvn test -Dtest="*IntegrationTest" \
                             -Dspring.datasource.url=jdbc:postgresql://postgres:5432/yazilimdogrulama_test \
                             -Dspring.datasource.username=postgres \
-                            -Dspring.datasource.password=postgres \
-                            -Djacoco.destFile=target/jacoco-integration.exec \
-                            -Djacoco.propertyName=surefireArgLine || true
+                            -Dspring.datasource.password=postgres || true
                         
                         # Exec dosyasını kontrol et
                         if [ -f "target/jacoco-integration.exec" ]; then
@@ -188,18 +196,22 @@ pipeline {
                         echo "Test pattern: com.example.backend.selenium.*Test"
                         mvn test-compile -Dtest="com.example.backend.selenium.*Test" 2>&1 | tail -20 || echo "⚠️ Test compile hatası"
                         
+                        # Önce JaCoCo agent'ı hazırla
+                        echo "🔧 JaCoCo agent hazırlanıyor..."
+                        mvn jacoco:prepare-agent \
+                            -Djacoco.destFile=target/jacoco-selenium.exec \
+                            -Djacoco.propertyName=surefireArgLine
+                        
                         # Testleri çalıştır (hata olsa bile devam et, ama hataları göster)
                         echo "🚀 Selenium testleri başlatılıyor..."
                         set +e  # Hata durumunda script devam etsin
-                        mvn test jacoco:report -Dtest="com.example.backend.selenium.*Test" -Dselenium.headless=true \
+                        mvn test -Dtest="com.example.backend.selenium.*Test" -Dselenium.headless=true \
                             -Dfrontend.url="${FRONTEND_URL}" \
                             -Dbackend.url="${BACKEND_URL}" \
                             -Dtest.db.url="${TEST_DB_URL}" \
                             -Dtest.db.user="${TEST_DB_USER}" \
                             -Dtest.db.password="${TEST_DB_PASSWORD}" \
-                            -DfailIfNoTests=false \
-                            -Djacoco.destFile=target/jacoco-selenium.exec \
-                            -Djacoco.propertyName=surefireArgLine 2>&1 | tee maven-test-output.log
+                            -DfailIfNoTests=false 2>&1 | tee maven-test-output.log
                         MVN_EXIT_CODE=$?
                         set -e
                         

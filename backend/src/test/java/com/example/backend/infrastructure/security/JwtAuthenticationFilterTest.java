@@ -88,7 +88,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void testDoFilterInternal_InvalidToken() throws ServletException, IOException {
-        String token = "invalid.token.here";
+        String token = "not-a-jwt-token";
         String email = "test@example.com";
 
         request = new MockHttpServletRequest();
@@ -147,7 +147,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void testDoFilterInternal_ExceptionDuringTokenExtraction() throws ServletException, IOException {
-        String token = "invalid.token.here";
+        String token = "not-a-jwt-token";
 
         request = new MockHttpServletRequest();
         ((MockHttpServletRequest) request).addHeader("Authorization", "Bearer " + token);
