@@ -306,14 +306,44 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         // Artı butonunu bul (retry logic ile)
         WebElement addButton = findAddButtonWithRetry(textBlock, actions);
         safeClick(addButton);
-        Thread.sleep(1000);
+        Thread.sleep(1500); // Menü açılması için daha fazla bekle
         
-        WebElement imageMenuButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".block-add-menu button[title='Resim'], .block-add-menu button:nth-child(1)")
-            )
-        );
-        imageMenuButton.click();
+        // Resim butonunu bul (retry logic ile)
+        WebElement imageMenuButton = null;
+        int retries = 5;
+        for (int i = 0; i < retries; i++) {
+            try {
+                imageMenuButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.cssSelector(".block-add-menu button[title='Resim'], .block-add-menu button:nth-child(1)")
+                    )
+                );
+                break;
+            } catch (org.openqa.selenium.TimeoutException e) {
+                if (i < retries - 1) {
+                    System.out.println("Resim butonu bulunamadı, tekrar deneniyor... (" + (i + 1) + "/" + retries + ")");
+                    Thread.sleep(1000);
+                    // Menüyü tekrar açmayı dene
+                    try {
+                        WebElement retryAddButton = driver.findElement(
+                            By.cssSelector(".block-add-button.visible, .editor-block .block-add-button.visible")
+                        );
+                        safeClick(retryAddButton);
+                        Thread.sleep(1000);
+                    } catch (Exception ex) {
+                        // Ignore
+                    }
+                } else {
+                    throw e;
+                }
+            }
+        }
+        
+        if (imageMenuButton == null) {
+            throw new RuntimeException("Resim butonu bulunamadı");
+        }
+        
+        safeClick(imageMenuButton);
         Thread.sleep(2000);
         
         // File input'u bul
@@ -381,7 +411,7 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         // Artı butonunu bul (retry logic ile)
         WebElement addButton = findAddButtonWithRetry(textBlock, actions);
         safeClick(addButton);
-        Thread.sleep(1000);
+        Thread.sleep(1500); // Menü açılması için daha fazla bekle
         
         // Prompt'u ÖNCE override et
         ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
@@ -389,12 +419,42 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         );
         Thread.sleep(500);
         
-        WebElement videoMenuButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".block-add-menu button[title='Video'], .block-add-menu button:nth-child(3)")
-            )
-        );
-        videoMenuButton.click();
+        // Video butonunu bul (retry logic ile)
+        WebElement videoMenuButton = null;
+        int retries = 5;
+        for (int i = 0; i < retries; i++) {
+            try {
+                videoMenuButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.cssSelector(".block-add-menu button[title='Video'], .block-add-menu button:nth-child(3)")
+                    )
+                );
+                break;
+            } catch (org.openqa.selenium.TimeoutException e) {
+                if (i < retries - 1) {
+                    System.out.println("Video butonu bulunamadı, tekrar deneniyor... (" + (i + 1) + "/" + retries + ")");
+                    Thread.sleep(1000);
+                    // Menüyü tekrar açmayı dene
+                    try {
+                        WebElement retryAddButton = driver.findElement(
+                            By.cssSelector(".block-add-button.visible, .editor-block .block-add-button.visible")
+                        );
+                        safeClick(retryAddButton);
+                        Thread.sleep(1000);
+                    } catch (Exception ex) {
+                        // Ignore
+                    }
+                } else {
+                    throw e;
+                }
+            }
+        }
+        
+        if (videoMenuButton == null) {
+            throw new RuntimeException("Video butonu bulunamadı");
+        }
+        
+        safeClick(videoMenuButton);
         Thread.sleep(2000);
         
         // Eğer alert açıldıysa handle et
@@ -428,7 +488,7 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         // Artı butonunu bul (retry logic ile)
         WebElement addButton = findAddButtonWithRetry(textBlock, actions);
         safeClick(addButton);
-        Thread.sleep(1000);
+        Thread.sleep(1500); // Menü açılması için daha fazla bekle
         
         // Prompt'u ÖNCE override et
         ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
@@ -436,12 +496,42 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         );
         Thread.sleep(500);
         
-        WebElement embedMenuButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".block-add-menu button[title='Gömülü İçerik'], .block-add-menu button:nth-child(5)")
-            )
-        );
-        embedMenuButton.click();
+        // Gömülü içerik butonunu bul (retry logic ile)
+        WebElement embedMenuButton = null;
+        int retries = 5;
+        for (int i = 0; i < retries; i++) {
+            try {
+                embedMenuButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.cssSelector(".block-add-menu button[title='Gömülü İçerik'], .block-add-menu button:nth-child(5)")
+                    )
+                );
+                break;
+            } catch (org.openqa.selenium.TimeoutException e) {
+                if (i < retries - 1) {
+                    System.out.println("Gömülü içerik butonu bulunamadı, tekrar deneniyor... (" + (i + 1) + "/" + retries + ")");
+                    Thread.sleep(1000);
+                    // Menüyü tekrar açmayı dene
+                    try {
+                        WebElement retryAddButton = driver.findElement(
+                            By.cssSelector(".block-add-button.visible, .editor-block .block-add-button.visible")
+                        );
+                        safeClick(retryAddButton);
+                        Thread.sleep(1000);
+                    } catch (Exception ex) {
+                        // Ignore
+                    }
+                } else {
+                    throw e;
+                }
+            }
+        }
+        
+        if (embedMenuButton == null) {
+            throw new RuntimeException("Gömülü içerik butonu bulunamadı");
+        }
+        
+        safeClick(embedMenuButton);
         Thread.sleep(2000);
         
         // Eğer alert açıldıysa handle et
@@ -541,14 +631,44 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         // Artı butonunu bul (retry logic ile)
         WebElement addButton = findAddButtonWithRetry(textBlock, actions);
         safeClick(addButton);
-        Thread.sleep(1000);
+        Thread.sleep(1500); // Menü açılması için daha fazla bekle
         
-        WebElement listMenuButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".block-add-menu button[title='Liste'], .block-add-menu button:nth-child(6)")
-            )
-        );
-        listMenuButton.click();
+        // Liste butonunu bul (retry logic ile)
+        WebElement listMenuButton = null;
+        int retries = 5;
+        for (int i = 0; i < retries; i++) {
+            try {
+                listMenuButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.cssSelector(".block-add-menu button[title='Liste'], .block-add-menu button:nth-child(6)")
+                    )
+                );
+                break;
+            } catch (org.openqa.selenium.TimeoutException e) {
+                if (i < retries - 1) {
+                    System.out.println("Liste butonu bulunamadı, tekrar deneniyor... (" + (i + 1) + "/" + retries + ")");
+                    Thread.sleep(1000);
+                    // Menüyü tekrar açmayı dene
+                    try {
+                        WebElement retryAddButton = driver.findElement(
+                            By.cssSelector(".block-add-button.visible, .editor-block .block-add-button.visible")
+                        );
+                        safeClick(retryAddButton);
+                        Thread.sleep(1000);
+                    } catch (Exception ex) {
+                        // Ignore
+                    }
+                } else {
+                    throw e;
+                }
+            }
+        }
+        
+        if (listMenuButton == null) {
+            throw new RuntimeException("Liste butonu bulunamadı");
+        }
+        
+        safeClick(listMenuButton);
         Thread.sleep(2000);
         
         for (int i = 0; i < items.length; i++) {

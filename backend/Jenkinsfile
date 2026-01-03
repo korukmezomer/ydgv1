@@ -353,9 +353,12 @@ pipeline {
                         fi
                         
                         if [ -z "${EXEC_FILES}" ]; then
-                            echo "⚠️ Hiç exec dosyası bulunamadı, tüm testleri çalıştırıp rapor oluşturuyoruz..."
-                            # Fallback: Tüm testleri çalıştır
-                            mvn test jacoco:report -Dtest="*Test" -DfailIfNoTests=false || echo "Test hatası olsa bile rapor oluşturulmaya çalışılıyor"
+                            echo "❌ Hiç exec dosyası bulunamadı!"
+                            echo "⚠️ Testler daha önce çalıştırılmış olmalıydı. Exec dosyaları kontrol ediliyor..."
+                            echo "📂 target klasörü içeriği:"
+                            ls -la target/ | grep -E "(jacoco|exec)" || echo "jacoco/exec dosyası bulunamadı"
+                            echo "⚠️ Exec dosyası olmadan rapor oluşturulamaz. Test aşamalarını kontrol edin."
+                            exit 1
                         else
                             echo "📦 Exec dosyaları birleştiriliyor..."
                             # pom.xml'de merge execution tanımlı, jacoco:merge@merge çağırarak birleştir
@@ -367,6 +370,9 @@ pipeline {
                                 if [ -f "${FIRST_FILE}" ]; then
                                     cp "${FIRST_FILE}" target/jacoco.exec
                                     echo "⚠️ Sadece ilk exec dosyası kullanıldı: ${FIRST_FILE}"
+                                else
+                                    echo "❌ Exec dosyaları birleştirilemedi ve alternatif yöntem de başarısız oldu"
+                                    exit 1
                                 fi
                             }
                             
@@ -374,14 +380,14 @@ pipeline {
                                 echo "✅ Exec dosyaları birleştirildi: target/jacoco.exec"
                                 ls -lh target/jacoco.exec
                                 
-                                # Birleştirilmiş exec dosyasından rapor oluştur
+                                # Birleştirilmiş exec dosyasından rapor oluştur (testleri çalıştırmadan)
                                 echo "📊 Birleştirilmiş exec dosyasından rapor oluşturuluyor..."
-                                mvn jacoco:report -DskipTests=true -Djacoco.dataFile=target/jacoco.exec
+                                mvn jacoco:report -DskipTests=true -Dmaven.test.skip=true -Djacoco.dataFile=target/jacoco.exec
                                 echo "✅ Coverage raporu oluşturuldu"
                             else
-                                echo "❌ Exec dosyaları birleştirilemedi, fallback yöntemi kullanılıyor..."
-                                # Fallback: Tüm testleri çalıştır
-                                mvn test jacoco:report -Dtest="*Test" -DfailIfNoTests=false || echo "Test hatası olsa bile rapor oluşturulmaya çalışılıyor"
+                                echo "❌ Exec dosyaları birleştirilemedi"
+                                echo "⚠️ Test aşamalarını kontrol edin. Exec dosyaları oluşturulmuş olmalıydı."
+                                exit 1
                             fi
                         fi
                     '''

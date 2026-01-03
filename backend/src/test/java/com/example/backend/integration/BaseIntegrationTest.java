@@ -42,10 +42,12 @@ public abstract class BaseIntegrationTest {
         
         // Other required properties
         registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+        // update kullan (create-drop yerine) - testler arasında context yüklenememe sorununu önler
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "update");
         registry.add("spring.jpa.show-sql", () -> "true");
         registry.add("spring.jpa.properties.hibernate.dialect", () -> "org.hibernate.dialect.PostgreSQLDialect");
         registry.add("spring.jpa.properties.hibernate.format_sql", () -> "true");
+        registry.add("spring.jpa.defer-datasource-initialization", () -> "true");
         registry.add("jwt.secret", () -> "test-secret-key-for-integration-tests-minimum-256-bits-required-here");
         registry.add("jwt.expiration", () -> "86400000");
         registry.add("file.upload-dir", () -> "test-uploads");
