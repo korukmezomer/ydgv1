@@ -475,14 +475,44 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         // Artı butonunu bul (retry logic ile)
         WebElement addButton = findAddButtonWithRetry(textBlock, actions);
         safeClick(addButton);
-        Thread.sleep(1000);
+        Thread.sleep(1500); // Menü açılması için daha fazla bekle
         
-        WebElement headingMenuButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".block-add-menu button[title='Başlık'], .block-add-menu button:nth-child(2)")
-            )
-        );
-        headingMenuButton.click();
+        // Başlık butonunu bul (retry logic ile)
+        WebElement headingMenuButton = null;
+        int retries = 5;
+        for (int i = 0; i < retries; i++) {
+            try {
+                headingMenuButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.cssSelector(".block-add-menu button[title='Başlık'], .block-add-menu button:nth-child(2)")
+                    )
+                );
+                break;
+            } catch (org.openqa.selenium.TimeoutException e) {
+                if (i < retries - 1) {
+                    System.out.println("Başlık butonu bulunamadı, tekrar deneniyor... (" + (i + 1) + "/" + retries + ")");
+                    Thread.sleep(1000);
+                    // Menüyü tekrar açmayı dene
+                    try {
+                        WebElement retryAddButton = driver.findElement(
+                            By.cssSelector(".block-add-button.visible, .editor-block .block-add-button.visible")
+                        );
+                        safeClick(retryAddButton);
+                        Thread.sleep(1000);
+                    } catch (Exception ex) {
+                        // Ignore
+                    }
+                } else {
+                    throw e;
+                }
+            }
+        }
+        
+        if (headingMenuButton == null) {
+            throw new RuntimeException("Başlık butonu bulunamadı");
+        }
+        
+        safeClick(headingMenuButton);
         Thread.sleep(1000);
         
         WebElement headingInput = wait.until(

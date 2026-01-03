@@ -194,7 +194,7 @@ public class Case12a_AdminUserManagementTest extends BaseSeleniumTest {
             // Kullanıcıyı tekrar bul (pagination ile)
             userRow = null;
             currentPage = 0;
-            maxPages = 10;
+            maxPages = 50; // Maksimum 50 sayfa kontrol et (pagination tersine çevrildiği için daha fazla sayfa gerekebilir)
             
             while (currentPage < maxPages && userRow == null) {
                 try {
@@ -298,7 +298,7 @@ public class Case12a_AdminUserManagementTest extends BaseSeleniumTest {
             
             WebElement userElement = null;
             int currentPage = 0;
-            int maxPages = 10; // Maksimum 10 sayfa kontrol et
+            int maxPages = 50; // Maksimum 50 sayfa kontrol et (pagination tersine çevrildiği için daha fazla sayfa gerekebilir)
             
             while (currentPage < maxPages && userElement == null) {
                 try {

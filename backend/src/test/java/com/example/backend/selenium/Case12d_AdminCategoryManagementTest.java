@@ -466,12 +466,52 @@ public class Case12d_AdminCategoryManagementTest extends BaseSeleniumTest {
             
             Thread.sleep(2000);
             
-            // 4. Kategoriyi bul ve sil
-            WebElement categoryRow = wait.until(
-                ExpectedConditions.presenceOfElementLocated(
-                    By.xpath("//tr[.//td[contains(text(), '" + categoryName + "')]]")
-                )
-            );
+            // 4. Kategoriyi bul ve sil (pagination ile arama yap)
+            WebElement categoryRow = null;
+            int currentPage = 0;
+            int maxPages = 50; // Maksimum 50 sayfa kontrol et
+            
+            while (currentPage < maxPages && categoryRow == null) {
+                try {
+                    categoryRow = wait.until(
+                        ExpectedConditions.presenceOfElementLocated(
+                            By.xpath("//tr[.//td[contains(text(), '" + categoryName + "')]]")
+                        )
+                    );
+                    System.out.println("Kategori bulundu (sayfa " + (currentPage + 1) + "): " + categoryName);
+                    break;
+                } catch (org.openqa.selenium.TimeoutException e) {
+                    // Kategori bu sayfada bulunamadı, sonraki sayfaya geç
+                    try {
+                        WebElement nextButton = driver.findElement(
+                            By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki')]")
+                        );
+                        
+                        // Buton disabled mı kontrol et
+                        if (nextButton.getAttribute("disabled") != null) {
+                            // Son sayfaya ulaşıldı
+                            System.out.println("Son sayfaya ulaşıldı, kategori bulunamadı");
+                            break;
+                        }
+                        
+                        // Sonraki sayfaya git
+                        System.out.println("Sonraki sayfaya geçiliyor... (sayfa " + (currentPage + 2) + ")");
+                        safeClick(nextButton);
+                        wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+                        Thread.sleep(2000);
+                        currentPage++;
+                    } catch (org.openqa.selenium.NoSuchElementException ex) {
+                        // Pagination butonu yok, son sayfadayız
+                        System.out.println("Pagination butonu yok, son sayfadayız");
+                        break;
+                    }
+                }
+            }
+            
+            if (categoryRow == null) {
+                fail("Case 12d Negative: Kategori bulunamadı: " + categoryName);
+                return;
+            }
             
             // Sil butonunu bul ve tıkla
             WebElement deleteButton = categoryRow.findElement(
@@ -494,14 +534,53 @@ public class Case12d_AdminCategoryManagementTest extends BaseSeleniumTest {
             driver.navigate().refresh();
             Thread.sleep(3000);
             
-            // Kategorinin silindiğini kontrol et (artık listede görünmemeli)
-            try {
-                driver.findElement(
-                    By.xpath("//tr[.//td[contains(text(), '" + categoryName + "')]]")
-                );
-                // Hala görünüyorsa test başarısız
+            // Kategorinin silindiğini kontrol et (artık listede görünmemeli) - pagination ile tüm sayfaları kontrol et
+            boolean categoryFound = false;
+            currentPage = 0;
+            maxPages = 50;
+            
+            // İlk sayfaya dön
+            driver.navigate().refresh();
+            Thread.sleep(3000);
+            waitForPageLoad();
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+            Thread.sleep(2000);
+            
+            while (currentPage < maxPages && !categoryFound) {
+                try {
+                    WebElement foundCategory = driver.findElement(
+                        By.xpath("//tr[.//td[contains(text(), '" + categoryName + "')]]")
+                    );
+                    // Kategori bulundu, hala listede görünüyor
+                    categoryFound = true;
+                    System.out.println("Kategori hala listede görünüyor (sayfa " + (currentPage + 1) + ")");
+                    break;
+                } catch (org.openqa.selenium.NoSuchElementException e) {
+                    // Kategori bu sayfada yok, sonraki sayfaya geç
+                    try {
+                        WebElement nextButton = driver.findElement(
+                            By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki')]")
+                        );
+                        
+                        if (nextButton.getAttribute("disabled") != null) {
+                            // Son sayfaya ulaşıldı, kategori bulunamadı (silindi)
+                            break;
+                        }
+                        
+                        safeClick(nextButton);
+                        wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+                        Thread.sleep(2000);
+                        currentPage++;
+                    } catch (org.openqa.selenium.NoSuchElementException ex) {
+                        // Pagination butonu yok, son sayfadayız
+                        break;
+                    }
+                }
+            }
+            
+            if (categoryFound) {
                 fail("Case 12d Negative: Kategori silinmedi (hala listede görünüyor)");
-            } catch (org.openqa.selenium.NoSuchElementException e) {
+            } else {
                 // Kategori bulunamadı - bu beklenen davranış (silindi)
                 assertTrue(true, "Case 12d Negative: Kategori başarıyla silindi");
             }
