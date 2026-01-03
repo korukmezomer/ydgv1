@@ -474,10 +474,10 @@ public class Case12d_AdminCategoryManagementTest extends BaseSeleniumTest {
             while (currentPage < maxPages && categoryRow == null) {
                 try {
                     categoryRow = wait.until(
-                        ExpectedConditions.presenceOfElementLocated(
-                            By.xpath("//tr[.//td[contains(text(), '" + categoryName + "')]]")
-                        )
-                    );
+                ExpectedConditions.presenceOfElementLocated(
+                    By.xpath("//tr[.//td[contains(text(), '" + categoryName + "')]]")
+                )
+            );
                     System.out.println("Kategori bulundu (sayfa " + (currentPage + 1) + "): " + categoryName);
                     break;
                 } catch (org.openqa.selenium.TimeoutException e) {
@@ -549,8 +549,8 @@ public class Case12d_AdminCategoryManagementTest extends BaseSeleniumTest {
             while (currentPage < maxPages && !categoryFound) {
                 try {
                     WebElement foundCategory = driver.findElement(
-                        By.xpath("//tr[.//td[contains(text(), '" + categoryName + "')]]")
-                    );
+                    By.xpath("//tr[.//td[contains(text(), '" + categoryName + "')]]")
+                );
                     // Kategori bulundu, hala listede görünüyor
                     categoryFound = true;
                     System.out.println("Kategori hala listede görünüyor (sayfa " + (currentPage + 1) + ")");

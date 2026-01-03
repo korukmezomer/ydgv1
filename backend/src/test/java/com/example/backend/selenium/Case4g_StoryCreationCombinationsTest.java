@@ -314,10 +314,10 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         for (int i = 0; i < retries; i++) {
             try {
                 imageMenuButton = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        By.cssSelector(".block-add-menu button[title='Resim'], .block-add-menu button:nth-child(1)")
-                    )
-                );
+            ExpectedConditions.elementToBeClickable(
+                By.cssSelector(".block-add-menu button[title='Resim'], .block-add-menu button:nth-child(1)")
+            )
+        );
                 break;
             } catch (org.openqa.selenium.TimeoutException e) {
                 if (i < retries - 1) {
@@ -425,10 +425,10 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         for (int i = 0; i < retries; i++) {
             try {
                 videoMenuButton = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        By.cssSelector(".block-add-menu button[title='Video'], .block-add-menu button:nth-child(3)")
-                    )
-                );
+            ExpectedConditions.elementToBeClickable(
+                By.cssSelector(".block-add-menu button[title='Video'], .block-add-menu button:nth-child(3)")
+            )
+        );
                 break;
             } catch (org.openqa.selenium.TimeoutException e) {
                 if (i < retries - 1) {
@@ -502,10 +502,10 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         for (int i = 0; i < retries; i++) {
             try {
                 embedMenuButton = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        By.cssSelector(".block-add-menu button[title='Gömülü İçerik'], .block-add-menu button:nth-child(5)")
-                    )
-                );
+            ExpectedConditions.elementToBeClickable(
+                By.cssSelector(".block-add-menu button[title='Gömülü İçerik'], .block-add-menu button:nth-child(5)")
+            )
+        );
                 break;
             } catch (org.openqa.selenium.TimeoutException e) {
                 if (i < retries - 1) {
@@ -573,10 +573,10 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         for (int i = 0; i < retries; i++) {
             try {
                 headingMenuButton = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        By.cssSelector(".block-add-menu button[title='Başlık'], .block-add-menu button:nth-child(2)")
-                    )
-                );
+            ExpectedConditions.elementToBeClickable(
+                By.cssSelector(".block-add-menu button[title='Başlık'], .block-add-menu button:nth-child(2)")
+            )
+        );
                 break;
             } catch (org.openqa.selenium.TimeoutException e) {
                 if (i < retries - 1) {
@@ -639,10 +639,10 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
         for (int i = 0; i < retries; i++) {
             try {
                 listMenuButton = wait.until(
-                    ExpectedConditions.elementToBeClickable(
-                        By.cssSelector(".block-add-menu button[title='Liste'], .block-add-menu button:nth-child(6)")
-                    )
-                );
+            ExpectedConditions.elementToBeClickable(
+                By.cssSelector(".block-add-menu button[title='Liste'], .block-add-menu button:nth-child(6)")
+            )
+        );
                 break;
             } catch (org.openqa.selenium.TimeoutException e) {
                 if (i < retries - 1) {
