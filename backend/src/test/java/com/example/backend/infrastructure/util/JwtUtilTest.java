@@ -167,7 +167,8 @@ class JwtUtilTest {
 
     @Test
     void testExtractEmailFromInvalidToken() {
-        String invalidToken = "invalid.token.here";
+        // Use completely invalid token format (not JWT format at all)
+        String invalidToken = "not-a-jwt-token";
         String email = jwtUtil.extractEmail(invalidToken);
 
         assertNull(email);
@@ -175,7 +176,8 @@ class JwtUtilTest {
 
     @Test
     void testExtractUserIdFromInvalidToken() {
-        String invalidToken = "invalid.token.here";
+        // Use completely invalid token format (not JWT format at all)
+        String invalidToken = "not-a-jwt-token";
         Long userId = jwtUtil.extractUserId(invalidToken);
 
         assertNull(userId);
@@ -183,7 +185,8 @@ class JwtUtilTest {
 
     @Test
     void testExtractRolesFromInvalidToken() {
-        String invalidToken = "invalid.token.here";
+        // Use completely invalid token format (not JWT format at all)
+        String invalidToken = "not-a-jwt-token";
         List<String> roles = jwtUtil.extractRoles(invalidToken);
 
         assertNotNull(roles);
@@ -192,7 +195,8 @@ class JwtUtilTest {
 
     @Test
     void testValidateTokenWithInvalidToken() {
-        String invalidToken = "invalid.token.here";
+        // Use completely invalid token format (not JWT format at all)
+        String invalidToken = "not-a-jwt-token";
         boolean isValid = jwtUtil.validateToken(invalidToken, "test@example.com");
 
         assertFalse(isValid);
@@ -200,7 +204,8 @@ class JwtUtilTest {
 
     @Test
     void testExtractExpirationFromInvalidToken() {
-        String invalidToken = "invalid.token.here";
+        // Use completely invalid token format (not JWT format at all)
+        String invalidToken = "not-a-jwt-token";
         Date expiration = jwtUtil.extractExpiration(invalidToken);
 
         assertNull(expiration);
@@ -209,7 +214,8 @@ class JwtUtilTest {
     @Test
     void testIsTokenExpiredWithNullExpiration() {
         // This tests the branch where extractExpiration returns null
-        String invalidToken = "invalid.token.here";
+        // Use completely invalid token format (not JWT format at all)
+        String invalidToken = "not-a-jwt-token";
         boolean isExpired = jwtUtil.isTokenExpired(invalidToken);
 
         assertTrue(isExpired);
@@ -265,7 +271,8 @@ class JwtUtilTest {
         // We can't directly test this with generateToken, but we can test the extractRoles
         // method with a manually crafted token claim structure
         // For now, we'll test that extractRoles handles invalid tokens gracefully
-        String invalidToken = "invalid.token.here";
+        // Use completely invalid token format (not JWT format at all)
+        String invalidToken = "not-a-jwt-token";
         List<String> roles = jwtUtil.extractRoles(invalidToken);
 
         assertNotNull(roles);
@@ -286,7 +293,8 @@ class JwtUtilTest {
     @Test
     void testExtractClaimWithException() {
         // Test exception handling in extractClaim
-        String invalidToken = "invalid.token.here";
+        // Use completely invalid token format (not JWT format at all)
+        String invalidToken = "not-a-jwt-token";
         
         assertThrows(RuntimeException.class, () -> {
             jwtUtil.extractClaim(invalidToken, claims -> claims.get("test", String.class));
@@ -299,7 +307,8 @@ class JwtUtilTest {
         // extractEmail exception fırlatmıyor (null döndürüyor)
         // extractRoles de exception fırlatmıyor (boş liste döndürüyor)
         // extractClaim public method ve extractAllClaims'i çağırıyor, exception fırlatıyor
-        String invalidToken = "invalid.token.here";
+        // Use completely invalid token format (not JWT format at all)
+        String invalidToken = "not-a-jwt-token";
         
         // extractClaim extractAllClaims'i çağırır ve exception fırlatır
         assertThrows(RuntimeException.class, () -> {
@@ -326,7 +335,8 @@ class JwtUtilTest {
     @Test
     void testValidateTokenWithException() {
         // Test exception handling in validateToken
-        String invalidToken = "invalid.token.here";
+        // Use completely invalid token format (not JWT format at all)
+        String invalidToken = "not-a-jwt-token";
         boolean isValid = jwtUtil.validateToken(invalidToken, "test@example.com");
 
         assertFalse(isValid);
