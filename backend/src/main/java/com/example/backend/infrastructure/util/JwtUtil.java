@@ -2,6 +2,7 @@ package com.example.backend.infrastructure.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,9 @@ public class JwtUtil {
     public String extractEmail(String token) {
         try {
             return extractClaim(token, Claims::getSubject);
+        } catch (MalformedJwtException e) {
+            logger.debug("Invalid JWT format while extracting email (expected in tests): {}", e.getMessage());
+            return null;
         } catch (Exception e) {
             logger.error("Error extracting email from token", e);
             return null;
@@ -62,6 +66,9 @@ public class JwtUtil {
     public Long extractUserId(String token) {
         try {
             return extractClaim(token, claims -> claims.get("userId", Long.class));
+        } catch (MalformedJwtException e) {
+            logger.debug("Invalid JWT format while extracting user ID (expected in tests): {}", e.getMessage());
+            return null;
         } catch (Exception e) {
             logger.error("Error extracting user ID from token", e);
             return null;
@@ -71,6 +78,9 @@ public class JwtUtil {
     public Date extractExpiration(String token) {
         try {
             return extractClaim(token, Claims::getExpiration);
+        } catch (MalformedJwtException e) {
+            logger.debug("Invalid JWT format while extracting expiration (expected in tests): {}", e.getMessage());
+            return null;
         } catch (Exception e) {
             logger.error("Error extracting expiration from token", e);
             return null;
@@ -81,6 +91,9 @@ public class JwtUtil {
         try {
             final Claims claims = extractAllClaims(token);
             return claimsResolver.apply(claims);
+        } catch (MalformedJwtException e) {
+            logger.debug("Invalid JWT format while extracting claim (expected in tests): {}", e.getMessage());
+            throw new RuntimeException("Token'dan claim çıkarılırken hata oluştu", e);
         } catch (Exception e) {
             logger.error("Error extracting claim from token", e);
             throw new RuntimeException("Token'dan claim çıkarılırken hata oluştu", e);
@@ -94,6 +107,9 @@ public class JwtUtil {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
+        } catch (MalformedJwtException e) {
+            logger.debug("Invalid JWT format while parsing claims (expected in tests): {}", e.getMessage());
+            throw new RuntimeException("Token parse edilemedi", e);
         } catch (Exception e) {
             logger.error("Error parsing token claims", e);
             throw new RuntimeException("Token parse edilemedi", e);
@@ -107,6 +123,9 @@ public class JwtUtil {
                 return true;
             }
             return expiration.before(new Date());
+        } catch (MalformedJwtException e) {
+            logger.debug("Invalid JWT format while checking expiration (expected in tests): {}", e.getMessage());
+            return true;
         } catch (Exception e) {
             logger.error("Error checking token expiration", e);
             return true;
@@ -117,12 +136,15 @@ public class JwtUtil {
         try {
             final String tokenEmail = extractEmail(token);
             if (tokenEmail == null) {
-                logger.warn("Token email is null");
+                logger.debug("Token email is null (expected for invalid tokens in tests)");
                 return false;
             }
             boolean isValid = tokenEmail.equals(email) && !isTokenExpired(token);
             logger.debug("Token validation result for email {}: {}", email, isValid);
             return isValid;
+        } catch (MalformedJwtException e) {
+            logger.debug("Invalid JWT format while validating token (expected in tests): {}", e.getMessage());
+            return false;
         } catch (Exception e) {
             logger.error("Error validating token for email: {}", email, e);
             return false;
@@ -161,6 +183,8 @@ public class JwtUtil {
             } else {
                 logger.warn("No roles found in token claims");
             }
+        } catch (MalformedJwtException e) {
+            logger.debug("Invalid JWT format while extracting roles (expected in tests): {}", e.getMessage());
         } catch (Exception e) {
             logger.error("Error extracting roles from token", e);
         }

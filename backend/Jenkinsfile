@@ -70,13 +70,10 @@ pipeline {
                     sh '''
                         # Unit testleri çalıştır (Selenium ve Integration hariç)
                         # Tüm unit test pattern'lerini kullan (Service, Util, Config, Entity, DTO, Exception, Provider, Initializer, vb.)
-                        # Önce JaCoCo agent'ı hazırla
-                        mvn jacoco:prepare-agent \
+                        # JaCoCo agent'ı hazırla ve testleri aynı komutta çalıştır
+                        mvn jacoco:prepare-agent test \
                             -Djacoco.destFile=target/jacoco-unit.exec \
-                            -Djacoco.propertyName=surefireArgLine
-                        
-                        # Sonra testleri çalıştır
-                        mvn test \
+                            -Djacoco.propertyName=argLine \
                             -Dtest="*ServiceImplTest,*PojoTest,*UtilTest,*ConfigTest,*ExceptionTest,*FilterTest,*HandlerTest,*EntityTest,*ProviderTest,*InitializerTest" \
                             -DfailIfNoTests=false || true
                         
@@ -119,13 +116,11 @@ pipeline {
                 dir('backend') {
                     // Integration testleri çalıştır ve exec dosyasını ayrı kaydet
                     sh '''
-                        # Önce JaCoCo agent'ı hazırla
-                        mvn jacoco:prepare-agent \
+                        # JaCoCo agent'ı hazırla ve testleri aynı komutta çalıştır
+                        mvn jacoco:prepare-agent test \
                             -Djacoco.destFile=target/jacoco-integration.exec \
-                            -Djacoco.propertyName=surefireArgLine
-                        
-                        # Sonra testleri çalıştır
-                        mvn test -Dtest="*IntegrationTest" \
+                            -Djacoco.propertyName=argLine \
+                            -Dtest="*IntegrationTest" \
                             -Dspring.datasource.url=jdbc:postgresql://postgres:5432/yazilimdogrulama_test \
                             -Dspring.datasource.username=postgres \
                             -Dspring.datasource.password=postgres || true
@@ -196,16 +191,14 @@ pipeline {
                         echo "Test pattern: com.example.backend.selenium.*Test"
                         mvn test-compile -Dtest="com.example.backend.selenium.*Test" 2>&1 | tail -20 || echo "⚠️ Test compile hatası"
                         
-                        # Önce JaCoCo agent'ı hazırla
-                        echo "🔧 JaCoCo agent hazırlanıyor..."
-                        mvn jacoco:prepare-agent \
-                            -Djacoco.destFile=target/jacoco-selenium.exec \
-                            -Djacoco.propertyName=surefireArgLine
-                        
-                        # Testleri çalıştır (hata olsa bile devam et, ama hataları göster)
-                        echo "🚀 Selenium testleri başlatılıyor..."
+                        # JaCoCo agent'ı hazırla ve testleri çalıştır
+                        echo "🔧 JaCoCo agent hazırlanıyor ve testler başlatılıyor..."
                         set +e  # Hata durumunda script devam etsin
-                        mvn test -Dtest="com.example.backend.selenium.*Test" -Dselenium.headless=true \
+                        mvn jacoco:prepare-agent test \
+                            -Djacoco.destFile=target/jacoco-selenium.exec \
+                            -Djacoco.propertyName=argLine \
+                            -Dtest="com.example.backend.selenium.*Test" \
+                            -Dselenium.headless=true \
                             -Dfrontend.url="${FRONTEND_URL}" \
                             -Dbackend.url="${BACKEND_URL}" \
                             -Dtest.db.url="${TEST_DB_URL}" \
