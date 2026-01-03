@@ -10,7 +10,6 @@ import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.Select;
 
 import java.util.Random;
 
@@ -260,51 +259,16 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
     
     // Helper methods
     private String registerWriter() throws Exception {
-        driver.get(BASE_URL + "/register");
-        waitForPageLoad();
-        
         Random random = new Random();
         String randomSuffix = String.valueOf(random.nextInt(10000));
         String email = "writer" + randomSuffix + "@example.com";
         String username = "writer" + randomSuffix;
         
-        WebElement firstNameInput = wait.until(
-            ExpectedConditions.presenceOfElementLocated(By.id("firstName"))
-        );
-        firstNameInput.sendKeys("Writer");
-        driver.findElement(By.id("lastName")).sendKeys("Test");
-        driver.findElement(By.id("email")).sendKeys(email);
-        driver.findElement(By.id("username")).sendKeys(username);
-        driver.findElement(By.id("password")).sendKeys("Test123456");
-        
-        WebElement roleSelectElement = wait.until(
-            ExpectedConditions.presenceOfElementLocated(By.id("roleName"))
-        );
-        Select roleSelect = new Select(roleSelectElement);
-        try {
-            roleSelect.selectByValue("WRITER");
-        } catch (Exception e) {
-            try {
-                roleSelect.selectByVisibleText("WRITER");
-            } catch (Exception e2) {
-                ((org.openqa.selenium.JavascriptExecutor) driver)
-                    .executeScript("arguments[0].value = 'WRITER';", roleSelectElement);
-            }
+        // BaseSeleniumTest'teki registerWriter metodunu kullan (React event'lerini doğru şekilde tetikler)
+        boolean registered = registerWriter("Writer", "Test", email, username, "Test123456");
+        if (!registered) {
+            throw new Exception("Kullanıcı kaydı başarısız oldu");
         }
-        
-        WebElement submitButton = wait.until(
-            ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']"))
-        );
-        WebElement form = driver.findElement(By.tagName("form"));
-        safeSubmitForm(submitButton, form);
-        
-        Thread.sleep(3000);
-        wait.until(ExpectedConditions.or(
-            ExpectedConditions.urlContains("/yazar/dashboard"),
-            ExpectedConditions.urlContains("/dashboard"),
-            ExpectedConditions.urlToBe(BASE_URL + "/")
-        ));
-        Thread.sleep(2000);
         
         return randomSuffix;
     }
@@ -327,16 +291,21 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
     }
     
     private void addImageBlock(WebElement textBlock, java.nio.file.Path imagePath) throws Exception {
+        // Text bloğunun boş olduğundan emin ol (artı butonu sadece boş text bloğunda görünür)
+        String textContent = textBlock.getAttribute("value");
+        if (textContent != null && !textContent.trim().isEmpty()) {
+            // Text bloğu dolu, boşalt
+            textBlock.clear();
+            Thread.sleep(500);
+        }
+        
         Actions actions = new Actions(driver);
         actions.moveToElement(textBlock).perform();
-        Thread.sleep(1000);
+        Thread.sleep(1500); // Hover sonrası artı butonunun görünür olması için bekle
         
-        WebElement addButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".block-add-button.visible, .editor-block .block-add-button.visible")
-            )
-        );
-        addButton.click();
+        // Artı butonunu bul (retry logic ile)
+        WebElement addButton = findAddButtonWithRetry(textBlock, actions);
+        safeClick(addButton);
         Thread.sleep(1000);
         
         WebElement imageMenuButton = wait.until(
@@ -397,16 +366,21 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
     }
     
     private void addVideoBlock(WebElement textBlock, String videoUrl) throws Exception {
+        // Text bloğunun boş olduğundan emin ol (artı butonu sadece boş text bloğunda görünür)
+        String textContent = textBlock.getAttribute("value");
+        if (textContent != null && !textContent.trim().isEmpty()) {
+            // Text bloğu dolu, boşalt
+            textBlock.clear();
+            Thread.sleep(500);
+        }
+        
         Actions actions = new Actions(driver);
         actions.moveToElement(textBlock).perform();
-        Thread.sleep(1000);
+        Thread.sleep(1500); // Hover sonrası artı butonunun görünür olması için bekle
         
-        WebElement addButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".block-add-button.visible, .editor-block .block-add-button.visible")
-            )
-        );
-        addButton.click();
+        // Artı butonunu bul (retry logic ile)
+        WebElement addButton = findAddButtonWithRetry(textBlock, actions);
+        safeClick(addButton);
         Thread.sleep(1000);
         
         // Prompt'u ÖNCE override et
@@ -440,16 +414,20 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
     }
     
     private void addEmbedBlock(WebElement textBlock, String embedUrl) throws Exception {
+        // Text bloğunun boş olduğundan emin ol (artı butonu sadece boş text bloğunda görünür)
+        String textContent = textBlock.getAttribute("value");
+        if (textContent != null && !textContent.trim().isEmpty()) {
+            textBlock.clear();
+            Thread.sleep(500);
+        }
+        
         Actions actions = new Actions(driver);
         actions.moveToElement(textBlock).perform();
-        Thread.sleep(1000);
+        Thread.sleep(1500);
         
-        WebElement addButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".block-add-button.visible, .editor-block .block-add-button.visible")
-            )
-        );
-        addButton.click();
+        // Artı butonunu bul (retry logic ile)
+        WebElement addButton = findAddButtonWithRetry(textBlock, actions);
+        safeClick(addButton);
         Thread.sleep(1000);
         
         // Prompt'u ÖNCE override et
@@ -483,16 +461,20 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
     }
     
     private void addHeadingBlock(WebElement textBlock, String headingText) throws Exception {
+        // Text bloğunun boş olduğundan emin ol (artı butonu sadece boş text bloğunda görünür)
+        String textContent = textBlock.getAttribute("value");
+        if (textContent != null && !textContent.trim().isEmpty()) {
+            textBlock.clear();
+            Thread.sleep(500);
+        }
+        
         Actions actions = new Actions(driver);
         actions.moveToElement(textBlock).perform();
-        Thread.sleep(1000);
+        Thread.sleep(1500);
         
-        WebElement addButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".block-add-button.visible, .editor-block .block-add-button.visible")
-            )
-        );
-        addButton.click();
+        // Artı butonunu bul (retry logic ile)
+        WebElement addButton = findAddButtonWithRetry(textBlock, actions);
+        safeClick(addButton);
         Thread.sleep(1000);
         
         WebElement headingMenuButton = wait.until(
@@ -515,16 +497,20 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
     }
     
     private void addListBlock(WebElement textBlock, String[] items) throws Exception {
+        // Text bloğunun boş olduğundan emin ol (artı butonu sadece boş text bloğunda görünür)
+        String textContent = textBlock.getAttribute("value");
+        if (textContent != null && !textContent.trim().isEmpty()) {
+            textBlock.clear();
+            Thread.sleep(500);
+        }
+        
         Actions actions = new Actions(driver);
         actions.moveToElement(textBlock).perform();
-        Thread.sleep(1000);
+        Thread.sleep(1500);
         
-        WebElement addButton = wait.until(
-            ExpectedConditions.elementToBeClickable(
-                By.cssSelector(".block-add-button.visible, .editor-block .block-add-button.visible")
-            )
-        );
-        addButton.click();
+        // Artı butonunu bul (retry logic ile)
+        WebElement addButton = findAddButtonWithRetry(textBlock, actions);
+        safeClick(addButton);
         Thread.sleep(1000);
         
         WebElement listMenuButton = wait.until(
@@ -558,6 +544,49 @@ public class Case4g_StoryCreationCombinationsTest extends BaseSeleniumTest {
             }
         }
         Thread.sleep(1000);
+    }
+    
+    // Helper method: Artı butonunu retry logic ile bul
+    private WebElement findAddButtonWithRetry(WebElement textBlock, Actions actions) throws Exception {
+        WebElement addButton = null;
+        int retryCount = 0;
+        int maxRetries = 6;
+        while (retryCount < maxRetries && addButton == null) {
+            try {
+                // Önce tüm artı butonlarını bul
+                java.util.List<WebElement> addButtons = driver.findElements(
+                    By.cssSelector(".block-add-button, .editor-block .block-add-button")
+                );
+                
+                // Görünür olanı bul
+                for (WebElement btn : addButtons) {
+                    try {
+                        if (btn.isDisplayed() && btn.isEnabled()) {
+                            addButton = btn;
+                            break;
+                        }
+                    } catch (Exception e) {
+                        // Element artık DOM'da yok, devam et
+                    }
+                }
+                
+                if (addButton == null) {
+                    // Hover'ı tekrar yap
+                    actions.moveToElement(textBlock).perform();
+                    Thread.sleep(1000);
+                    retryCount++;
+                }
+            } catch (Exception e) {
+                retryCount++;
+                Thread.sleep(1000);
+            }
+        }
+        
+        if (addButton == null) {
+            throw new Exception("Artı butonu bulunamadı (retry sonrası)");
+        }
+        
+        return addButton;
     }
     
     private java.nio.file.Path createTestImage() throws Exception {

@@ -76,29 +76,37 @@ public class Case12a_AdminUserManagementTest extends BaseSeleniumTest {
             
             WebElement userElement = null;
             int currentPage = 0;
-            int maxPages = 10; // Maksimum 10 sayfa kontrol et
+            int maxPages = 50; // Maksimum 50 sayfa kontrol et (daha fazla sayfa olabilir)
             
             while (currentPage < maxPages && userElement == null) {
                 try {
-                    // Kullanıcıyı bu sayfada bulmayı dene
-                    userElement = wait.until(
-                        ExpectedConditions.presenceOfElementLocated(
+                    // Önce sayfanın yüklendiğinden emin ol
+                    wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".admin-loading")));
+                    Thread.sleep(1000);
+                    
+                    // Kullanıcıyı bu sayfada bulmayı dene (daha esnek XPath)
+                    try {
+                        userElement = driver.findElement(
                             By.xpath("//table//tr//td[contains(text(), '" + testUserUsername + "')]")
-                        )
-                    );
-                    System.out.println("Kullanıcı bulundu (sayfa " + (currentPage + 1) + "): " + testUserUsername);
-                    break;
-                } catch (org.openqa.selenium.TimeoutException e) {
+                        );
+                        if (userElement.isDisplayed()) {
+                            System.out.println("Kullanıcı bulundu (sayfa " + (currentPage + 1) + "): " + testUserUsername);
+                            break;
+                        }
+                    } catch (org.openqa.selenium.NoSuchElementException e) {
+                        // Kullanıcı bu sayfada yok, devam et
+                    }
+                    
                     // Kullanıcı bu sayfada bulunamadı, sonraki sayfaya geç
                     try {
                         WebElement nextButton = driver.findElement(
                             By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki')]")
                         );
                         
-                        // Buton disabled mı kontrol et
-                        if (nextButton.getAttribute("disabled") != null) {
+                        // Buton disabled mı veya görünür değil mi kontrol et
+                        if (nextButton.getAttribute("disabled") != null || !nextButton.isDisplayed() || !nextButton.isEnabled()) {
                             // Son sayfaya ulaşıldı
-                            System.out.println("Son sayfaya ulaşıldı, kullanıcı bulunamadı");
+                            System.out.println("Son sayfaya ulaşıldı (sayfa " + (currentPage + 1) + "), kullanıcı bulunamadı");
                             break;
                         }
                         
@@ -110,14 +118,31 @@ public class Case12a_AdminUserManagementTest extends BaseSeleniumTest {
                         currentPage++;
                     } catch (org.openqa.selenium.NoSuchElementException ex) {
                         // Pagination butonu yok, son sayfadayız
-                        System.out.println("Pagination butonu yok, son sayfadayız");
+                        System.out.println("Pagination butonu yok, son sayfadayız (sayfa " + (currentPage + 1) + ")");
+                        break;
+                    }
+                } catch (org.openqa.selenium.TimeoutException e) {
+                    // Sayfa yüklenemedi, sonraki sayfaya geçmeyi dene
+                    System.out.println("Sayfa yükleme timeout (sayfa " + (currentPage + 1) + "), sonraki sayfaya geçiliyor...");
+                    try {
+                        WebElement nextButton = driver.findElement(
+                            By.xpath("//div[contains(@class, 'admin-pagination')]//button[contains(text(), 'Sonraki')]")
+                        );
+                        if (nextButton.isEnabled() && nextButton.isDisplayed()) {
+                            safeClick(nextButton);
+                            Thread.sleep(2000);
+                            currentPage++;
+                        } else {
+                            break;
+                        }
+                    } catch (Exception ex) {
                         break;
                     }
                 }
             }
             
             if (userElement == null) {
-                fail("Case 12a: Test kullanıcısı listede bulunamadı (kullanıcı adı): " + testUserUsername);
+                fail("Case 12a: Test kullanıcısı listede bulunamadı (kullanıcı adı): " + testUserUsername + " (toplam " + (currentPage + 1) + " sayfa kontrol edildi)");
                 return;
             }
             
